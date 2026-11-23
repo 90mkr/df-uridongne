@@ -3,6 +3,7 @@
 // 태블릿·가로: 왼쪽 40% 명함 카드 목록 + 오른쪽 60% 지도 (지도 범위 안 가게만 목록에)
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -600,7 +601,7 @@ class _Tail extends CustomPainter {
   _Tail(this.fill, this.line);
   @override
   void paint(Canvas canvas, Size s) {
-    final p = Path()
+    final p = ui.Path()
       ..moveTo(0, 0)
       ..lineTo(s.width / 2, s.height)
       ..lineTo(s.width, 0);

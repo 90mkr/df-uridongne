@@ -24,3 +24,46 @@ jobs:
           flutter create --org kr.designfeel --project-name dongne --platforms android,web . > /dev/null
           flutter pub get > /dev/null
           flutter analyze --no-fatal-infos --no-fatal-warnings lib
+
+  # 커밋 글에 [화면] 이 있으면: 웹으로 만들어 휴대폰·태블릿 화면 사진을 shots-check 갈래에 올림
+  shots:
+    if: contains(github.event.head_commit.message, '[화면]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: 저장소 받기
+        uses: actions/checkout@v4
+
+      - name: 플러터 준비
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: 웹 만들기
+        run: |
+          flutter create --org kr.designfeel --project-name dongne --platforms web . > /dev/null
+          flutter pub get > /dev/null
+          flutter build web --release --base-href /df-uridongne/
+          mkdir -p /tmp/site && cp -r build/web /tmp/site/df-uridongne
+
+      - name: 브라우저 준비
+        run: |
+          pip install -q playwright
+          python -m playwright install --with-deps chromium > /dev/null
+
+      - name: 화면 찍기
+        run: |
+          (cd /tmp/site && python3 -m http.server 8765 > /dev/null 2>&1 &)
+          sleep 2
+          fc-list | grep -i -q noto.*cjk || sudo apt-get install -y -q fonts-noto-cjk > /dev/null
+          python .github/shot/shot.py "http://localhost:8765/df-uridongne/" shots
+
+      - name: 사진 올리기
+        if: always()
+        run: |
+          cd shots
+          git init -q -b shots-check
+          git add -A
+          git -c user.name="화면 확인" -c user.email="shot@users.noreply.github.com" commit -qm "화면 점검 ${{ github.run_id }}"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" shots-check
