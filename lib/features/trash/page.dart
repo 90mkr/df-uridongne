@@ -7,6 +7,7 @@ import '../../core/me.dart';
 import '../../core/theme.dart';
 import '../../core/ui.dart';
 import 'data.dart';
+import 'feature.dart' show TrashHero;
 import 'guide.dart';
 import 'trash_icons.dart';
 
@@ -69,7 +70,7 @@ class _TrashPageState extends State<TrashPage> {
             ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
             : RefreshIndicator(
                 onRefresh: () => _load(fresh: true),
-                child: ListView(padding: const EdgeInsets.fromLTRB(kPad, 16, kPad, 34), children: _body(info!)),
+                child: ListView(padding: const EdgeInsets.fromLTRB(kPad, 16, kPad, 34), children: [TrashHero(c: widget.complex), const SizedBox(height: 16), ..._body(info!)]),
               ),
       );
 

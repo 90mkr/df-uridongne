@@ -18,7 +18,7 @@ class TrashFeature extends Feature {
   @override
   String get icon => 'trash';
   @override
-  Slot get slot => Slot.hero;
+  Slot get slot => Slot.tool; // 대표님 11-24: 홈 맨 위 자리는 비우고, 배출 안내는 분리수거 화면 맨 위로
   @override
   int get order => 10;
   @override
@@ -29,16 +29,17 @@ class TrashFeature extends Feature {
   Color get tint => kSoft;
 
   @override
-  Widget? homeCard(BuildContext context, Complex c) => _Hero(c: c, f: this);
+  Widget? homeCard(BuildContext context, Complex c) => TrashHero(c: c, f: this);
 
   @override
   Widget page(BuildContext context, Complex c) => TrashPage(complex: c);
 }
 
-class _Hero extends StatelessWidget {
+// 오늘의 배출 안내 카드 (분리수거 화면 맨 위)
+class TrashHero extends StatelessWidget {
   final Complex c;
-  final Feature f;
-  const _Hero({required this.c, required this.f});
+  final Feature? f; // 있으면 누를 때 분리수거 화면 열기
+  const TrashHero({super.key, required this.c, this.f});
 
   static const _w = Color(0xD9FFFFFF);
 
@@ -83,7 +84,7 @@ class _Hero extends StatelessWidget {
             }
             return InkWell(
               borderRadius: BorderRadius.circular(16),
-              onTap: () => openFeature(context, f),
+              onTap: f == null ? null : () => openFeature(context, f!),
               child: Container(
                 // 시안 11-23 (본부): 짙은 파랑 그라데이션 + 오른쪽 위 단지 그림
                 decoration: BoxDecoration(
