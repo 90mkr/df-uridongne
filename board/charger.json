@@ -2,10 +2,10 @@
  "id": "charger",
  "name": "전기차 충전소",
  "folder": "lib/features/charger",
- "room": "",
- "state": "대기",
- "doing": "",
+ "room": "전기차 충전소 방",
+ "state": "작업 중",
+ "doing": "충전소 상세 화면·충전기별 상태·지도 1차 제작",
  "version": "0.0.1",
- "updated": "2026-11-23 19:50",
+ "updated": "2026-11-23 21:00",
  "order": 8
 }
