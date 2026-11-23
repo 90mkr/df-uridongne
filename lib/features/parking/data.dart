@@ -46,6 +46,9 @@ class Lot {
   // 「노외 · 공영」처럼 짧은 구분
   String get label => [if (kind.isNotEmpty) kind, if (type.isNotEmpty) type].join(' · ');
 
+  // 지도 점 글자: 「P 68」 (칸 수 모르면 무료·유료)
+  String get badge => spaces > 0 ? 'P $spaces' : (isFree ? 'P 무료' : 'P');
+
   // 요금 한 줄 (목록용)
   String get feeShort {
     if (isFree) return '무료';

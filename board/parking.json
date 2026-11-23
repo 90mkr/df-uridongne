@@ -3,9 +3,9 @@
  "name": "주차장",
  "folder": "lib/features/parking",
  "room": "공공주차장 방",
- "state": "멈춤",
- "doing": "깃허브 비밀 DATA_GO_KR_KEY 없음 → 대표님이 넣으면 김부장이 주차장만 실행해 자료 확인",
- "version": "0.1.0",
- "updated": "2026-11-23 21:30",
+ "state": "작업 중",
+ "doing": "전국 주차장 17,165곳 자료 받음(송도 2km 16곳) · 지도 점에 「P 칸 수」 글자 · 미리보기 화면 확인 중",
+ "version": "0.1.2",
+ "updated": "2026-11-23 21:55",
  "order": 7
 }

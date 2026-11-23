@@ -81,7 +81,7 @@ class _ParkingPageState extends State<ParkingPage> {
                   pinFill: _fill,
                   points: [
                     for (final l in list.take(300))
-                      MapPoint(id: l.id, name: '${l.name} · ${l.feeShort}', sub: l.label, pos: l.pos, onTap: (ctx) => showLot(ctx, l, widget.complex)),
+                      MapPoint(id: l.id, name: '${l.name} · ${l.feeShort}', sub: l.label, badge: l.badge, pos: l.pos, onTap: (ctx) => showLot(ctx, l, widget.complex)),
                   ],
                 ),
         ),
@@ -319,6 +319,6 @@ Future<List<MapPoint>> parkingPoints(Complex c) async {
   final v = await lotsNear(c.pos, km: 2);
   return [
     for (final l in v.take(200))
-      MapPoint(id: 'parking_${l.id}', name: '${l.name} · ${l.feeShort}', sub: l.label, pos: l.pos, onTap: (ctx) => showLot(ctx, l, c)),
+      MapPoint(id: 'parking_${l.id}', name: '${l.name} · ${l.feeShort}', sub: l.label, badge: l.badge, pos: l.pos, onTap: (ctx) => showLot(ctx, l, c)),
   ];
 }
