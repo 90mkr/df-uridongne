@@ -267,10 +267,10 @@ class _ZoneList extends StatelessWidget {
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Row(children: [
-                        Flexible(child: Text(z.name.isNotEmpty ? z.name : z.target, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: on ? kBlue : kInk))),
+                        Flexible(child: Text(z.label, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: on ? kBlue : kInk))),
                         if (picks.contains(z.id)) ...[const SizedBox(width: 6), const Pill('우리 단지 쪽')],
                       ]),
-                      if (z.target.isNotEmpty && z.target != z.name) Text(z.target, style: T.small),
+                      if (z.name.isNotEmpty && z.name != z.label && z.name != gov.gu) Text(z.name, style: T.small),
                       const SizedBox(height: 2),
                       Text('일반 ${daysText(z.days['g'] ?? '')} · 음식물 ${daysText(z.days['f'] ?? '')} · 재활용 ${daysText(z.days['r'] ?? '')}', style: T.tiny),
                     ]),

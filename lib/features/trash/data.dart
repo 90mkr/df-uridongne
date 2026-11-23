@@ -170,11 +170,16 @@ Future<(String?, List<String>, String)> _codeOf(Complex c) async {
       }
     }
   }
+  // 동네의 구 (인천은 2026년 7월 구 개편: 중구·동구 → 영종구·제물포구, 서구 → 서해구·검단구)
   final a = c.area;
   if (idx is Map && a != null) {
-    for (final g in (idx['gu'] as List? ?? const [])) {
-      if (g is List && g.length >= 3 && '${g[1]}'.startsWith(a.sido.length >= 2 ? a.sido.substring(0, 2) : a.sido) && '${g[2]}' == a.gu) {
-        return ('${g[0]}', <String>[], '');
+    const renamed = {'yeongjong': '영종구', 'sinpo': '제물포구', 'seogu': '서해구'};
+    final names = [if (renamed[a.id] != null) renamed[a.id]!, a.gu];
+    for (final n in names) {
+      for (final g in (idx['gu'] as List? ?? const [])) {
+        if (g is List && g.length >= 3 && '${g[1]}'.startsWith(a.sido.length >= 2 ? a.sido.substring(0, 2) : a.sido) && '${g[2]}' == n) {
+          return ('${g[0]}', <String>[], '');
+        }
       }
     }
   }

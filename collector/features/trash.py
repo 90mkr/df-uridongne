@@ -202,20 +202,27 @@ def match(groups, info):
     return None, []
 
 
+def write_groups(groups):
+    print(f"  지자체 {len(groups)}곳, 관리구역 {sum(len(g['zones']) for g in groups.values())}개")
+    stamp = now()
+    for code, g in groups.items():
+        g["updated"] = stamp
+        with open(os.path.join(OUT, f"g_{code}.json"), "w", encoding="utf-8") as f:
+            json.dump(g, f, ensure_ascii=False, separators=(",", ":"))
+    idx = {"updated": stamp, "src": "행정안전부 생활쓰레기배출정보", "gu": [[g["code"], g["sido"], g["gu"], len(g["zones"])] for g in groups.values()]}
+    with open(os.path.join(OUT, "index.json"), "w", encoding="utf-8") as f:
+        json.dump(idx, f, ensure_ascii=False, separators=(",", ":"))
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     txt = download()
     if txt:
-        groups = build_zones(txt)
-        print(f"  지자체 {len(groups)}곳, 관리구역 {sum(len(g['zones']) for g in groups.values())}개")
-        stamp = now()
-        for code, g in groups.items():
-            g["updated"] = stamp
-            with open(os.path.join(OUT, f"g_{code}.json"), "w", encoding="utf-8") as f:
-                json.dump(g, f, ensure_ascii=False, separators=(",", ":"))
-        idx = {"updated": stamp, "src": "행정안전부 생활쓰레기배출정보", "gu": [[g["code"], g["sido"], g["gu"], len(g["zones"])] for g in groups.values()]}
-        with open(os.path.join(OUT, "index.json"), "w", encoding="utf-8") as f:
-            json.dump(idx, f, ensure_ascii=False, separators=(",", ":"))
+        write_groups(build_zones(txt))
+    elif not glob.glob(os.path.join(OUT, "g_*.json")):
+        # 처음인데 받지 못했으면 저장소에 넣어 둔 수도권 첫 자료(seed_*.csv)로 만든다
+        for p in glob.glob(os.path.join(OUT, "seed_*.csv")):
+            write_groups(build_zones(open(p, encoding="utf-8").read()))
     else:
         print("  생활쓰레기배출정보를 받지 못해 지난 자료를 그대로 둡니다")
     # 단지 → 관리구역 짝짓기
