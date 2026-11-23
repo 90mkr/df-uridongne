@@ -522,7 +522,9 @@ Future<Weather?> weatherFor(Complex c, {bool force = false}) {
   final have = _cache[k];
   final keep = force ? const Duration(minutes: 5) : const Duration(minutes: 30);
   if (have != null && _nowKst.difference(have.at) < keep) return Future.value(have);
-  return _loading[k] ??= _fetchSafe(c).whenComplete(() => _loading.remove(k)).then((w) {
+  return _loading[k] ??= _fetchSafe(c).whenComplete(() {
+    _loading.remove(k); // (=> 로 쓰면 지운 자기 자신을 기다려 멈춤)
+  }).then((w) {
     if (w != null) _cache[k] = w;
     return w ?? have;
   });
