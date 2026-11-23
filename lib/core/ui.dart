@@ -75,7 +75,6 @@ class HomeCardBox extends StatelessWidget {
         LineIcon(icon, size: 24),
         const SizedBox(width: 7),
         Flexible(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.title)),
-        if (art != null) const SizedBox(width: 60),
       ]),
       const SizedBox(height: 10),
       child,
@@ -100,11 +99,11 @@ class HomeCardBox extends StatelessWidget {
                   top: 0,
                   child: ShaderMask(
                     blendMode: BlendMode.dstIn,
-                    shaderCallback: (r) => const LinearGradient(colors: [Color(0x00000000), Color(0xFF000000)], stops: [0, 0.45]).createShader(r),
+                    shaderCallback: (r) => const LinearGradient(colors: [Color(0x00000000), Color(0x99000000), Color(0xFF000000)], stops: [0, 0.5, 1]).createShader(r),
                     child: ShaderMask(
                       blendMode: BlendMode.dstIn,
                       shaderCallback: (r) => const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF000000), Color(0x00000000)], stops: [0.55, 1]).createShader(r),
-                      child: Image.asset(art.$1, height: 50, fit: BoxFit.contain, filterQuality: FilterQuality.medium),
+                      child: Image.asset(art.$1, height: icon == 'deals' ? 64 : 40, fit: BoxFit.contain, filterQuality: FilterQuality.medium),
                     ),
                   ),
                 ),

@@ -96,11 +96,11 @@ class _Hero extends StatelessWidget {
                   Positioned(
                     right: 0,
                     top: 0,
-                    width: 250,
+                    width: 236,
                     bottom: info != null && !info.empty ? 58 : 0,
                     child: ShaderMask(
                       blendMode: BlendMode.dstIn,
-                      shaderCallback: (r) => const LinearGradient(colors: [Color(0x00000000), Color(0xCC000000), Color(0xFF000000)], stops: [0, 0.35, 1]).createShader(r),
+                      shaderCallback: (r) => const LinearGradient(colors: [Color(0x00000000), Color(0x8C000000), Color(0xE6000000)], stops: [0, 0.5, 1]).createShader(r),
                       child: ShaderMask(
                         blendMode: BlendMode.dstIn,
                         shaderCallback: (r) => const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF000000), Color(0x00000000)], stops: [0.6, 1]).createShader(r),
