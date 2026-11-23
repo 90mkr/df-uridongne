@@ -34,11 +34,21 @@ const kCats = [
   Cat('pharm', '약국', '약국'),
   Cat('hardware', '철물·설비', '철물·인테리어·설비'),
   Cat('bank', '은행', '은행·금융'),
-  Cat('car', '자동차', '주유·세차·정비'),
+  Cat('car', '자동차', '세차·정비'),
   Cat('pet', '반려동물', '동물병원·애견미용'),
   Cat('public', '공공기관', '주민센터·우체국'),
   Cat('realty', '부동산', '공인중개사'),
 ];
+
+// 자동차 업종에서 뺄 주유소·충전소 (주유소는 주유소 화면에 가격과 함께 있음, 대표님 11-24)
+final _fuel = RegExp(r'주유|충전|S-?OIL|칼텍스|오일뱅크|LPG|에쓰오일|현대오일|알뜰', caseSensitive: false);
+bool isFuel(Shop s) => _fuel.hasMatch('${s.sub} ${s.name}');
+
+// 업종 고르기 (자동차는 주유·충전 빼고)
+List<Shop> shopsInCat(List<Shop> all, String cat) => [
+      for (final s in all)
+        if (s.cats.contains(cat) && !(cat == 'car' && isFuel(s))) s
+    ];
 
 Cat catOf(String id) => kCats.firstWhere((c) => c.id == id, orElse: () => kCats.first);
 
@@ -46,7 +56,8 @@ class Kok {
   final double grate;
   final int greviews;
   final int yt;
-  const Kok(this.grate, this.greviews, this.yt);
+  final String thumb, ch; // 유튜브 영상 사진 · 채널 이름 (첫 영상)
+  const Kok(this.grate, this.greviews, this.yt, {this.thumb = '', this.ch = ''});
 }
 
 // 영업 상태
@@ -113,7 +124,10 @@ Future<List<Shop>> shopsOf(String areaId) async {
   for (final p in (k['places'] as List? ?? const [])) {
     if (p is! Map) continue;
     final id = '${p['id']}';
-    final kok = Kok((p['grate'] as num?)?.toDouble() ?? 0, (p['greviews'] as num?)?.toInt() ?? 0, (p['vids'] is List) ? (p['vids'] as List).length : 0);
+    final vids = p['vids'] is List ? p['vids'] as List : const [];
+    final v0 = vids.isNotEmpty && vids.first is Map ? vids.first as Map : const {};
+    final kok = Kok((p['grate'] as num?)?.toDouble() ?? 0, (p['greviews'] as num?)?.toInt() ?? 0, vids.length,
+        thumb: v0['id'] == null ? '' : 'https://i.ytimg.com/vi/${v0['id']}/mqdefault.jpg', ch: '${v0['ch'] ?? ''}');
     var s = byId[id];
     if (s == null) {
       final lat = (p['lat'] as num?)?.toDouble(), lng = (p['lng'] as num?)?.toDouble();

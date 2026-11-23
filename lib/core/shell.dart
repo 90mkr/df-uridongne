@@ -6,6 +6,7 @@ import '../features/registry.dart';
 import 'complex_pick.dart';
 import 'data.dart';
 import 'fb.dart';
+import 'feature.dart';
 import 'home.dart';
 import 'icons.dart';
 import 'map_tab.dart';
@@ -27,6 +28,12 @@ class _ShellState extends State<Shell> {
   void initState() {
     super.initState();
     _boot();
+    mapAsk.addListener(_toMap);
+  }
+
+  // 다른 화면의 「지도로 보기」 → 지도 탭으로
+  void _toMap() {
+    if (mapAsk.value != null && mounted) setState(() => tab = 2);
   }
 
   Future<void> _boot() async {

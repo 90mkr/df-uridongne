@@ -18,26 +18,57 @@ class DongneMap extends StatefulWidget {
   final Color pinFill;
   final MapController? controller;
   final String icon; // 점 안에 넣을 기능 아이콘 (색 아이콘)
-  const DongneMap({super.key, required this.center, this.points = const [], this.zoom = 15, this.pinFill = kSoft, this.controller, this.icon = ''});
+  final String focus; // 처음부터 고르고 그쪽으로 옮길 점 id
+  const DongneMap({super.key, required this.center, this.points = const [], this.zoom = 15, this.pinFill = kSoft, this.controller, this.icon = '', this.focus = ''});
   @override
   State<DongneMap> createState() => _DongneMapState();
 }
 
 class _DongneMapState extends State<DongneMap> {
   String? sel;
+  final nctl = DnMapCtl();
+  String _focused = '';
+
+  // 「지도로 보기」로 넘어온 점: 고르고 그쪽으로 (점이 다 들어온 뒤 한 번)
+  void _applyFocus() {
+    final f = widget.focus;
+    if (f.isEmpty || f == _focused) return;
+    final p = widget.points.where((x) => x.id == f).firstOrNull;
+    if (p == null) return;
+    _focused = f;
+    sel = f;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final c = complex.value;
+      final pts = [p.pos, if (c != null) c.pos];
+      if (naverMapOn) {
+        nctl.fit(pts, const EdgeInsets.fromLTRB(60, 190, 60, 80), maxZoom: 17);
+      } else {
+        try {
+          widget.controller?.fitCamera(CameraFit.coordinates(coordinates: pts, padding: const EdgeInsets.fromLTRB(60, 190, 60, 80), maxZoom: 17));
+        } catch (_) {}
+      }
+      if (mounted) setState(() {});
+    });
+  }
   @override
   Widget build(BuildContext context) {
     final c = complex.value;
     final pts = widget.points.take(500).toList();
+    _applyFocus();
     // 휴대폰 앱: 네이버 지도 (첫 번 누르면 이름·설명, 두 번 누르면 그 곳 열기)
     if (naverMapOn) {
       return naverMap(
         center: widget.center,
         zoom: widget.zoom,
+        ctl: nctl,
+        onReady: () {
+          _focused = '';
+          _applyFocus();
+        },
         pins: [
           if (c != null) DnPin(id: '_apt', pos: c.pos, name: c.name, apt: true),
           for (final p in pts)
-            DnPin(id: p.id, pos: p.pos, name: p.badge.isNotEmpty ? '${p.badge}  ${p.name}' : p.name, sub: p.sub, icon: widget.icon.isEmpty ? 'pin' : widget.icon, selected: sel == p.id),
+            DnPin(id: p.id, pos: p.pos, name: p.badge.isNotEmpty ? '${p.badge}  ${p.name}' : p.name, sub: p.sub, icon: p.icon.isNotEmpty ? p.icon : (widget.icon.isEmpty ? 'pin' : widget.icon), selected: sel == p.id),
         ],
         onMapTap: () => setState(() => sel = null),
         onPinTap: (id) {
@@ -128,7 +159,7 @@ class _DongneMapState extends State<DongneMap> {
                   const Icon(Icons.chevron_right_rounded, size: 16, color: kMute),
                 ]),
               ),
-            if (p.badge.isEmpty) _IconPin(widget.icon.isEmpty ? 'pin' : widget.icon, on: on) else _Badge(p.badge, on: on, icon: widget.icon),
+            if (p.badge.isEmpty) _IconPin(p.icon.isNotEmpty ? p.icon : (widget.icon.isEmpty ? 'pin' : widget.icon), on: on) else _Badge(p.badge, on: on, icon: widget.icon),
           ]),
         ),
       ),

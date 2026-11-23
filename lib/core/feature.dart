@@ -28,7 +28,28 @@ class MapPoint {
   final String badge; // 지도에 핀 대신 보일 짧은 글자 (예: 「240면」·「1,689원」·「빈 3」) — 비우면 핀
   final LatLng pos;
   final void Function(BuildContext context)? onTap;
-  const MapPoint({required this.id, required this.name, this.sub = '', this.badge = '', required this.pos, this.onTap});
+  final String icon; // 점마다 다른 아이콘 (비우면 기능 아이콘) — 예: 전화번호부 업종
+  const MapPoint({required this.id, required this.name, this.sub = '', this.badge = '', required this.pos, this.onTap, this.icon = ''});
+}
+
+// 지도 탭 거르기 단추 하나 (예: 전화번호부의 「세탁소」)
+class MapFilter {
+  final String id, name, icon;
+  const MapFilter(this.id, this.name, this.icon);
+}
+
+// 다른 화면에서 「지도로 보기」: 지도 탭으로 넘어가며 기능·거르기·고를 점을 정해 연다
+class MapAsk {
+  final String feature, filter, focus;
+  const MapAsk(this.feature, {this.filter = '', this.focus = ''});
+}
+
+final mapAsk = ValueNotifier<MapAsk?>(null);
+
+// 쌓인 화면을 닫고 하단 지도 탭으로
+void openMapTab(BuildContext context, MapAsk ask) {
+  Navigator.of(context).popUntil((r) => r.isFirst);
+  mapAsk.value = ask;
 }
 
 abstract class Feature {
@@ -50,6 +71,12 @@ abstract class Feature {
 
   // 지도 탭에 올릴 점 (없으면 빈 목록)
   Future<List<MapPoint>> mapPoints(Complex c) async => const [];
+
+  // 지도 탭에서 이 기능을 골랐을 때 둘째 줄에 나올 거르기 단추 (없으면 빈 목록)
+  List<MapFilter> mapFilters() => const [];
+
+  // 거르기를 고른 점들 (기본: 거르기 없이 전부)
+  Future<List<MapPoint>> mapPointsFor(Complex c, String filter) => mapPoints(c);
 
   // 단지 홈 맨 위 「지금 우리 단지」 카드에 낼 한 장 (없으면 null). 점수가 높을수록 앞에 나온다.
   // 시간대·날씨·배출일에 맞춰 기능이 스스로 점수를 매긴다 (예: 출근 시간 버스 80, 비 오기 전 날씨 90).

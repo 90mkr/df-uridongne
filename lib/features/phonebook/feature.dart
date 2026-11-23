@@ -39,7 +39,21 @@ class PhonebookFeature extends Feature {
     final all = await shopsOf(c.areaId);
     final near = [...all]..sort((a, b) => meters(c.pos, a.pos).compareTo(meters(c.pos, b.pos)));
     return [
-      for (final s in near.take(300)) MapPoint(id: s.id, name: s.name, sub: s.sub, pos: s.pos, onTap: (ctx) => showShop(ctx, s, c)),
+      for (final s in near.take(300)) MapPoint(id: s.id, name: s.name, sub: s.sub, pos: s.pos, icon: s.cats.isEmpty ? '' : s.cats.first, onTap: (ctx) => showShop(ctx, s, c)),
+    ];
+  }
+
+  // 지도 탭 둘째 줄: 업종
+  @override
+  List<MapFilter> mapFilters() => [for (final k in kCats) MapFilter(k.id, k.name, k.id)];
+
+  @override
+  Future<List<MapPoint>> mapPointsFor(Complex c, String filter) async {
+    final all = await shopsOf(c.areaId);
+    final list = shopsInCat(all, filter)..sort((a, b) => meters(c.pos, a.pos).compareTo(meters(c.pos, b.pos)));
+    return [
+      for (final s in list.take(300))
+        MapPoint(id: s.id, name: s.name, sub: '${s.sub.isEmpty ? catOf(filter).name : s.sub} · ${distText(meters(c.pos, s.pos))}', pos: s.pos, icon: filter, onTap: (ctx) => showShop(ctx, s, c)),
     ];
   }
 }
@@ -220,8 +234,9 @@ class _PhonebookPageState extends State<PhonebookPage> {
           const SizedBox(height: 20),
           const Row(children: [MixTitle('콕플이 고른', '동네 맛집'), SizedBox(width: 7), Text('구글 별점·유튜버 방문 기준', style: T.tiny)]),
           const SizedBox(height: 10),
+          // 유튜브 영상 사진이 크게 보이는 카드 (대표님 11-24)
           SizedBox(
-            height: 88,
+            height: 196,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               clipBehavior: Clip.none,
@@ -229,23 +244,66 @@ class _PhonebookPageState extends State<PhonebookPage> {
               separatorBuilder: (_, __) => const SizedBox(width: 10),
               itemBuilder: (_, i) {
                 final s = tops[i];
-                return InkWell(
-                  borderRadius: BorderRadius.circular(kRadius),
+                final k = s.kok!;
+                return GestureDetector(
                   onTap: () => showShop(context, s, c),
-                  child: Ink(
-                    width: 160,
-                    decoration: cardBox(),
-                    padding: const EdgeInsets.fromLTRB(13, 11, 12, 10),
+                  child: Container(
+                    width: 184,
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(kRadius), border: Border.all(color: kLine), boxShadow: kShadow),
+                    clipBehavior: Clip.antiAlias,
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(s.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
-                      Text(s.sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.tiny),
-                      const Spacer(),
-                      Row(children: [
-                        const Icon(Icons.star_rounded, size: 15, color: Color(0xFFFFB020)),
-                        Text(s.kok!.grate > 0 ? s.kok!.grate.toStringAsFixed(1) : '-', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                        const SizedBox(width: 6),
-                        Text(distText(meters(c.pos, s.pos)), style: T.tiny),
-                      ]),
+                      SizedBox(
+                        height: 104,
+                        width: 184,
+                        child: Stack(fit: StackFit.expand, children: [
+                          if (k.thumb.isNotEmpty)
+                            Image.network(k.thumb, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: const Color(0xFFF3F6FB), alignment: Alignment.center, child: LineIcon(s.cats.first, size: 40)))
+                          else
+                            Container(color: const Color(0xFFF3F6FB), alignment: Alignment.center, child: LineIcon(s.cats.isEmpty ? 'food' : s.cats.first, size: 40)),
+                          // 아래 어둡게 + 채널 이름
+                          const DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0x00000000), Color(0x8C000000)], stops: [0.55, 1]),
+                            ),
+                          ),
+                          if (k.yt > 0)
+                            Positioned(
+                              left: 8,
+                              top: 8,
+                              child: Container(
+                                padding: const EdgeInsets.fromLTRB(5, 2, 7, 2),
+                                decoration: BoxDecoration(color: const Color(0xFFFF0033), borderRadius: BorderRadius.circular(6)),
+                                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                  const Icon(Icons.play_arrow_rounded, size: 13, color: Colors.white),
+                                  Text('유튜버 ${k.yt}명', style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: Colors.white, height: 1.2)),
+                                ]),
+                              ),
+                            ),
+                          if (k.ch.isNotEmpty)
+                            Positioned(
+                              left: 8,
+                              right: 8,
+                              bottom: 6,
+                              child: Text(k.ch, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: Colors.white)),
+                            ),
+                        ]),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(11, 9, 10, 0),
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text(s.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, letterSpacing: -0.3)),
+                          const SizedBox(height: 1),
+                          Text(s.sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.tiny),
+                          const SizedBox(height: 6),
+                          Row(children: [
+                            const Icon(Icons.star_rounded, size: 15, color: Color(0xFFFFB020)),
+                            Text(k.grate > 0 ? k.grate.toStringAsFixed(1) : '-', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                            if (k.greviews > 0) Text(' (${k.greviews})', style: T.tiny),
+                            const Spacer(),
+                            Text(distText(meters(c.pos, s.pos)), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                          ]),
+                        ]),
+                      ),
                     ]),
                   ),
                 );
