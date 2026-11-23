@@ -83,12 +83,15 @@ class LineIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final body = kIconBody[name] ?? kIconBody['pin']!;
-    final svg = ('$_svgHead$body</svg>').replaceAll('"L"', '"${_hex(line)}"').replaceAll('"F"', '"${_hex(fill)}"');
+    // 반투명 면은 fill-opacity 로 (예: 파랑 카드 위 흰 면)
+    final fo = fill.a < 0.99 && fill.a >= 0.02 ? ' fill-opacity="${fill.a.toStringAsFixed(2)}"' : '';
+    final svg = ('$_svgHead$body</svg>').replaceAll('"L"', '"${_hex(line)}"').replaceAll('fill="F"', 'fill="${_hex(fill)}"$fo');
     return SvgPicture.string(svg, width: size, height: size);
   }
 }
 
 String _hex(Color c) {
+  if (c.a < 0.02) return 'none';
   final v = c.toARGB32() & 0xFFFFFF;
   return '#${v.toRadixString(16).padLeft(6, '0')}';
 }
