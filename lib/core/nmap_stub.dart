@@ -8,10 +8,9 @@ export 'nmap_common.dart';
 bool get naverMapOn => false;
 Future<void> initNaverMap() async {}
 
-class DnMapCtl {
-  Future<void> move(LatLng p, double zoom, {bool animate = true}) async {}
-  Future<void> fit(List<LatLng> pts, EdgeInsets pad, {double maxZoom = 17}) async {}
-}
 
 Widget naverMap({Key? key, required LatLng center, double zoom = 15, List<DnPin> pins = const [], void Function(String id)? onPinTap, VoidCallback? onMapTap, DnIdle? onIdle, VoidCallback? onReady, DnMapCtl? ctl}) =>
+    const SizedBox();
+
+Widget naverRich({Key? key, required LatLng center, double zoom = 15, List<DnMark> marks = const [], List<DnLine> lines = const [], List<DnCircle> circles = const [], VoidCallback? onMapTap, DnIdle? onIdle, VoidCallback? onReady, DnMapCtl? ctl}) =>
     const SizedBox();

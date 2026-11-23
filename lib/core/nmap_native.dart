@@ -25,16 +25,16 @@ Future<void> initNaverMap() async {
 NLatLng _n(LatLng p) => NLatLng(p.latitude, p.longitude);
 LatLng _l(NLatLng p) => LatLng(p.latitude, p.longitude);
 
-class DnMapCtl {
-  NaverMapController? _c;
-  Future<void> move(LatLng p, double zoom, {bool animate = true}) async {
+// 네이버 지도 조종 손잡이를 DnMapCtl 에 연결
+void _attach(DnMapCtl? ctl, NaverMapController c) {
+  if (ctl == null) return;
+  ctl.onMove = (p, zoom, animate) async {
     final u = NCameraUpdate.withParams(target: _n(p), zoom: zoom);
     if (animate) u.setAnimation(animation: NCameraAnimation.easing, duration: const Duration(milliseconds: 420));
-    await _c?.updateCamera(u);
-  }
-
-  Future<void> fit(List<LatLng> pts, EdgeInsets pad, {double maxZoom = 17}) async {
-    if (_c == null || pts.isEmpty) return;
+    await c.updateCamera(u);
+  };
+  ctl.onFit = (pts, pad, maxZoom) async {
+    if (pts.isEmpty) return;
     var s = pts.first.latitude, n = s, w = pts.first.longitude, e = w;
     for (final p in pts) {
       if (p.latitude < s) s = p.latitude;
@@ -42,12 +42,20 @@ class DnMapCtl {
       if (p.longitude < w) w = p.longitude;
       if (p.longitude > e) e = p.longitude;
     }
+    if (n - s < 0.0005) {
+      s -= 0.0005;
+      n += 0.0005;
+    }
+    if (e - w < 0.0005) {
+      w -= 0.0005;
+      e += 0.0005;
+    }
     final u = NCameraUpdate.fitBounds(NLatLngBounds(southWest: NLatLng(s, w), northEast: NLatLng(n, e)), padding: pad);
     u.setAnimation(animation: NCameraAnimation.easing, duration: const Duration(milliseconds: 450));
-    await _c!.updateCamera(u);
-    final cam = await _c!.getCameraPosition();
-    if (cam.zoom > maxZoom) await move(_l(cam.target), maxZoom);
-  }
+    await c.updateCamera(u);
+    final cam = await c.getCameraPosition();
+    if (cam.zoom > maxZoom) await c.updateCamera(NCameraUpdate.withParams(target: cam.target, zoom: maxZoom));
+  };
 }
 
 Widget naverMap({Key? key, required LatLng center, double zoom = 15, List<DnPin> pins = const [], void Function(String id)? onPinTap, VoidCallback? onMapTap, DnIdle? onIdle, VoidCallback? onReady, DnMapCtl? ctl}) =>
@@ -155,7 +163,106 @@ class _NMapState extends State<_NMap> {
         ),
         onMapReady: (ctl) {
           c = ctl;
-          widget.ctl?._c = ctl;
+          _attach(widget.ctl, ctl);
+          _sig = '';
+          _sync();
+          widget.onReady?.call();
+        },
+        onMapTapped: (_, __) => widget.onMapTap?.call(),
+        onCameraChange: (reason, isGesture) {
+          if (isGesture) gesture = true;
+        },
+        onCameraIdle: () async {
+          final cc = c;
+          if (cc == null) return;
+          final g = gesture;
+          gesture = false;
+          final cam = await cc.getCameraPosition();
+          final b = await cc.getContentBounds();
+          widget.onIdle?.call(_l(cam.target), cam.zoom, (_l(b.southWest), _l(b.northEast)), g);
+        },
+      );
+}
+
+// 자유 모양 점·선·원 지도 (주유소·충전소·약국·버스 노선용)
+Widget naverRich({Key? key, required LatLng center, double zoom = 15, List<DnMark> marks = const [], List<DnLine> lines = const [], List<DnCircle> circles = const [], VoidCallback? onMapTap, DnIdle? onIdle, VoidCallback? onReady, DnMapCtl? ctl}) =>
+    _NRich(key: key, center: center, zoom: zoom, marks: marks, lines: lines, circles: circles, onMapTap: onMapTap, onIdle: onIdle, onReady: onReady, ctl: ctl);
+
+class _NRich extends StatefulWidget {
+  final LatLng center;
+  final double zoom;
+  final List<DnMark> marks;
+  final List<DnLine> lines;
+  final List<DnCircle> circles;
+  final VoidCallback? onMapTap, onReady;
+  final DnIdle? onIdle;
+  final DnMapCtl? ctl;
+  const _NRich({super.key, required this.center, required this.zoom, required this.marks, required this.lines, required this.circles, this.onMapTap, this.onIdle, this.onReady, this.ctl});
+  @override
+  State<_NRich> createState() => _NRichState();
+}
+
+class _NRichState extends State<_NRich> {
+  NaverMapController? c;
+  bool gesture = false;
+  final Map<String, NOverlayImage> _img = {};
+  String _sig = '';
+
+  @override
+  void didUpdateWidget(covariant _NRich old) {
+    super.didUpdateWidget(old);
+    _sync();
+  }
+
+  Future<void> _sync() async {
+    final cc = c;
+    if (cc == null || !mounted) return;
+    final sig = [
+      for (final m in widget.marks) '${m.id}:${m.key}',
+      for (final l in widget.lines) 'L${l.points.length}${l.points.isEmpty ? '' : l.points.first}',
+      for (final o in widget.circles) 'C${o.pos}${o.meters}',
+    ].join(',');
+    if (sig == _sig) return;
+    _sig = sig;
+    final set = <NAddableOverlay>{};
+    for (final l in widget.lines) {
+      if (l.points.length < 2) continue;
+      set.add(NPolylineOverlay(id: 'line${set.length}', coords: [for (final p in l.points) _n(p)], color: l.color, width: l.width));
+    }
+    for (final o in widget.circles) {
+      set.add(NCircleOverlay(id: 'circle${set.length}', center: _n(o.pos), radius: o.meters, color: o.fill, outlineColor: o.line, outlineWidth: 1));
+    }
+    for (final m in widget.marks) {
+      var img = _img[m.key];
+      if (img == null) {
+        if (!mounted) return;
+        img = await NOverlayImage.fromWidget(widget: m.child, size: m.size, context: context);
+        _img[m.key] = img;
+      }
+      final mk = NMarker(id: m.id, position: _n(m.pos), icon: img, size: m.size, anchor: const NPoint(0.5, 1));
+      if (m.z != 0) mk.setGlobalZIndex(200000 + m.z);
+      if (m.onTap != null) mk.setOnTapListener((_) => m.onTap!());
+      set.add(mk);
+    }
+    if (!mounted || sig != _sig) return;
+    await cc.clearOverlays();
+    await cc.addOverlayAll(set);
+  }
+
+  @override
+  Widget build(BuildContext context) => NaverMap(
+        options: NaverMapViewOptions(
+          initialCameraPosition: NCameraPosition(target: _n(widget.center), zoom: widget.zoom),
+          locale: const Locale('ko'),
+          logoClickEnable: false,
+          rotationGesturesEnable: false,
+          tiltGesturesEnable: false,
+          minZoom: 7,
+          maxZoom: 19,
+        ),
+        onMapReady: (ctl) {
+          c = ctl;
+          _attach(widget.ctl, ctl);
           _sig = '';
           _sync();
           widget.onReady?.call();
