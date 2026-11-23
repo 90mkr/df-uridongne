@@ -22,7 +22,7 @@ class TrashFeature extends Feature {
   @override
   int get order => 10;
   @override
-  String get version => '0.1.0';
+  String get version => '0.1.1';
   @override
   bool get ready => true;
   @override
@@ -91,7 +91,7 @@ class _Hero extends StatelessWidget {
                   Row(children: [
                     Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('오늘의 단지 소식${info?.fromApt == true ? ' · 우리 단지 요일' : ''}', style: const TextStyle(fontSize: 11, color: _w)),
+                        Text('오늘의 배출 안내${info?.fromApt == true ? ' · 우리 단지 요일' : ''}', style: const TextStyle(fontSize: 11, color: _w)),
                         const SizedBox(height: 3),
                         MixTitle(bold, thin, size: 17, color: Colors.white),
                         const SizedBox(height: 3),
