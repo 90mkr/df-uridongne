@@ -68,8 +68,10 @@ class _ComplexPickPageState extends State<ComplexPickPage> {
   }
 
   List<Complex> get shown {
-    final t = q.text.replaceAll(' ', '');
-    var l = t.isEmpty ? apts : apts.where((c) => '${c.name}${c.addr}'.replaceAll(' ', '').contains(t)).toList();
+    // 띄어쓰기·앞의 「인천」·뒤의 「아파트」와 상관없이 찾기
+    String norm(String s) => s.replaceAll(' ', '').replaceAll('인천', '').replaceAll('아파트', '').toLowerCase();
+    final t = norm(q.text);
+    var l = t.isEmpty ? apts : apts.where((c) => norm('${c.name}${c.addr}').contains(t)).toList();
     final f = from;
     if (f != null && area != null && meters(f, area!.center) < 20000) {
       l = [...l]..sort((a, b) => meters(f, a.pos).compareTo(meters(f, b.pos)));

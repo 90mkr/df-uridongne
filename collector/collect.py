@@ -143,12 +143,17 @@ APT_SKIP = ("상가", "관리사무소", "부동산", "공인중개", "경로당
 def collect_apts(a):
     """동네의 아파트 단지 목록 (단지 고르기 화면용)."""
     out = {}
-    for d in sweep("k", "아파트", a["bbox"]):
+    docs = []
+    for kw in ("아파트", "주상복합", "오피스텔", "도시형생활주택"):
+        docs += sweep("k", kw, a["bbox"])
+    for d in docs:
         cname = d.get("category_name", "")
         name = d.get("place_name", "").strip()
-        if "아파트" not in cname or any(w in name for w in APT_SKIP):
+        if any(w in name for w in APT_SKIP):
             continue
-        if not cname.endswith("아파트"):  # '…주거시설 > 아파트' 만 (아파트 안의 가게 제외)
+        # '…주거시설 > 아파트/주상복합/오피스텔/도시형생활주택' 만 (그 안의 가게 제외)
+        last = cname.split(">")[-1].strip() if cname else ""
+        if last not in ("아파트", "주상복합", "오피스텔", "도시형생활주택"):
             continue
         try:
             lng, lat = float(d["x"]), float(d["y"])
@@ -156,7 +161,7 @@ def collect_apts(a):
             continue
         pid = str(d.get("id", ""))
         if pid and pid not in out:
-            out[pid] = {"id": pid, "n": name, "a": d.get("road_address_name") or d.get("address_name", ""), "y": round(lat, 6), "x": round(lng, 6)}
+            out[pid] = {"id": pid, "n": name, "k": "" if last == "아파트" else last, "a": d.get("road_address_name") or d.get("address_name", ""), "y": round(lat, 6), "x": round(lng, 6)}
     return sorted(out.values(), key=lambda z: z["n"])
 
 
