@@ -149,7 +149,7 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
   }
 
   // 아래 상세 카드에 가리지 않게 가게를 화면 위쪽으로
-  double get _panelDy => _wide ? 0 : 130;
+  double get _panelDy => (mapView && !_wide) ? 130 : 0; // 휴대폰 지도 보기에서만 아래 상세 카드가 있음
 
   // 지도 핀을 누름: 그 가게 상세를 아래에 띄우고, 태블릿 목록은 그 카드로
   void _pin(Shop s) {
@@ -181,14 +181,8 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
 
   // 카드를 누름: 「이 가게가 우리 단지에서 어디쯤인지」 — 단지와 가게가 함께 보이게 알맞게 확대
   void _focus(Shop s) {
-    setState(() {
-      sel = s.id;
-      if (!_wide) mapView = true;
-    });
-    if (!_wide) {
-      _pending = s; // 지도가 새로 그려진 뒤 onMapReady 에서 맞춤
-      return;
-    }
+    // 목록 보기(휴대폰도 옆에 지도가 있음): 옆 지도를 그 가게로 옮기고 표시만
+    setState(() => sel = s.id);
     _fit(s, animate: true);
   }
 
@@ -196,7 +190,7 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
     try {
       final fit = CameraFit.coordinates(
         coordinates: [from, s.pos],
-        padding: EdgeInsets.fromLTRB(60, 90, 60, _wide ? 60 : 330),
+        padding: mapView ? EdgeInsets.fromLTRB(60, 90, 60, _wide ? 60 : 330) : EdgeInsets.fromLTRB(_wide ? 60 : 22, 60, _wide ? 60 : 22, 60),
         maxZoom: 17.2,
         minZoom: 12,
       ).fit(mapCtl.camera);
@@ -227,7 +221,7 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
             _head(wide),
             _bar(list.length, wide),
             const Divider(height: 1, color: kLine),
-            Expanded(child: mapView ? _fullMap(list, wide) : (wide ? _split(list, box.maxWidth) : _phoneList(list))),
+            Expanded(child: mapView ? _fullMap(list, wide) : _split(list, box.maxWidth, compact: !wide)),
           ]);
         }),
       ),
@@ -434,11 +428,12 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
   }
 
   // ---------- 태블릿·가로 목록 보기: 왼쪽 목록 40% + 오른쪽 지도 60% ----------
-  Widget _split(List<Shop> list, double w) {
-    final b = bounds;
+  // 목록 보기: 왼쪽 카드 목록 + 오른쪽 지도 (휴대폰은 카드 3/5 + 지도 2/5, 대표님 11-24)
+  Widget _split(List<Shop> list, double w, {bool compact = false}) {
+    final b = compact ? null : bounds;
     final inView = b == null ? list : list.where((s) => b.contains(s.pos)).toList();
     final shown = inView.take(120).toList();
-    final leftW = (w * 0.4).clamp(340.0, 460.0);
+    final leftW = compact ? w * 0.6 : (w * 0.4).clamp(340.0, 460.0);
     return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       SizedBox(
         width: leftW,
@@ -446,21 +441,21 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
           color: kBg,
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(18, 12, 18, 2),
-              child: Text(b == null ? '${list.length}곳' : '지도 안 ${inView.length}곳', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: kSub)),
+              padding: EdgeInsets.fromLTRB(compact ? 12 : 18, compact ? 10 : 12, 12, 2),
+              child: Text(b == null ? '${list.length}곳 · 가까운 순' : '지도 안 ${inView.length}곳', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: kSub)),
             ),
             Expanded(
               child: shown.isEmpty
                   ? _empty()
                   : SingleChildScrollView(
                       controller: listCtl,
-                      padding: const EdgeInsets.fromLTRB(14, 8, 14, 30),
+                      padding: EdgeInsets.fromLTRB(compact ? 8 : 14, 8, compact ? 8 : 14, 30),
                       child: Column(children: [
                         for (final s in shown)
                           Padding(
                             key: _keys.putIfAbsent(s.id, () => GlobalKey()),
-                            padding: const EdgeInsets.only(bottom: _gap),
-                            child: ShopCard(shop: s, complex: c, selected: sel == s.id, tapHint: '지도', onTap: () => _focus(s)),
+                            padding: EdgeInsets.only(bottom: compact ? 8 : _gap),
+                            child: ShopCard(shop: s, complex: c, selected: sel == s.id, tapHint: '지도', compact: compact, onTap: () => _focus(s)),
                           ),
                       ]),
                     ),
@@ -469,7 +464,7 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
         ),
       ),
       Container(width: 1, color: kLine),
-      Expanded(child: _map(list.take(_maxPins * 2).toList(), wide: true)),
+      Expanded(child: _map(list.take(_maxPins * 2).toList(), wide: !compact)),
     ]);
   }
 
@@ -579,7 +574,7 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
   Set<String> _labels(List<Shop> pins, Size size, double padBottom) {
     final out = <String>{};
     if (sel != null) out.add(sel!);
-    if (zoom < 15) return out;
+    if (zoom < 15 || size.width < 260) return out; // 좁은 옆 지도는 점만 (고른 가게만 카드)
     final c0 = _center ?? from;
     final scale = 256 * math.pow(2, zoom).toDouble();
     Offset pr(LatLng p) {

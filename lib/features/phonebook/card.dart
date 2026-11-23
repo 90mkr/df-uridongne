@@ -20,7 +20,8 @@ class ShopCard extends StatefulWidget {
   final VoidCallback? onTap; // 카드 몸통 누르기
   final String tapHint; // 몸통 오른쪽 위 작은 글 (예: 「지도」)
   final VoidCallback? onClose; // 지도 위 상세일 때 닫기
-  const ShopCard({super.key, required this.shop, required this.complex, this.selected = false, this.onTap, this.tapHint = '', this.onClose});
+  final bool compact; // 휴대폰 목록(옆에 지도): 작게
+  const ShopCard({super.key, required this.shop, required this.complex, this.selected = false, this.onTap, this.tapHint = '', this.onClose, this.compact = false});
   @override
   State<ShopCard> createState() => _ShopCardState();
 }
@@ -84,6 +85,7 @@ class _ShopCardState extends State<ShopCard> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.compact) return _small(context);
     final rec = recsOf(c.areaId)[s.id];
     final open = s.openAt(DateTime.now());
     final lot = nearestLot(s.pos);
@@ -256,6 +258,111 @@ class _ShopCardState extends State<ShopCard> {
       ),
     );
   }
+
+  // 작은 카드 (휴대폰 목록 3/5 폭): 몸통 누르면 옆 지도로, 추천은 누르면 아래에 펼침
+  Widget _small(BuildContext context) {
+    final rec = recsOf(c.areaId)[s.id];
+    final open = s.openAt(DateTime.now());
+    final n = rec?.n ?? 0;
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: widget.selected ? kBlue : kLine, width: 1),
+        boxShadow: widget.selected ? [BoxShadow(color: kBlue.withValues(alpha: 0.18), blurRadius: 14)] : kShadow,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          InkWell(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+            onTap: widget.onTap,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(9, 9, 8, 0),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(color: const Color(0xFFF3F6FB), borderRadius: BorderRadius.circular(10)),
+                  child: s.photo.startsWith('http')
+                      ? ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.network(s.photo, width: 44, height: 44, fit: BoxFit.cover))
+                      : LineIcon(s.cats.isEmpty ? 'pin' : s.cats.first, size: 32),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(s.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, height: 1.25, letterSpacing: -0.4)),
+                    const SizedBox(height: 1),
+                    Text(s.sub.isNotEmpty ? s.sub : (s.cats.isEmpty ? '' : catOf(s.cats.first).name),
+                        maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10.5, color: kSub, height: 1.3)),
+                    const SizedBox(height: 3),
+                    Row(children: [
+                      if (open != Open.unknown) ...[OpenMark(open), const SizedBox(width: 5)],
+                      Flexible(child: Text(distText(meters(c.pos, s.pos)), maxLines: 1, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700))),
+                      const SizedBox(width: 5),
+                      Text('추천 $n', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: n > 0 ? kBlue : kMute)),
+                    ]),
+                  ]),
+                ),
+                Icon(Icons.place_outlined, size: 16, color: widget.selected ? kBlue : kMute),
+              ]),
+            ),
+          ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 200),
+            alignment: Alignment.topCenter,
+            child: !editing
+                ? const SizedBox(width: double.infinity)
+                : Padding(
+                    padding: const EdgeInsets.fromLTRB(9, 8, 9, 0),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Wrap(spacing: 4, runSpacing: 4, children: [
+                        for (final st in kStickers)
+                          ChoiceChipBox(st.text, on: picked.contains(st.id), onTap: () {
+                            setState(() {
+                              if (picked.contains(st.id)) {
+                                picked.remove(st.id);
+                              } else if (picked.length < 3) {
+                                picked.add(st.id);
+                              }
+                            });
+                          }),
+                      ]),
+                      const SizedBox(height: 6),
+                      Btn(busy ? '저장하는 중' : '추천 남기기', primary: true, h: 32, onTap: busy ? null : _save),
+                    ]),
+                  ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(9, 8, 9, 9),
+            child: Row(children: [
+              Expanded(child: _mini(s.tel.isEmpty ? '번호 없음' : '전화', 'phone', s.tel.isEmpty ? null : () => callTel(s.tel), primary: s.tel.isNotEmpty)),
+              const SizedBox(width: 5),
+              Expanded(child: _mini('길안내', 'route', () => startNav(context, name: s.name, lat: s.lat, lng: s.lng))),
+              const SizedBox(width: 5),
+              Expanded(child: _mini(editing ? '닫기' : '추천', 'owner', editing ? () => setState(() => editing = false) : _startRec, soft: true)),
+            ]),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  Widget _mini(String t, String icon, VoidCallback? f, {bool primary = false, bool soft = false}) => Material(
+        color: primary ? kBlue : (soft ? const Color(0xFFEEF3FF) : Colors.white),
+        borderRadius: BorderRadius.circular(8),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: f,
+          child: Container(
+            height: 30,
+            alignment: Alignment.center,
+            decoration: primary || soft ? null : BoxDecoration(borderRadius: BorderRadius.circular(8), border: Border.all(color: const Color(0xFFD5D9E0))),
+            child: Text(t, maxLines: 1, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: primary ? Colors.white : (soft ? kBlue : kInk))),
+          ),
+        ),
+      );
 
   Widget _link(String t, VoidCallback f) => InkWell(
         onTap: f,
