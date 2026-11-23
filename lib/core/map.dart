@@ -118,7 +118,27 @@ class _IconPin extends StatelessWidget {
   final bool on;
   const _IconPin(this.icon, {this.on = false});
   @override
-  Widget build(BuildContext context) => Column(mainAxisSize: MainAxisSize.min, children: [
+  Widget build(BuildContext context) {
+    // 버스 정류장: 상자 없이 통통한 버스 + 정류장 기둥 (대표님 11-23)
+    if (icon == 'bus') {
+      return Column(mainAxisSize: MainAxisSize.min, children: [
+        AnimatedScale(
+          scale: on ? 1.25 : 1,
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutBack,
+          child: Container(
+            decoration: BoxDecoration(shape: BoxShape.circle, boxShadow: [BoxShadow(color: (on ? kBlue : const Color(0xFF1C3A6E)).withValues(alpha: on ? 0.35 : 0.18), blurRadius: 10)]),
+            child: const LineIcon('bus', size: 30),
+          ),
+        ),
+        Container(width: 3, height: 7, decoration: BoxDecoration(color: on ? kBlue : const Color(0xFF24539F), borderRadius: BorderRadius.circular(2))),
+        Container(width: 10, height: 3, decoration: BoxDecoration(color: (on ? kBlue : const Color(0xFF24539F)).withValues(alpha: 0.35), borderRadius: BorderRadius.circular(2))),
+      ]);
+    }
+    return _box();
+  }
+
+  Widget _box() => Column(mainAxisSize: MainAxisSize.min, children: [
         AnimatedContainer(
           duration: const Duration(milliseconds: 160),
           width: on ? 40 : 34,
