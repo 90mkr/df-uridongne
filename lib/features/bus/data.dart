@@ -83,7 +83,7 @@ final Map<String, (DateTime, List<Map>)> _cache = {};
 
 String get _key => kDataGoKrKey.contains('%') ? kDataGoKrKey : Uri.encodeQueryComponent(kDataGoKrKey);
 
-Future<List<Map>?> _call(String path, Map<String, String> q, {Duration keep = const Duration(seconds: 30)}) async {
+Future<List<Map>?> _call(String path, Map<String, String> q, {Duration keep = const Duration(seconds: 30), int retry = 1}) async {
   if (!hasDataKey) {
     lastErr = BusErr.noKey;
     return null;
@@ -107,6 +107,11 @@ Future<List<Map>?> _call(String path, Map<String, String> q, {Duration keep = co
     final resp = j is Map ? j['response'] : null;
     final head = resp is Map ? resp['header'] : null;
     final code = head is Map ? '${head['resultCode'] ?? ''}' : '';
+    if (code == '99' && retry > 0) {
+      // 동시 접속 한도 — 잠깐 쉬고 한 번 더
+      await Future.delayed(const Duration(milliseconds: 1500));
+      return _call(path, q, keep: keep, retry: retry - 1);
+    }
     if (code.isNotEmpty && code != '00' && code != '0') {
       lastErr = BusErr.fail;
       return null;

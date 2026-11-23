@@ -24,7 +24,7 @@ class BusFeature extends Feature {
   @override
   int get order => 10;
   @override
-  String get version => '0.1.0';
+  String get version => '0.1.1';
   @override
   bool get ready => true;
   @override
