@@ -118,6 +118,8 @@ String _hex(Color c) {
 const kColorPng = {
   'laundry', 'repair', 'ricecake', 'hair', 'acad', 'kids', 'hosp', 'realty', 'food',
   'cafe', 'mart', 'pharm', 'flower', 'hardware', 'bank', 'car', 'pet', 'public',
+  // 기능·생활 도구 (시안 11-23 둘째 그림)
+  'weather', 'trash', 'bus', 'book', 'deals', 'gas', 'charger', 'parking', 'post', 'lotto',
 };
 
 // 기능·도구: 남색 선 + 색 면 (시안 느낌으로 직접 그림)

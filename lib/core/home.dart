@@ -93,12 +93,21 @@ class _HomeTabState extends State<HomeTab> {
             for (final f in at(Slot.wide)) ...[card(f), const SizedBox(height: 12)],
             if (tools.isNotEmpty) ...[
               const Padding(padding: EdgeInsets.fromLTRB(2, 8, 0, 10), child: Text('생활 도구', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: -0.3))),
-              Row(children: [
-                for (var i = 0; i < 4; i++) ...[
-                  if (i > 0) const SizedBox(width: 8),
-                  Expanded(child: i < tools.length ? ToolTile(f: tools[i]) : const SizedBox()),
-                ],
-              ]),
+              // 옆으로 넘기는 줄 (4개 반쯤 보여 더 있다는 걸 알게)
+              LayoutBuilder(builder: (ctx, box) {
+                final w = (box.maxWidth - 8 * 4) / 4.4;
+                final all = [...tools, ...features.where((f) => f.slot != Slot.tool && f.ready && _short.containsKey(f.id))];
+                return SizedBox(
+                  height: 92,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    clipBehavior: Clip.none,
+                    itemCount: all.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (_, i) => SizedBox(width: w, child: ToolTile(f: all[i])),
+                  ),
+                );
+              }),
             ],
             const SizedBox(height: 22),
             const Text('정보는 공공데이터·카카오 장소 정보를 바탕으로 해요. 방문 전 전화로 한 번 확인해 주세요.', style: T.tiny),
@@ -159,6 +168,9 @@ class _Header extends StatelessWidget {
   }
 }
 
+// 생활 도구 줄에 함께 넣는 다른 기능의 짧은 이름
+const _short = {'lotto': '로또', 'weather': '날씨', 'trash': '분리수거', 'bus': '버스', 'pharmacy': '약국', 'phonebook': '전화번호부', 'deals': '실거래가'};
+
 // 생활 도구 작은 칸
 class ToolTile extends StatelessWidget {
   final Feature f;
@@ -173,9 +185,9 @@ class ToolTile extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 13),
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: kLine), boxShadow: kShadow),
             child: Column(children: [
-              LineIcon(f.icon, size: 30),
+              LineIcon(f.icon, size: 34),
               const SizedBox(height: 6),
-              Text(f.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: -0.2)),
+              Text(_short[f.id] ?? f.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: -0.2)),
             ]),
           ),
         ),
