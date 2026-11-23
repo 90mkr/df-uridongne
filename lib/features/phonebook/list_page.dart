@@ -485,11 +485,12 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
             for (final s in ordered)
               Marker(
                 point: s.pos,
-                width: 170,
-                height: 46,
+                width: _pinW,
+                height: _pinH + 8,
                 alignment: Alignment.topCenter,
                 child: _ShopPin(
-                  name: s.name,
+                  shop: s,
+                  rec: recsOf(c.areaId)[s.id]?.n ?? 0,
                   open: s.openAt(now),
                   selected: s.id == sel,
                   label: named.contains(s.id),
@@ -534,7 +535,7 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
   Set<String> _labels(List<Shop> pins, Size size, double padBottom) {
     final out = <String>{};
     if (sel != null) out.add(sel!);
-    if (zoom < 14.5) return out;
+    if (zoom < 15) return out;
     final c0 = _center ?? from;
     final scale = 256 * math.pow(2, zoom).toDouble();
     Offset pr(LatLng p) {
@@ -548,8 +549,8 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
     final placed = <Rect>[];
     Rect rectOf(Shop s) {
       final q = pr(s.pos) - o + Offset(size.width / 2, size.height / 2);
-      final w = math.min(160.0, s.name.length * 11.5 + 30);
-      return Rect.fromLTWH(q.dx - w / 2, q.dy - 34, w, 28);
+      final w = _cardW(s.name);
+      return Rect.fromLTWH(q.dx - w / 2, q.dy - _pinH - 6, w, _pinH);
     }
 
     // 단지 이름표 자리는 비워 둠
@@ -561,7 +562,7 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
     placed.add(Rect.fromLTWH(size.width - 64, 0, 64, 160)); // 지도 단추 자리
     for (final s in pins) {
       if (s.id == sel) continue;
-      if (out.length >= 45) break;
+      if (out.length >= 30) break;
       final r = rectOf(s);
       if (!view.overlaps(r)) continue;
       final rr = r.inflate(3);
@@ -580,13 +581,18 @@ class _Drag extends MaterialScrollBehavior {
   Set<PointerDeviceKind> get dragDevices => {PointerDeviceKind.touch, PointerDeviceKind.mouse, PointerDeviceKind.trackpad, PointerDeviceKind.stylus};
 }
 
-// 가게 핀: 확대하면 상호 말풍선, 멀리서는 점. 영업 중 = 파랑, 곧 마감 = 주황, 그 밖 = 회색
+// 가게 핀 (콕플처럼 작은 카드): 업종 그림 + 상호 + 한 줄(영업 상태·이웃 추천·세부 업종)
+// 자리가 있으면 카드, 겹치면 작은 점. 영업 중 = 파랑, 곧 마감 = 주황, 그 밖 = 회색
+const _pinW = 190.0, _pinH = 46.0;
+double _cardW(String name) => math.min(_pinW, math.max(104.0, name.length * 11.8 + 62));
+
 class _ShopPin extends StatelessWidget {
-  final String name;
+  final Shop shop;
+  final int rec;
   final Open open;
   final bool selected, label;
   final VoidCallback onTap;
-  const _ShopPin({required this.name, required this.open, required this.selected, required this.label, required this.onTap});
+  const _ShopPin({required this.shop, required this.rec, required this.open, required this.selected, required this.label, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -598,33 +604,62 @@ class _ShopPin extends StatelessWidget {
     final Widget body;
     if (!label) {
       body = Container(
-        width: 14,
-        height: 14,
-        margin: const EdgeInsets.only(bottom: 0),
+        width: 13,
+        height: 13,
         decoration: BoxDecoration(color: col, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 1), boxShadow: kShadow),
       );
     } else {
       final bg = selected ? kInk : Colors.white;
       final fg = selected ? Colors.white : kInk;
-      body = Column(mainAxisSize: MainAxisSize.min, children: [
-        Container(
-          constraints: const BoxConstraints(maxWidth: 160),
-          padding: const EdgeInsets.fromLTRB(8, 5, 10, 5),
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: selected ? kInk : const Color(0xFFD3D8E0)),
-            boxShadow: kShadow,
-          ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Container(width: 7, height: 7, decoration: BoxDecoration(color: col, shape: BoxShape.circle)),
-            const SizedBox(width: 5),
-            Flexible(
-              child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: selected ? 12.5 : 11.5, fontWeight: selected ? FontWeight.w700 : FontWeight.w600, color: fg, height: 1.2)),
-            ),
-          ]),
+      final sub = selected ? const Color(0xCCFFFFFF) : kSub;
+      final cat = shop.cats.isEmpty ? 'pin' : shop.cats.first;
+      // 둘째 줄: 영업 상태가 있으면 그것, 없으면 이웃 추천, 그것도 없으면 세부 업종
+      final Widget line2 = open == Open.open || open == Open.closing
+          ? Row(mainAxisSize: MainAxisSize.min, children: [
+              Container(width: 5, height: 5, decoration: BoxDecoration(color: selected ? Colors.white : col, shape: BoxShape.circle)),
+              const SizedBox(width: 3),
+              Text(open == Open.open ? '영업 중' : '곧 마감', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: selected ? Colors.white : col, height: 1.2)),
+              if (rec > 0) Text('  ·  추천 $rec', style: TextStyle(fontSize: 10, color: sub, height: 1.2)),
+            ])
+          : Text(rec > 0 ? '이웃 추천 $rec' : (shop.sub.isNotEmpty ? shop.sub : catOf(cat).name),
+              maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 10, color: sub, height: 1.2, fontWeight: rec > 0 ? FontWeight.w600 : FontWeight.w400));
+      final card = AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        width: _cardW(shop.name),
+        height: _pinH,
+        padding: const EdgeInsets.fromLTRB(5, 5, 9, 5),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: selected ? kInk : const Color(0xFFD5DAE1)),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: selected ? 0.22 : 0.10), blurRadius: selected ? 14 : 8)],
         ),
-        CustomPaint(size: const Size(10, 6), painter: _Tail(bg, selected ? kInk : const Color(0xFFD3D8E0))),
+        child: Row(children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(7),
+            child: Container(
+              width: 36,
+              height: 36,
+              color: selected ? const Color(0x26FFFFFF) : const Color(0xFFF2F4F7),
+              alignment: Alignment.center,
+              child: shop.photo.startsWith('http')
+                  ? Image.network(shop.photo, width: 36, height: 36, fit: BoxFit.cover, errorBuilder: (_, __, ___) => LineIcon(cat, size: 23))
+                  : LineIcon(cat, size: 23, line: selected ? Colors.white : kInk, fill: selected ? const Color(0x40FFFFFF) : kSoft),
+            ),
+          ),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
+              Text(shop.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: fg, height: 1.2, letterSpacing: -0.2)),
+              const SizedBox(height: 2),
+              line2,
+            ]),
+          ),
+        ]),
+      );
+      body = Column(mainAxisSize: MainAxisSize.min, children: [
+        card,
+        CustomPaint(size: const Size(12, 6), painter: _Tail(bg, selected ? kInk : const Color(0xFFD5DAE1))),
       ]);
     }
     return Align(
