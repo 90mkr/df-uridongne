@@ -1,4 +1,6 @@
 // 공용 지도 (본부 방만 고침): 오픈스트리트맵 바탕 + 단지 표시 + 점들. 모든 기능 지도는 이걸 쓴다.
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -114,7 +116,7 @@ class _Tail extends CustomPainter {
   _Tail(this.c);
   @override
   void paint(Canvas canvas, Size s) {
-    final path = Path()
+    final path = ui.Path()
       ..moveTo(0, 0)
       ..lineTo(s.width, 0)
       ..lineTo(s.width / 2, s.height)
