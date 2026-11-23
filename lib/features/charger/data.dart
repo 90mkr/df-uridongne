@@ -4,11 +4,13 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:cloud_firestore/cloud_firestore.dart' show FieldValue;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
 import '../../core/data.dart';
+import '../../core/fb.dart';
 import '../../core/keys.dart';
 
 // ---------------- 충전기 ----------------
@@ -55,6 +57,54 @@ class Charger {
   // 완속: AC완속·DC콤보(완속), 또는 출력이 표시돼 있고 30kW 미만
   bool get fast => !(type == '02' || type == '08' || (kw > 0 && kw < 30));
   Use get use => useOf(stat);
+  Set<String> get plugs => plugsOf(type);
+  // 내 차 단자에 맞는지 (내 단자를 안 골랐으면 모두 맞음)
+  bool fits(Set<String> mine) => mine.isEmpty || plugs.any(mine.contains);
+}
+
+// ---------------- 충전 단자 ----------------
+// 충전기 종류 코드 → 꽂을 수 있는 단자
+const kPlugs = <(String, String, String)>[
+  ('combo', 'DC콤보', '현대·기아·제네시스 등 요즘 전기차 대부분 (급속)'),
+  ('ac', 'AC완속', '거의 모든 전기차 (완속, 5핀)'),
+  ('chademo', 'DC차데모', '옛 레이EV·쏘울EV·리프 등 (급속)'),
+  ('ac3', 'AC3상', '르노 SM3 Z.E.·조에 등 (급속)'),
+  ('nacs', 'NACS', '테슬라 단자'),
+];
+
+String plugName(String id) => kPlugs.where((p) => p.$1 == id).firstOrNull?.$2 ?? id;
+
+Set<String> plugsOf(String t) => switch (t) {
+      '01' => {'chademo'},
+      '02' => {'ac'},
+      '03' => {'chademo', 'ac3'},
+      '04' => {'combo'},
+      '05' => {'chademo', 'combo'},
+      '06' => {'chademo', 'ac3', 'combo'},
+      '07' => {'ac3'},
+      '08' => {'combo'},
+      '09' => {'nacs'},
+      '10' => {'combo', 'nacs'},
+      _ => const {},
+    };
+
+// 내 차 단자 (휴대폰에 기억, 비어 있으면 모두 보기)
+final myPlugs = ValueNotifier<Set<String>>({});
+bool _plugsLoaded = false;
+
+// 처음이면 true (한 번 물어봄)
+Future<bool> loadMyPlugs() async {
+  if (_plugsLoaded) return false;
+  _plugsLoaded = true;
+  final v = await prefGet('charger.plugs');
+  if (v == null) return true;
+  myPlugs.value = {for (final x in v.split(',')) if (x.isNotEmpty) x};
+  return false;
+}
+
+Future<void> saveMyPlugs(Set<String> p) async {
+  myPlugs.value = {...p};
+  await prefSet('charger.plugs', p.join(','));
 }
 
 // ---------------- 충전소 ----------------
@@ -85,8 +135,13 @@ class Station {
   bool get hasSlow => chargers.any((c) => !c.fast);
   int get maxKw => chargers.fold(0, (m, c) => c.kw > m ? c.kw : m);
 
+  // 고른 조건(급속만·내 단자)에 맞는 충전기
+  List<Charger> pick({bool fastOnly = false, Set<String> plugs = const {}}) =>
+      chargers.where((c) => (!fastOnly || c.fast) && c.fits(plugs)).toList();
   List<Charger> of(bool? fast) => fast == null ? chargers : chargers.where((c) => c.fast == fast).toList();
   int freeOf(bool? fast) => of(fast).where((c) => c.use == Use.free).length;
+
+  bool get isPublicPrice => publicPriceFor(this);
 
   static Station? fromJson(dynamic j) {
     if (j is! Map || j['y'] == null || j['x'] == null) return null;
@@ -147,7 +202,8 @@ final Map<String, DateTime> _asked = {};
 
 List _items(dynamic j) {
   dynamic x = j;
-  if (x is Map && x['response'] is Map) x = (x['response'] as Map)['body'];
+  if (x is Map && x['response'] is Map) x = x['response'];
+  if (x is Map && x['body'] is Map) x = x['body'];
   if (x is Map) x = x['items'];
   if (x is Map) x = x['item'];
   if (x is List) return x;
@@ -201,4 +257,122 @@ String agoText(String upd) {
   if (m < 60 * 24) return '${m ~/ 60}시간 전';
   if (m < 60 * 24 * 30) return '${m ~/ (60 * 24)}일 전';
   return '오래전';
+}
+
+// ---------------- 요금 ----------------
+// 공공(기후에너지환경부) 충전요금 5단계 (2026-08-01 시행) — web/data/charger/prices.json 으로 바꿀 수 있게
+class PriceBook {
+  final List<(int, double)> tiers; // (이 출력 미만, 원/kWh) … 마지막은 그 이상
+  final List<String> owners; // 이 운영기관 이름이 들어가면 공공요금
+  final List<String> seoulOwners; // 서울(시도 11)에서만 공공요금
+  final Map<String, (double, double)> ops; // 민간 운영기관 이름 → (급속, 완속) 원/kWh
+  final String since, source;
+  const PriceBook(this.tiers, this.owners, this.seoulOwners, this.ops, this.since, this.source);
+}
+
+const _builtinPrices = PriceBook(
+  [(30, 295.0), (50, 307.2), (100, 325.6), (200, 348.4), (100000, 393.1)],
+  ['환경부', '기후에너지환경부', '환경공단'],
+  ['한국전력', '한전', '서울시', '서울특별시'],
+  {},
+  '2026-08-01',
+  '기후에너지환경부 공공충전요금',
+);
+
+PriceBook prices = _builtinPrices;
+bool _pricesLoaded = false;
+
+Future<void> loadPrices() async {
+  if (_pricesLoaded) return;
+  _pricesLoaded = true;
+  final j = await getJson('${dataBase}charger/prices.json');
+  if (j is! Map) return;
+  try {
+    final tiers = [
+      for (final t in (j['tiers'] as List)) ((t[0] as num).toInt(), (t[1] as num).toDouble()),
+    ];
+    final ops = <String, (double, double)>{
+      for (final e in ((j['ops'] as Map?) ?? const {}).entries)
+        if (e.value is List && (e.value as List).length >= 2) '${e.key}': (((e.value as List)[0] as num).toDouble(), ((e.value as List)[1] as num).toDouble()),
+    };
+    if (tiers.isEmpty) return;
+    prices = PriceBook(tiers, [for (final x in (j['owners'] as List? ?? const [])) '$x'], [for (final x in (j['seoulOwners'] as List? ?? const [])) '$x'],
+        ops, '${j['since'] ?? ''}', '${j['source'] ?? ''}');
+  } catch (_) {}
+}
+
+bool publicPriceFor(Station s) =>
+    prices.owners.any(s.owner.contains) || (s.zcode == '11' && prices.seoulOwners.any(s.owner.contains));
+
+// 충전기 하나의 원/kWh (모르면 null)
+double? priceOf(Station s, Charger c) {
+  if (publicPriceFor(s)) {
+    if (c.kw <= 0) return null;
+    for (final t in prices.tiers) {
+      if (c.kw < t.$1) return t.$2;
+    }
+    return prices.tiers.last.$2;
+  }
+  for (final e in prices.ops.entries) {
+    if (s.owner.contains(e.key)) return c.fast ? e.value.$1 : e.value.$2;
+  }
+  return null;
+}
+
+// 충전소에서 고른 충전기 중 가장 싼 값
+double? cheapest(Station s, List<Charger> list) {
+  double? best;
+  for (final c in list) {
+    final p = priceOf(s, c);
+    if (p != null && (best == null || p < best)) best = p;
+  }
+  return best;
+}
+
+String wonText(double p) => p == p.roundToDouble() ? '${p.toInt()}원' : '${p.toStringAsFixed(1)}원';
+
+// ---------------- 고장 제보 (파이어베이스 dn_charger_reports) ----------------
+// 문서 번호 = 충전소_충전기_사람_날짜 → 같은 사람은 한 충전기에 하루 한 번만 (규칙도 덮어쓰기 막음)
+const kReportKinds = ['충전이 안 돼요', '화면·결제 고장', '케이블·커넥터 파손', '자리에 일반차', '기타'];
+
+class Report {
+  final String cid, kind, text;
+  final DateTime at;
+  const Report(this.cid, this.kind, this.text, this.at);
+}
+
+String _day(DateTime t) => '${t.year}${'${t.month}'.padLeft(2, '0')}${'${t.day}'.padLeft(2, '0')}';
+
+Future<List<Report>> reportsOf(Station s) async {
+  if (!await fbReady()) return const [];
+  try {
+    final q = await db.collection('dn_charger_reports').where('sid', isEqualTo: s.id).limit(40).get();
+    final since = DateTime.now().subtract(const Duration(days: 7));
+    final list = <Report>[
+      for (final d in q.docs)
+        if (d.data()['at'] != null)
+          Report('${d.data()['cid'] ?? ''}', '${d.data()['kind'] ?? ''}', '${d.data()['text'] ?? ''}', (d.data()['at'] as dynamic).toDate() as DateTime),
+    ]..retainWhere((r) => r.at.isAfter(since));
+    list.sort((a, b) => b.at.compareTo(a.at));
+    return list;
+  } catch (_) {
+    return const [];
+  }
+}
+
+// null 이면 잘 보냄, 아니면 안내 말
+Future<String?> sendReport(Station s, Charger c, String kind, String text) async {
+  if (!await fbReady()) return '지금은 보낼 수 없어요';
+  final u = me;
+  if (u == null) return 'login';
+  final day = _day(DateTime.now());
+  final id = '${s.id}_${c.id}_${u.uid}_$day';
+  try {
+    final ref = db.collection('dn_charger_reports').doc(id);
+    if ((await ref.get()).exists) return '이 충전기는 오늘 이미 알려 주셨어요';
+    await ref.set({'sid': s.id, 'cid': c.id, 'uid': u.uid, 'day': day, 'kind': kind, 'text': text, 'at': FieldValue.serverTimestamp()});
+    return null;
+  } catch (_) {
+    return '보내지 못했어요. 잠시 뒤에 다시 해 주세요';
+  }
 }

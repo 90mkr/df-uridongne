@@ -65,10 +65,24 @@ def get(params):
             time.sleep(3 * (tryn + 1))
 
 
-def items(j):
+def body(j):
+    """응답 모양이 여러 가지라 모두 받는다: {response:{header,body}} · {header,body} · {items,totalCount}"""
     x = j
     if isinstance(x, dict) and isinstance(x.get("response"), dict):
-        x = x["response"].get("body", {})
+        x = x["response"]
+    if isinstance(x, dict) and isinstance(x.get("body"), dict):
+        x = x["body"]
+    return x
+
+
+def head_msg(j):
+    x = j.get("response", j) if isinstance(j, dict) else {}
+    h = x.get("header", x) if isinstance(x, dict) else {}
+    return f"{h.get('resultCode', '')} {h.get('resultMsg', '')}".strip() if isinstance(h, dict) else ""
+
+
+def items(j):
+    x = body(j)
     if isinstance(x, dict):
         x = x.get("items")
     if isinstance(x, dict):
@@ -81,9 +95,7 @@ def items(j):
 
 
 def total(j):
-    x = j
-    if isinstance(x, dict) and isinstance(x.get("response"), dict):
-        x = x["response"].get("body", {})
+    x = body(j)
     try:
         return int(x.get("totalCount", 0))
     except Exception:
@@ -99,6 +111,8 @@ def fetch_sido(zcode):
         got = items(j)
         rows += got
         t = total(j)
+        if not got:
+            print("  응답:", head_msg(j) or str(j)[:200])
         print(f"  시도 {zcode} {page}쪽: {len(got)}줄 (모두 {t})")
         if not got or len(rows) >= t or page >= 40:
             break
