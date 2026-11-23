@@ -79,3 +79,9 @@
 ## 6. 버전
 
 `0.<큰 변화>.<작은 변화>` — 올릴 때마다 작은 수 하나 올림. `feature.dart` 의 `version` 과 작업판의 `version` 을 같게.
+
+## 공공데이터 부르기 (11-23 본부)
+- apis.data.go.kr 는 **반드시 `lib/core/dg.dart` 의 `dgGet(url)` (또는 `dgUrl(url)`)** 로 부른다. 주소에 serviceKey 를 넣지 않는다.
+- 다리(클라우드플레어 dongne-dari)가 열쇠를 붙이고 30초 묶어 둔다. 잘 안 바뀌는 목록은 `cache: 43200`.
+- 「열쇠 있나」 확인은 `hasDataKey` 만 쓴다 (`kDataGoKrKey.isEmpty` 직접 확인 금지 — 곧 앱에서 열쇠를 뺌).
+- 모든 기능이 옮기면 본부가 앱 제작에서 DATA_GO_KR_KEY 를 뺀다.
