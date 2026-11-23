@@ -1,6 +1,6 @@
 // 지금 문 연 약국 (이 폴더는 지금 문 연 약국 담당 방만 고침)
-// 지금은 본부가 만든 빈 틀입니다. 담당 방이 이 폴더 안에서 채웁니다.
-// 할 일: 요일별 운영시간 기준으로 지금 문 연 약국·병원, 야간 소아과, 응급실.
+// 단지 홈 반쪽 카드: 가장 가까운 지금 연 약국 · 몇 시까지 · 전화 버튼
+// 상세 화면: 지금 영업 중 / 밤 늦게까지 / 일요일·공휴일, 오늘 영업시간 막대, 야간 소아과, 응급실, 상비약 편의점, 지도
 import 'package:flutter/material.dart';
 
 import '../../core/data.dart';
@@ -8,6 +8,8 @@ import '../../core/feature.dart';
 import '../../core/icons.dart';
 import '../../core/theme.dart';
 import '../../core/ui.dart';
+import 'data.dart';
+import 'page.dart';
 
 class PharmacyFeature extends Feature {
   @override
@@ -21,27 +23,141 @@ class PharmacyFeature extends Feature {
   @override
   int get order => 20;
   @override
-  String get version => '0.0.1';
+  String get version => '0.1.0';
+  @override
+  bool get ready => true;
   @override
   Color get tint => kSoftGreen;
 
   @override
-  Widget? homeCard(BuildContext context, Complex c) => HomeCardBox(icon: icon, title: name, onTap: () => openFeature(context, this), child: const ComingSoon());
+  Widget? homeCard(BuildContext context, Complex c) => _HomeCard(feature: this, complex: c);
 
   @override
-  Widget page(BuildContext context, Complex c) => DetailPage(
-        title: name,
-        icon: icon,
-        body: const Center(
-          child: Padding(
-            padding: EdgeInsets.all(30),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              LineIcon('pharm', size: 54),
-              SizedBox(height: 14),
-              Text('준비하고 있어요', style: T.h2),
-              SizedBox(height: 6),
-              Text('요일별 운영시간 기준으로 지금 문 연 약국·병원, 야간 소아과, 응급실.', textAlign: TextAlign.center, style: T.small),
-            ]),
+  Widget page(BuildContext context, Complex c) => PharmacyPage(complex: c);
+
+  @override
+  Future<List<MapPoint>> mapPoints(Complex c) async {
+    final now = DateTime.now();
+    final list = await placesNear(c.pos, r: 3000);
+    return [
+      for (final p in list.where((p) => p.isPharm))
+        if (p.stateAt(now) case final s when s.open)
+          MapPoint(
+            id: 'pharmacy.${p.id}',
+            name: p.name,
+            sub: '${distText(meters(c.pos, p.pos))} · ${s.untilText}',
+            pos: p.pos,
+            onTap: (ctx) => showPlace(ctx, p, c),
+          ),
+    ];
+  }
+}
+
+class _HomeCard extends StatefulWidget {
+  final PharmacyFeature feature;
+  final Complex complex;
+  const _HomeCard({required this.feature, required this.complex});
+  @override
+  State<_HomeCard> createState() => _HomeCardState();
+}
+
+class _HomeCardState extends State<_HomeCard> {
+  late Future<List<Place>> _f;
+
+  @override
+  void initState() {
+    super.initState();
+    _f = placesNear(widget.complex.pos, r: 3000);
+  }
+
+  @override
+  void didUpdateWidget(covariant _HomeCard old) {
+    super.didUpdateWidget(old);
+    if (old.complex.id != widget.complex.id) _f = placesNear(widget.complex.pos, r: 3000);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final f = widget.feature, c = widget.complex;
+    return FutureBuilder<List<Place>>(
+      future: _f,
+      builder: (context, snap) {
+        Widget body;
+        String? foot;
+        Place? callTo;
+        if (snap.connectionState != ConnectionState.done) {
+          body = const ComingSoon('찾고 있어요…');
+        } else {
+          final now = DateTime.now();
+          final pharm = (snap.data ?? const <Place>[]).where((p) => p.isPharm).toList();
+          if (pharm.isEmpty) {
+            body = const ComingSoon('약국 자료를 모으고 있어요');
+          } else {
+            final open = [for (final p in pharm) if (p.stateAt(now).open) p];
+            if (open.isNotEmpty) {
+              final p = open.first, s = p.stateAt(now);
+              callTo = p;
+              foot = '3km 안 ${open.length}곳 영업 중';
+              body = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: -0.4, height: 1.25)),
+                const SizedBox(height: 3),
+                Text.rich(
+                  TextSpan(children: [
+                    TextSpan(text: '${distText(meters(c.pos, p.pos))} · '),
+                    s.closingSoon
+                        ? TextSpan(text: '${s.minsLeft}분 뒤 닫음', style: const TextStyle(color: kWarn, fontWeight: FontWeight.w700))
+                        : TextSpan(text: s.untilText),
+                  ]),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: T.small,
+                ),
+              ]);
+            } else {
+              final p = pharm.first, s = p.stateAt(now);
+              foot = '가까운 곳: ${p.name}';
+              body = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('지금 연 곳이 없어요', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, height: 1.25)),
+                const SizedBox(height: 3),
+                Text(s.next.isEmpty ? '응급실·편의점 보기' : '${s.next}에 열어요', maxLines: 1, overflow: TextOverflow.ellipsis, style: T.small),
+              ]);
+            }
+          }
+        }
+        return HomeCardBox(
+          icon: f.icon,
+          title: '문 연 약국',
+          foot: foot,
+          onTap: () => openFeature(context, f),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            Expanded(child: body),
+            if (callTo != null && callTo.tel.isNotEmpty) ...[
+              const SizedBox(width: 6),
+              _CallMini(tel: callTo.tel, label: '${callTo.name} 전화'),
+            ],
+          ]),
+        );
+      },
+    );
+  }
+}
+
+class _CallMini extends StatelessWidget {
+  final String tel, label;
+  const _CallMini({required this.tel, required this.label});
+  @override
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        label: label,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(9),
+          onTap: () => callTel(tel),
+          child: Container(
+            width: 34,
+            height: 34,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(9), border: Border.all(color: kLine)),
+            child: const LineIcon('phone', size: 20, fill: kSoft),
           ),
         ),
       );
