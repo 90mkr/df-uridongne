@@ -19,3 +19,8 @@
 수동 실행이 기다리는 동안 다른 방이 올리면 대기 중인 실행이 취소됩니다.
 `workflow_dispatch` 입력에 「기능 자료만」(예: `only_features: true` → collect.py 건너뜀)을 두면
 기능 방들이 자료를 금방 확인할 수 있습니다.
+
+## 추가 (21:03) — 급함
+대표님이 수동 실행(#21)을 눌렀는데 19초 만에 다른 방 올리기(#22)에 밀려 취소됐습니다.
+`build.yml` 의 `concurrency: group: pages` 가 워크플로 전체에 걸려 있어서, 대기 중인 수동 실행이 뒤에 온 push 실행으로 바뀌기 때문입니다.
+`collect` 작업은 push 때 돌지도 않으니, concurrency 를 `web`·`deploy` 작업에만 걸고 `collect` 는 따로(예: `group: collect`) 두면 수동 실행이 취소되지 않습니다.
