@@ -1,0 +1,26 @@
+name: 코드 점검
+
+# check 갈래에 올리면 화면 코드만 맞춰 본다 (배포 안 함)
+on:
+  push:
+    branches: [ check ]
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 저장소 받기
+        uses: actions/checkout@v4
+
+      - name: 플러터 준비
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: 코드 검사
+        run: |
+          flutter create --org kr.designfeel --project-name dongne --platforms android,web . > /dev/null
+          flutter pub get > /dev/null
+          flutter analyze --no-fatal-infos --no-fatal-warnings lib

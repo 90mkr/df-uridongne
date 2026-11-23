@@ -1,0 +1,40 @@
+name: dongne
+description: 우리동네 – 동네 생활정보 (디자인필)
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.6.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_map: ^8.2.0
+  latlong2: ">=0.9.1 <0.11.0"
+  http: ^1.2.0
+  url_launcher: ^6.3.0
+  shared_preferences: ^2.3.0
+  geolocator: ">=13.0.0 <16.0.0"
+  flutter_svg: ^2.0.10
+  firebase_core: any
+  cloud_firestore: any
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+  fonts:
+    - family: Pretendard
+      fonts:
+        - asset: assets/fonts/Pretendard-Light.otf
+          weight: 300
+        - asset: assets/fonts/Pretendard-Regular.otf
+          weight: 400
+        - asset: assets/fonts/Pretendard-Medium.otf
+          weight: 500
+        - asset: assets/fonts/Pretendard-SemiBold.otf
+          weight: 600
+        - asset: assets/fonts/Pretendard-Bold.otf
+          weight: 700

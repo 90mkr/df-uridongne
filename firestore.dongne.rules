@@ -1,0 +1,21 @@
+    // ---- 우리동네 (df-uridongne) ----
+    // 사장님 등록·정보 수정 신고: 누구나 보내기만 (로그인 없이) · 보기·처리는 관리자만
+    match /dn_reqs/{id} {
+      allow create: if request.resource.data.keys().hasOnly(['app', 'kind', 'sid', 'sname', 'area', 'items', 'text', 'contact', 'cat', 'tel', 'addr', 'hours', 'owner', 'st', 'at'])
+        && request.resource.data.app == 'dongne'
+        && request.resource.data.kind in ['fix', 'owner']
+        && request.resource.data.st == 'new'
+        && request.resource.data.at == request.time
+        && request.resource.data.sname is string && request.resource.data.sname.size() >= 1 && request.resource.data.sname.size() <= 60
+        && request.resource.data.sid is string && request.resource.data.sid.size() <= 40
+        && request.resource.data.area is string && request.resource.data.area.size() <= 40
+        && request.resource.data.contact is string && request.resource.data.contact.size() <= 60
+        && (!('text' in request.resource.data) || (request.resource.data.text is string && request.resource.data.text.size() <= 300))
+        && (!('items' in request.resource.data) || (request.resource.data.items is list && request.resource.data.items.size() <= 6))
+        && (!('tel' in request.resource.data) || (request.resource.data.tel is string && request.resource.data.tel.size() <= 30))
+        && (!('addr' in request.resource.data) || (request.resource.data.addr is string && request.resource.data.addr.size() <= 100))
+        && (!('hours' in request.resource.data) || (request.resource.data.hours is string && request.resource.data.hours.size() <= 100))
+        && (!('owner' in request.resource.data) || (request.resource.data.owner is string && request.resource.data.owner.size() <= 30))
+        && (!('cat' in request.resource.data) || (request.resource.data.cat is string && request.resource.data.cat.size() <= 20));
+      allow read, update, delete: if isAdmin();
+    }

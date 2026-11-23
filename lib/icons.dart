@@ -1,0 +1,77 @@
+part of 'main.dart';
+
+// ---------------- 아이콘: 가는 선 + 옅은 면 (원 안에 넣지 않음) ----------------
+// 48×48 칸에 그린다. 선 색(L)·면 색(F)은 그릴 때 바꿔 끼운다.
+
+const _svgHead = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" stroke="L" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">';
+
+const Map<String, String> kIconBody = {
+  // 음식점: 그릇과 김
+  'food': '<path d="M8 25h32c0 8-7 14-16 14S8 33 8 25z" fill="F"/><path d="M8 25h32"/><path d="M18 39h12"/><path d="M18 19c-2-2 2-4 0-7M24 19c-2-2 2-4 0-7M30 19c-2-2 2-4 0-7"/>',
+  // 카페: 잔과 받침
+  'cafe': '<path d="M11 17h22v10c0 6-5 10-11 10s-11-4-11-10z" fill="F"/><path d="M33 20h3a4 4 0 0 1 0 8h-3"/><path d="M8 41h28"/><path d="M18 12c-1-1 1-3 0-5M24 12c-1-1 1-3 0-5"/>',
+  // 마트·편의점: 장바구니 수레
+  'mart': '<path d="M6 9h5l4 21h22l4-15H13" /><path d="M14 15h27l-4 15H15z" fill="F" stroke="none"/><circle cx="18" cy="37" r="2.6"/><circle cx="33" cy="37" r="2.6"/>',
+  // 병원: 건물과 십자
+  'hosp': '<rect x="9" y="12" width="30" height="28" rx="2" fill="F"/><path d="M24 18v10M19 23h10"/><path d="M20 40v-6h8v6"/><path d="M17 12V8h14v4"/>',
+  // 약국: 알약
+  'pharm': '<rect x="8" y="18" width="32" height="13" rx="6.5" transform="rotate(-35 24 24.5)" fill="F"/><path d="M19 15l10 15" /><rect x="8" y="18" width="32" height="13" rx="6.5" transform="rotate(-35 24 24.5)"/>',
+  // 어린이집·유치원: 쌓기 나무
+  'kids': '<rect x="9" y="27" width="13" height="13" rx="1.5" fill="F"/><rect x="26" y="27" width="13" height="13" rx="1.5"/><path d="M24 9l7.5 13h-15z" fill="F"/><path d="M24 9l7.5 13h-15z"/>',
+  // 학원: 펼친 책
+  'acad': '<path d="M24 14c-4-3-10-4-16-3v25c6-1 12 0 16 3" fill="F"/><path d="M24 14c4-3 10-4 16-3v25c-6-1-12 0-16 3z"/><path d="M24 14c-4-3-10-4-16-3v25c6-1 12 0 16 3z"/>',
+  // 세탁소: 세탁기
+  'laundry': '<rect x="10" y="7" width="28" height="34" rx="3"/><circle cx="24" cy="26" r="8.5" fill="F"/><circle cx="24" cy="26" r="8.5"/><path d="M19 27c2 2 5 2 7 0"/><path d="M15 13h5M30 13h2"/>',
+  // 떡집·반찬: 접시 위 떡
+  'ricecake': '<path d="M7 33h34" /><path d="M10 33c1 4 6 6 14 6s13-2 14-6"/><rect x="12" y="23" width="11" height="9" rx="3" fill="F"/><rect x="25" y="23" width="11" height="9" rx="3"/><rect x="18" y="14" width="12" height="9" rx="3" fill="F"/>',
+  // 미용실: 가위
+  'hair': '<circle cx="14" cy="34" r="5" fill="F"/><circle cx="14" cy="34" r="5"/><circle cx="34" cy="34" r="5"/><path d="M17.5 30.5L36 9M30.5 30.5L12 9"/>',
+  // 꽃집: 꽃
+  'flower': '<circle cx="24" cy="17" r="4"/><path d="M24 13c-3-6 3-6 0 0M28 17c6-3 6 3 0 0M24 21c3 6-3 6 0 0M20 17c-6 3-6-3 0 0" fill="F"/><path d="M24 21v19"/><path d="M24 33c-6 0-9-4-9-7 4 0 9 3 9 7zM24 30c5 0 8-3 8-6-4 0-8 2-8 6z" fill="F"/>',
+  // 수선·열쇠: 열쇠
+  'repair': '<circle cx="15" cy="20" r="7" fill="F"/><circle cx="15" cy="20" r="7"/><circle cx="15" cy="20" r="2"/><path d="M21 24l17 13M31 31.5l3-4M35 34.5l3-4"/>',
+  // 철물·인테리어: 망치
+  'hardware': '<path d="M12 12l9-4 6 6-4 3z" fill="F"/><path d="M12 12l9-4 6 6-4 3-8-2z"/><path d="M22 16l18 22-3 3-19-21"/>',
+  // 부동산: 집
+  'realty': '<path d="M8 22L24 9l16 13" /><path d="M12 19v21h24V19" fill="F"/><path d="M12 19v21h24V19"/><path d="M21 40V29h6v11"/>',
+  // 은행: 기둥 건물
+  'bank': '<path d="M7 18L24 9l17 9z" fill="F"/><path d="M7 18L24 9l17 9z"/><path d="M11 22v13M19 22v13M29 22v13M37 22v13"/><path d="M7 39h34"/>',
+  // 주유소·세차·정비: 자동차
+  'car': '<path d="M9 27l3-9c1-2 2-3 4-3h16c2 0 3 1 4 3l3 9" /><rect x="7" y="27" width="34" height="9" rx="3" fill="F"/><rect x="7" y="27" width="34" height="9" rx="3"/><path d="M11 36v3h5v-3M32 36v3h5v-3"/><circle cx="14" cy="31.5" r="1.4"/><circle cx="34" cy="31.5" r="1.4"/>',
+  // 동물병원·애견: 발자국
+  'pet': '<ellipse cx="24" cy="32" rx="8" ry="6.5" fill="F"/><ellipse cx="24" cy="32" rx="8" ry="6.5"/><ellipse cx="13" cy="22" rx="3" ry="4"/><ellipse cx="20" cy="15" rx="3" ry="4"/><ellipse cx="28" cy="15" rx="3" ry="4"/><ellipse cx="35" cy="22" rx="3" ry="4"/>',
+  // 주민센터·공공기관: 깃발 건물
+  'public': '<rect x="10" y="22" width="28" height="18" rx="1.5" fill="F"/><rect x="10" y="22" width="28" height="18" rx="1.5"/><path d="M24 22V8"/><path d="M24 8h9l-2 3 2 3h-9" /><path d="M21 40v-8h6v8"/>',
+  // ---- 생활 도구 ----
+  'post': '<rect x="7" y="12" width="34" height="24" rx="2.5" fill="F"/><rect x="7" y="12" width="34" height="24" rx="2.5"/><path d="M8 14l16 12 16-12"/>',
+  'night': '<path d="M30 9a13 13 0 1 0 9 22A15 15 0 0 1 30 9z" fill="F"/><path d="M30 9a13 13 0 1 0 9 22A15 15 0 0 1 30 9z"/><path d="M20 21v8M16 25h8"/>',
+  'kokple': '<path d="M24 41s-12-11-12-20a12 12 0 0 1 24 0c0 9-12 20-12 20z" fill="F"/><path d="M24 41s-12-11-12-20a12 12 0 0 1 24 0c0 9-12 20-12 20z"/><path d="M24 26c-4-3-6-5-6-7a3 3 0 0 1 6-1 3 3 0 0 1 6 1c0 2-2 4-6 7z"/>',
+  'owner': '<path d="M8 18l3-9h26l3 9" /><path d="M8 18c0 3 2.5 5 5.3 5s5.3-2 5.3-5c0 3 2.5 5 5.4 5s5.3-2 5.3-5c0 3 2.5 5 5.4 5S40 21 40 18z" fill="F"/><path d="M8 18c0 3 2.5 5 5.3 5s5.3-2 5.3-5c0 3 2.5 5 5.4 5s5.3-2 5.3-5c0 3 2.5 5 5.4 5S40 21 40 18z"/><path d="M11 23v17h26V23"/><path d="M20 40v-9h8v9"/>',
+  'pin': '<path d="M24 41s-11-10-11-19a11 11 0 0 1 22 0c0 9-11 19-11 19z" fill="F"/><path d="M24 41s-11-10-11-19a11 11 0 0 1 22 0c0 9-11 19-11 19z"/><circle cx="24" cy="22" r="4"/>',
+  'search': '<circle cx="21" cy="21" r="12"/><path d="M30 30l10 10"/>',
+  'phone': '<path d="M15 8l5 9-3.5 3c2 4.5 6 8.5 10.5 10.5l3-3.5 9 5-2 6c-14 1-27-12-26-26z" fill="F"/><path d="M15 8l5 9-3.5 3c2 4.5 6 8.5 10.5 10.5l3-3.5 9 5-2 6c-14 1-27-12-26-26z"/>',
+  'route': '<circle cx="12" cy="36" r="4"/><circle cx="36" cy="12" r="4" fill="F"/><circle cx="36" cy="12" r="4"/><path d="M15 33l6-6c3-3 2-7 6-9l5-3"/>',
+  'map': '<path d="M7 12l11-4 12 4 11-4v28l-11 4-12-4-11 4z" fill="F"/><path d="M7 12l11-4 12 4 11-4v28l-11 4-12-4-11 4z"/><path d="M18 8v28M30 12v28"/>',
+  'list': '<path d="M16 13h24M16 24h24M16 35h24"/><circle cx="9" cy="13" r="1.6"/><circle cx="9" cy="24" r="1.6"/><circle cx="9" cy="35" r="1.6"/>',
+  'loc': '<circle cx="24" cy="24" r="12"/><circle cx="24" cy="24" r="4" fill="F"/><path d="M24 6v6M24 36v6M6 24h6M36 24h6"/>',
+};
+
+class LineIcon extends StatelessWidget {
+  final String name;
+  final double size;
+  final Color line;
+  final Color fill;
+  const LineIcon(this.name, {super.key, this.size = 28, this.line = kInk, this.fill = kSoft});
+
+  @override
+  Widget build(BuildContext context) {
+    final body = kIconBody[name] ?? kIconBody['pin']!;
+    final svg = ('$_svgHead$body</svg>').replaceAll('"L"', '"${_hex(line)}"').replaceAll('"F"', '"${_hex(fill)}"');
+    return SvgPicture.string(svg, width: size, height: size);
+  }
+}
+
+String _hex(Color c) {
+  final v = c.toARGB32() & 0xFFFFFF;
+  return '#${v.toRadixString(16).padLeft(6, '0')}';
+}

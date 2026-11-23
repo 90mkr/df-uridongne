@@ -1,0 +1,190 @@
+name: 앱 제작
+
+on:
+  push:
+    branches: [ main ]
+  schedule:
+    # 매주 월요일 새벽 3시 13분(한국 시각)에 업체 자료를 새로 모은다 (생활 업체는 자주 바뀌지 않음)
+    - cron: '13 18 * * 0'
+  workflow_dispatch:
+    inputs:
+      areas:
+        description: '이번에 모을 동네 id (쉼표로, 비우면 모으기가 켜진 동네 전부)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 저장소 받기
+        uses: actions/checkout@v4
+
+      - name: 업체 자료 모으기
+        timeout-minutes: 240
+        env:
+          KAKAO_REST_KEY: ${{ secrets.KAKAO_REST_KEY }}
+          AREAS: ${{ inputs.areas }}
+        run: python3 -u collector/collect.py
+
+      - name: 모은 자료 저장
+        if: ${{ !cancelled() }}
+        run: |
+          git config user.name "df-uridongne"
+          git config user.email "dfmail@naver.com"
+          git add -f web/data/*.json
+          git commit -m "업체 자료 갱신" || exit 0
+          git pull --rebase origin main
+          git push
+
+  # 크롬 미리보기 (휴대폰 없이 화면 확인용)
+  web:
+    needs: collect
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: 저장소 받기
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: 지난번 화면 꺼내기
+        id: webcache
+        uses: actions/cache@v4
+        with:
+          path: build/web
+          key: web-${{ hashFiles('lib/**', 'pubspec.yaml', 'assets/**', 'tool/**', 'web/*.js', 'web/*.html', '.github/workflows/build.yml') }}
+
+      - name: 플러터 준비
+        if: steps.webcache.outputs.cache-hit != 'true'
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: 크롬 미리보기 만들기
+        if: steps.webcache.outputs.cache-hit != 'true'
+        run: |
+          flutter create --org kr.designfeel --project-name dongne --platforms web .
+          sed -i 's#<title>.*</title>#<title>우리동네 – 동네 생활정보</title>#' web/index.html
+          flutter pub get
+          flutter build web --release --base-href /df-uridongne/
+
+      - name: 최신 업체 자료 넣기
+        run: |
+          mkdir -p build/web/data
+          cp web/data/*.json build/web/data/
+          cp web/postcode.html build/web/postcode.html
+
+      - name: 새 화면이 바로 보이게 (판 번호 찍기)
+        run: python3 tool/stamp_web.py ${{ github.run_id }}
+
+      - name: 미리보기 게시 준비
+        uses: actions/configure-pages@v5
+
+      - name: 크롬 미리보기 올리기
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+
+  deploy:
+    needs: web
+    if: ${{ !cancelled() && needs.web.result == 'success' }}
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: 크롬 미리보기 게시
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  # 안드로이드 설치 파일 (화면 코드를 바꿨을 때만)
+  apk:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 저장소 받기
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: 자바 준비
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # 고정 서명 키: 깃허브 비밀(ANDROID_KEY_PASS)로 잠가 저장소에 둔다. 비밀이 없으면 임시 서명.
+      - name: 앱 서명 키 준비
+        env:
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASS }}
+        run: |
+          K="$RUNNER_TEMP/upload.jks"
+          git fetch -q origin main && git checkout origin/main -- tool/upload.jks.enc 2>/dev/null || true
+          if [ -z "$KEY_PASS" ]; then
+            echo "서명 키 비밀번호(ANDROID_KEY_PASS)가 아직 없어 임시 서명으로 만듭니다"
+          elif [ -f tool/upload.jks.enc ]; then
+            if openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in tool/upload.jks.enc -out "$K" -pass env:KEY_PASS 2>/dev/null; then
+              echo "고정 서명 키로 만듭니다"
+            else
+              echo "::error::서명 키 비밀번호(ANDROID_KEY_PASS)가 처음 정한 것과 달라 서명 키를 열지 못했습니다."
+              exit 1
+            fi
+          else
+            rm -f "$K"
+            keytool -genkeypair -keystore "$K" -alias dongne -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass "$KEY_PASS" -keypass "$KEY_PASS" -dname "CN=Dongne, O=Designfeel, L=Incheon, C=KR"
+            openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -in "$K" -out tool/upload.jks.enc -pass env:KEY_PASS
+            git config user.name "df-uridongne"
+            git config user.email "dfmail@naver.com"
+            git add tool/upload.jks.enc
+            git commit -m "앱 서명 키 처음 만듦 (잠근 파일) [skip ci]"
+            git pull --rebase origin main && git push
+          fi
+
+      - name: 플러터 준비
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: 빠진 기본 파일 채우기
+        run: |
+          flutter create --org kr.designfeel --project-name dongne --platforms android,ios,web .
+          python3 tool/patch_android.py "우리동네"
+
+      - name: 앱 서명 키 넣기
+        run: |
+          if [ -f "$RUNNER_TEMP/upload.jks" ]; then cp "$RUNNER_TEMP/upload.jks" android/app/upload.jks; fi
+
+      - name: 안드로이드 설치 파일 만들기
+        env:
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASS }}
+        run: |
+          flutter pub get
+          flutter build apk --release
+          cp build/app/outputs/flutter-apk/app-release.apk dongne.apk
+          if [ -f android/app/upload.jks ]; then keytool -list -v -keystore android/app/upload.jks -storepass "$KEY_PASS" -alias dongne | grep -E "SHA1|SHA256" || true; fi
+
+      - name: 설치 파일 고정 링크로 게시
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NOTE="제작 시각: $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M')"
+          if gh release view latest >/dev/null 2>&1; then
+            gh release upload latest dongne.apk --clobber
+            gh release edit latest --notes "$NOTE" --title "우리동네 최신 앱" || true
+          else
+            gh release create latest dongne.apk --title "우리동네 최신 앱" --notes "$NOTE" --target main
+          fi
