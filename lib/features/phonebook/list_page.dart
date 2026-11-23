@@ -14,6 +14,7 @@ import '../../core/data.dart';
 import '../../core/icons.dart';
 import '../../core/theme.dart';
 import '../../core/ui.dart';
+import '../../core/nmap.dart';
 import 'card.dart';
 import 'data.dart';
 import 'shop_sheet.dart';
@@ -35,6 +36,8 @@ class ShopListPage extends StatefulWidget {
 class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMixin {
   final q = TextEditingController();
   final mapCtl = MapController();
+  final nctl = DnMapCtl(); // 휴대폰 앱: 네이버 지도
+  double _mapW = 360;
   final listCtl = ScrollController();
   bool mapView = true;
   Sort sort = Sort.near;
@@ -133,10 +136,18 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
 
   // ---------- 지도 움직임 ----------
   // 가게가 카드에 가리지 않게 화면 위쪽(dy 만큼)에 오도록 옮긴다
+  double get _zoomNow => naverMapOn ? zoom : mapCtl.camera.zoom;
+
   void _glideTo(LatLng p, {double? z, double dy = 0}) {
+    final tz0 = z ?? math.max(_zoomNow, 16.0);
+    final mpp0 = 156543.03 * math.cos(p.latitude * math.pi / 180) / math.pow(2, tz0);
+    if (naverMapOn) {
+      nctl.move(LatLng(p.latitude - dy * mpp0 / 111320, p.longitude), tz0);
+      return;
+    }
     final cam = mapCtl.camera;
-    final tz = z ?? math.max(cam.zoom, 16.0);
-    final mpp = 156543.03 * math.cos(p.latitude * math.pi / 180) / math.pow(2, tz);
+    final tz = tz0;
+    final mpp = mpp0;
     final target = LatLng(p.latitude - dy * mpp / 111320, p.longitude);
     final a = cam.center, az = cam.zoom;
     _glide?.dispose();
@@ -158,7 +169,7 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
       sel = s.id;
       listHidden = false;
     });
-    _glideTo(s.pos, z: mapCtl.camera.zoom, dy: _panelDy);
+    _glideTo(s.pos, z: _zoomNow, dy: _panelDy);
     if (!mapView) {
       final k = _keys[s.id];
       final ctx = k?.currentContext;
@@ -167,10 +178,10 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
   }
 
   // 지도 가운데(아래 상세 카드에 가리지 않는 곳)에 가장 가까운 가게 (화면 너비의 1/3 안)
-  Shop? _nearestToFocus(MapCamera cam) {
-    final mpp = 156543.03 * math.cos(cam.center.latitude * math.pi / 180) / math.pow(2, cam.zoom);
-    final focus = LatLng(cam.center.latitude + _panelDy * mpp / 111320, cam.center.longitude);
-    final limit = mpp * (cam.nonRotatedSize.width / 3);
+  Shop? _nearestToFocus(LatLng center, double z, double width) {
+    final mpp = 156543.03 * math.cos(center.latitude * math.pi / 180) / math.pow(2, z);
+    final focus = LatLng(center.latitude + _panelDy * mpp / 111320, center.longitude);
+    final limit = mpp * (width / 3);
     Shop? best;
     var bd = double.infinity;
     for (final s in _lastPins) {
@@ -191,6 +202,11 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
   }
 
   void _fit(Shop s, {bool animate = false}) {
+    final pad = mapView ? EdgeInsets.fromLTRB(60, 90, 60, _wide ? 60 : 330) : EdgeInsets.fromLTRB(_wide ? 60 : 22, 60, _wide ? 60 : 22, 60);
+    if (naverMapOn) {
+      nctl.fit([from, s.pos], pad, maxZoom: 17.2);
+      return;
+    }
     try {
       final fit = CameraFit.coordinates(
         coordinates: [from, s.pos],
@@ -511,6 +527,8 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
     final now = DateTime.now();
     final selShop = pins.where((s) => s.id == sel).firstOrNull;
     return LayoutBuilder(builder: (ctx, box) {
+    _mapW = box.maxWidth;
+    if (naverMapOn) return _naver(pins, wide);
     final named = _labels(pins, box.biggest, padBottom);
     // 점 → 카드 → 고른 가게 순으로 그려 카드 위에 점이 올라오지 않게
     final ordered = [
@@ -548,7 +566,7 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
                 if (wide) bounds = cam.visibleBounds;
                 // 야놀자처럼: 상세 카드가 열린 채 지도를 끌면, 가운데(카드 위쪽)에 가장 가까운 가게로 상세가 바뀐다
                 if (moved && mapView && sel != null) {
-                  final near = _nearestToFocus(cam);
+                  final near = _nearestToFocus(cam.center, cam.zoom, cam.nonRotatedSize.width);
                   if (near != null) sel = near.id;
                 }
               });
@@ -610,6 +628,56 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
     ]);
     });
   }
+
+  // 휴대폰 앱: 네이버 지도 (이름표 겹침은 네이버가 알아서 숨김)
+  Widget _naver(List<Shop> pins, bool wide) => Stack(children: [
+        naverMap(
+          center: from,
+          zoom: 16,
+          ctl: nctl,
+          pins: [
+            DnPin(id: '_apt', pos: from, name: c.name, apt: true),
+            for (final s in pins) DnPin(id: s.id, pos: s.pos, name: s.name, sub: s.sub, icon: s.cats.isEmpty ? 'pin' : s.cats.first, selected: s.id == sel),
+          ],
+          onReady: () {
+            final p = _pending;
+            if (p != null) {
+              _pending = null;
+              _fit(p);
+            }
+          },
+          onPinTap: (id) {
+            final s = pins.where((x) => x.id == id).firstOrNull;
+            if (s != null) _pin(s);
+          },
+          onMapTap: () => setState(() {
+            sel = null;
+            if (!mapView && !_wide) listHidden = true;
+          }),
+          onIdle: (center, z, b, gesture) {
+            if (!mounted) return;
+            setState(() {
+              zoom = z;
+              _center = center;
+              if (wide && b != null) bounds = LatLngBounds(b.$1, b.$2);
+              if (gesture && mapView && sel != null) {
+                final near = _nearestToFocus(center, z, _mapW);
+                if (near != null) sel = near.id;
+              }
+            });
+          },
+        ),
+        Positioned(right: 14, top: 12, child: _MapBtn(icon: 'apt', tip: '우리 단지로', onTap: () => _glideTo(from, z: 16))),
+        Positioned(
+          right: 14,
+          top: 60,
+          child: Column(children: [
+            _MapBtn(text: '+', onTap: () => nctl.move(_center ?? from, math.min(19, zoom + 1))),
+            const SizedBox(height: 6),
+            _MapBtn(text: '−', onTap: () => nctl.move(_center ?? from, math.max(11, zoom - 1))),
+          ]),
+        ),
+      ]);
 
   // 말풍선끼리 겹치지 않게: 가까운(목록 앞) 가게부터 이름을 달고, 겹치면 점으로만
   Set<String> _labels(List<Shop> pins, Size size, double padBottom) {

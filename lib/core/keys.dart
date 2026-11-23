@@ -9,6 +9,9 @@ const kEvKey = String.fromEnvironment('EV_KEY'); // 환경부 충전소 — 비�
 // 공공데이터 「중간 다리」 (클라우드플레어 워커 dongne-dari, 코드 proxy/worker.js)
 // 열쇠는 다리 서버에만 있고, 앱·미리보기는 다리를 부른다 → 크롬 미리보기(CORS)·열쇠 노출·한도 낭비 해결
 // 기능 방은 apis.data.go.kr 주소를 lib/core/dg.dart 의 dgUrl()/dgGet() 으로 감싸면 된다.
+// 네이버 지도 Client ID (공개용 — 앱 안에 들어가는 값, 콘솔 Maps > uridongne)
+const kNaverMapId = String.fromEnvironment('NAVER_MAP_ID', defaultValue: '0g3mx1t2l0');
+
 const kDataProxy = String.fromEnvironment('DATA_PROXY', defaultValue: 'https://dongne-dari.dfmail.workers.dev');
 
 // 공공데이터를 부를 수 있는지 (다리가 있거나 열쇠가 있으면)

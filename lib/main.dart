@@ -1,11 +1,14 @@
 // 우리동네 — 시작점 (본부 방만 고침)
 import 'package:flutter/material.dart';
 
+import 'core/nmap.dart';
+
 import 'core/shell.dart';
 import 'core/theme.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initNaverMap(); // 휴대폰: 네이버 지도 준비 (웹은 아무것도 안 함)
   runApp(const DongneApp());
 }
 

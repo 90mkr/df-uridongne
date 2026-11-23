@@ -8,6 +8,7 @@ import 'package:latlong2/latlong.dart';
 import 'data.dart';
 import 'feature.dart';
 import 'icons.dart';
+import 'nmap.dart';
 import 'theme.dart';
 
 class DongneMap extends StatefulWidget {
@@ -28,6 +29,29 @@ class _DongneMapState extends State<DongneMap> {
   Widget build(BuildContext context) {
     final c = complex.value;
     final pts = widget.points.take(500).toList();
+    // 휴대폰 앱: 네이버 지도 (첫 번 누르면 이름·설명, 두 번 누르면 그 곳 열기)
+    if (naverMapOn) {
+      return naverMap(
+        center: widget.center,
+        zoom: widget.zoom,
+        pins: [
+          if (c != null) DnPin(id: '_apt', pos: c.pos, name: c.name, apt: true),
+          for (final p in pts)
+            DnPin(id: p.id, pos: p.pos, name: p.badge.isNotEmpty ? '${p.badge}  ${p.name}' : p.name, sub: p.sub, icon: widget.icon.isEmpty ? 'pin' : widget.icon, selected: sel == p.id),
+        ],
+        onMapTap: () => setState(() => sel = null),
+        onPinTap: (id) {
+          if (id == '_apt') return;
+          final p = pts.where((x) => x.id == id).firstOrNull;
+          if (p == null) return;
+          if (sel == id) {
+            p.onTap?.call(context);
+          } else {
+            setState(() => sel = id);
+          }
+        },
+      );
+    }
     return FlutterMap(
       mapController: widget.controller,
       options: MapOptions(

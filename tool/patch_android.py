@@ -118,3 +118,12 @@ if os.path.exists(grv):
         open(grv, "w", encoding="utf-8").write(g)
 print("안드로이드 설정 완료")
 
+
+# 네이버 지도: 안드로이드 6.0(SDK 23) 이상 — 넉넉히 24
+import glob
+for g in glob.glob("android/app/build.gradle*"):
+    t = open(g, encoding="utf-8").read()
+    t2 = re.sub(r"minSdk(Version)?\s*=?\s*flutter\.minSdkVersion", "minSdk = 24", t)
+    t2 = re.sub(r"minSdkVersion\s+flutter\.minSdkVersion", "minSdkVersion 24", t2)
+    if t2 != t:
+        open(g, "w", encoding="utf-8").write(t2)
