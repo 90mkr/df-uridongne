@@ -12,6 +12,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../../core/data.dart';
 import '../../core/fb.dart';
+import '../../core/kk.dart';
 
 class Cat {
   final String id, name, desc;
@@ -106,7 +107,66 @@ final Map<String, String> _updated = {};
 String updatedOf(String areaId) => _updated[areaId] ?? '';
 List<Shop> kokTops(String areaId) => _kokTops[areaId] ?? const [];
 
+// 준비된 동네가 아닌 단지(전국): 카카오에서 그 자리 둘레를 바로 불러온다 (다리가 7일 묶어 둠)
+// 분야 → 카카오 분류 코드(c) 또는 검색어(k) + 이름·분류에 꼭 들어갈 말 — collector/collect.py 의 CATS 와 같게
+const _liveRules = <String, List<(String, String, List<String>)>>{
+  'food': [('c', 'FD6', [])],
+  'cafe': [('c', 'CE7', [])],
+  'mart': [('c', 'MT1', []), ('c', 'CS2', [])],
+  'hosp': [('c', 'HP8', [])],
+  'pharm': [('c', 'PM9', [])],
+  'kids': [('c', 'PS3', [])],
+  'acad': [('c', 'AC5', [])],
+  'laundry': [('k', '세탁소', ['세탁', '크리닝', '클리닝']), ('k', '빨래방', ['빨래', '세탁', '코인'])],
+  'ricecake': [('k', '떡집', ['떡']), ('k', '반찬가게', ['반찬'])],
+  'hair': [('k', '미용실', ['미용', '헤어', 'hair', 'Hair', 'HAIR'])],
+  'flower': [('k', '꽃집', ['꽃', '플라워', 'flower', 'Flower'])],
+  'repair': [('k', '옷수선', ['수선']), ('k', '열쇠', ['열쇠', '키']), ('k', '구두수선', ['구두', '수선'])],
+  'hardware': [('k', '철물점', ['철물', '공구']), ('k', '인테리어', ['인테리어', '도배', '설비'])],
+  'realty': [('c', 'AG2', [])],
+  'bank': [('c', 'BK9', [])],
+  'car': [('k', '세차장', ['세차']), ('k', '카센터', ['카센터', '정비', '자동차'])],
+  'pet': [('k', '동물병원', ['동물', '펫', '애견', '애완']), ('k', '애견미용', ['애견', '펫', '강아지', '도그'])],
+  'public': [('c', 'PO3', [])],
+};
+
+Future<List<Shop>> _liveShops(Complex c) async {
+  final key = 'live_${c.id}';
+  final have = _cache[key];
+  if (have != null) return have;
+  final shops = <String, Shop>{};
+  final at = {'x': '${c.lng}', 'y': '${c.lat}', 'radius': '2000', 'sort': 'distance'};
+  await Future.wait([
+    for (final e in _liveRules.entries)
+      for (final r in e.value)
+        (r.$1 == 'c' ? kkAll('category', {...at, 'category_group_code': r.$2}) : kkAll('keyword', {...at, 'query': r.$2})).then((docs) {
+          for (final d in docs) {
+            final name = '${d['place_name'] ?? ''}'.trim();
+            final cname = '${d['category_name'] ?? ''}';
+            if (r.$3.isNotEmpty && !r.$3.any((w) => name.contains(w) || cname.contains(w))) continue;
+            final id = '${d['id'] ?? ''}';
+            final lat = double.tryParse('${d['y']}'), lng = double.tryParse('${d['x']}');
+            if (id.isEmpty || lat == null || lng == null) continue;
+            final old = shops[id];
+            if (old != null) {
+              if (!old.cats.contains(e.key)) old.cats.add(e.key);
+              continue;
+            }
+            final road = '${d['road_address_name'] ?? ''}';
+            shops[id] = Shop(id, name, [e.key], cname.split('>').last.trim(), road.isNotEmpty ? road : '${d['address_name'] ?? ''}', '${d['phone'] ?? ''}'.trim(), lat, lng);
+          }
+        }),
+  ]);
+  final list = shops.values.toList();
+  if (list.isNotEmpty) _cache[key] = list;
+  return list;
+}
+
 Future<List<Shop>> shopsOf(String areaId) async {
+  if (areaId.isEmpty) {
+    final c = complex.value;
+    return c == null ? const [] : _liveShops(c);
+  }
   final have = _cache[areaId];
   if (have != null) return have;
   final r = await Future.wait([getJson('$dataBase$areaId.json'), getJson('$kKokpleDataUrl$areaId.json')]);

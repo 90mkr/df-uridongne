@@ -97,7 +97,16 @@ class Complex {
   Area? get area => areaById(areaId);
 
   // 「송도」 + 「○○아파트」처럼 앞 동네 이름과 단지 이름을 나눠 보여 줄 때
-  String get town => area?.name.split('/').first ?? '';
+  // 준비된 동네가 아니면 주소의 시·군·구에서 (예: 「부산 해운대구 …」 → 「해운대」)
+  String get town {
+    final a = area;
+    if (a != null) return a.name.split('/').first;
+    final w = addr.split(' ');
+    if (w.length < 2) return '';
+    var g = w[1];
+    if (g.length > 2 && (g.endsWith('구') || g.endsWith('시') || g.endsWith('군'))) g = g.substring(0, g.length - 1);
+    return g;
+  }
 
   Map<String, dynamic> toJson() => {'id': id, 'n': name, 'a': addr, 'ar': areaId, 'y': lat, 'x': lng};
   static Complex? fromJson(dynamic j) {

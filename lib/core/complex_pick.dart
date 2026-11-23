@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 
 import 'data.dart';
 import 'icons.dart';
+import 'kk.dart';
 import 'theme.dart';
 import 'ui.dart';
 
@@ -23,6 +24,8 @@ class _ComplexPickPageState extends State<ComplexPickPage> {
   List<Complex> apts = [];
   bool loading = true;
   LatLng? from;
+  LatLng? liveAt; // 준비된 동네가 아닌 곳: 이 자리 둘레를 카카오에서 바로 찾음
+  bool liveSearch = false; // 전국 이름 찾기 결과를 보여 주는 중
 
   @override
   void initState() {
@@ -33,20 +36,28 @@ class _ComplexPickPageState extends State<ComplexPickPage> {
   Future<void> _init() async {
     await loadAreas();
     final c = complex.value;
-    area = c?.area ?? areas.where((a) => a.ready).firstOrNull;
     from = c?.pos ?? myPos.value;
+    if (c != null && c.area == null) {
+      liveAt = c.pos;
+    } else {
+      area = c?.area ?? areas.where((a) => a.ready).firstOrNull;
+    }
     await _load();
   }
 
   Future<void> _load() async {
     final a = area;
-    if (a == null) {
+    final at = liveAt ?? (a != null && !a.ready ? a.center : null);
+    if (a == null && at == null) {
       setState(() => loading = false);
       return;
     }
-    setState(() => loading = true);
-    final list = await complexesOf(a);
-    if (!mounted || area?.id != a.id) return;
+    setState(() {
+      loading = true;
+      liveSearch = false;
+    });
+    final list = at != null ? await kkComplexes(near: at) : await complexesOf(a!);
+    if (!mounted || area?.id != a?.id) return;
     setState(() {
       apts = list;
       loading = false;
@@ -58,19 +69,41 @@ class _ComplexPickPageState extends State<ComplexPickPage> {
     if (!mounted) return;
     if (p == null) return toast(context, '위치를 알 수 없어요. 휴대폰 위치 사용을 켜 주세요');
     final a = areaAt(p);
-    if (a == null) return toast(context, '이 근처는 아직 준비 중이에요');
     setState(() {
       from = p;
-      area = a;
       q.clear();
+      if (a != null && a.ready && a.contains(p)) {
+        area = a;
+        liveAt = null;
+      } else {
+        area = null;
+        liveAt = p; // 전국 어디든: 내 둘레 단지를 바로 찾기
+      }
     });
     await _load();
+  }
+
+  // 전국에서 이름으로 찾기
+  Future<void> _searchAll() async {
+    final t = q.text.trim();
+    if (t.isEmpty) return;
+    FocusScope.of(context).unfocus();
+    setState(() => loading = true);
+    final list = await kkComplexes(q: t, near: from);
+    if (!mounted) return;
+    setState(() {
+      apts = list;
+      liveSearch = true;
+      loading = false;
+    });
+    if (list.isEmpty) toast(context, '「$t」 단지를 찾지 못했어요');
   }
 
   List<Complex> get shown {
     // 띄어쓰기·앞의 「인천」·뒤의 「아파트」와 상관없이 찾기
     String norm(String s) => s.replaceAll(' ', '').replaceAll('인천', '').replaceAll('아파트', '').toLowerCase();
     final t = norm(q.text);
+    if (liveSearch) return apts;
     var l = t.isEmpty ? apts : apts.where((c) => norm('${c.name}${c.addr}').contains(t)).toList();
     final f = from;
     if (f != null && area != null && meters(f, area!.center) < 20000) {
@@ -94,7 +127,7 @@ class _ComplexPickPageState extends State<ComplexPickPage> {
               const Text('단지 기준으로 쓰레기 배출일·버스·약국·동네 가게를 모아 보여 드려요', style: T.small),
               const SizedBox(height: 14),
             ],
-            TextField(controller: q, onChanged: (_) => setState(() {}), style: const TextStyle(fontSize: 14.5), decoration: inputDeco('단지 이름으로 찾기')),
+            TextField(controller: q, onChanged: (_) => setState(() => liveSearch = false), onSubmitted: (_) => _searchAll(), textInputAction: TextInputAction.search, style: const TextStyle(fontSize: 14.5), decoration: inputDeco('단지 이름으로 찾기 (전국)')),
             const SizedBox(height: 10),
             Row(children: [
               InkWell(
@@ -116,7 +149,7 @@ class _ComplexPickPageState extends State<ComplexPickPage> {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
                   child: Row(children: [
-                    Text(area == null ? '동네 고르기' : '${area!.sido} ${area!.name}', style: const TextStyle(fontSize: 13, color: kSub)),
+                    Text(area == null ? (liveAt != null ? '내 위치 둘레' : '동네 고르기') : '${area!.sido} ${area!.name}', style: const TextStyle(fontSize: 13, color: kSub)),
                     const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: kSub),
                   ]),
                 ),
@@ -138,6 +171,10 @@ class _ComplexPickPageState extends State<ComplexPickPage> {
                         child: Column(children: [
                           Text(list.isEmpty ? '찾는 단지가 없어요' : '목록에 없나요?', style: T.small),
                           const SizedBox(height: 8),
+                          if (q.text.trim().isNotEmpty && !liveSearch) ...[
+                            SizedBox(width: 220, child: Btn('전국에서 「${q.text.trim()}」 찾기', icon: 'search', primary: true, onTap: _searchAll)),
+                            const SizedBox(height: 8),
+                          ],
                           SizedBox(width: 220, child: Btn('내 위치로 직접 넣기', icon: 'loc', onTap: _manual)),
                         ]),
                       );
@@ -177,9 +214,7 @@ class _ComplexPickPageState extends State<ComplexPickPage> {
           Padding(padding: const EdgeInsets.only(top: 14, bottom: 8), child: Text(sido, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: kMute))),
           Wrap(spacing: 8, runSpacing: 8, children: [
             for (final a in areas.where((x) => x.sido == sido))
-              ChoiceChipBox(a.ready ? a.name : '${a.name} · 준비 중', on: a.id == area?.id, onTap: () {
-                if (a.ready) Navigator.pop(ctx, a);
-              }),
+              ChoiceChipBox(a.name, on: a.id == area?.id, onTap: () => Navigator.pop(ctx, a)),
           ]),
         ],
       ]),
@@ -187,7 +222,8 @@ class _ComplexPickPageState extends State<ComplexPickPage> {
     if (a == null) return;
     setState(() {
       area = a;
-      from = myPos.value;
+      liveAt = null;
+      from = a.ready ? myPos.value : a.center;
     });
     await _load();
   }
@@ -196,7 +232,6 @@ class _ComplexPickPageState extends State<ComplexPickPage> {
     final p = await myLocation();
     if (!mounted) return;
     if (p == null) return toast(context, '위치를 알 수 없어요');
-    final a = areaAt(p);
     final name = TextEditingController();
     final ok = await showSheet<bool>(
       context,
@@ -211,7 +246,7 @@ class _ComplexPickPageState extends State<ComplexPickPage> {
       ),
     );
     if (ok != true || name.text.trim().isEmpty) return;
-    _done(Complex(id: 'my_${DateTime.now().millisecondsSinceEpoch}', name: name.text.trim(), addr: '', areaId: a?.id ?? '', lat: p.latitude, lng: p.longitude));
+    _done(Complex(id: 'my_${DateTime.now().millisecondsSinceEpoch}', name: name.text.trim(), addr: '', areaId: areaIdAt(p), lat: p.latitude, lng: p.longitude));
   }
 
   void _done(Complex c) {
