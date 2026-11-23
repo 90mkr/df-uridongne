@@ -270,6 +270,8 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     reg = load(REGIONS) or {}
     want = set(filter(None, os.environ.get('AREAS', '').replace(' ', '').split(',')))
+    # 「앱 제작」을 동네 칸에 gas 라고 넣고 돌리면: 카카오 업체 모으기는 건너뛰고 주유소만 전 동네
+    want.discard('gas')
     areas = []
     for sd in reg.get('sido', []):
         for a in sd.get('areas', []):
