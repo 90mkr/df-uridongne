@@ -170,7 +170,6 @@ class TodayHero extends StatefulWidget {
 class _TodayHeroState extends State<TodayHero> {
   List<(Feature, Brief)> items = [];
   bool loading = true;
-  final pc = PageController();
   int page = 0;
   Timer? auto;
 
@@ -179,15 +178,14 @@ class _TodayHeroState extends State<TodayHero> {
     super.initState();
     _load();
     auto = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (!pc.hasClients || items.length < 2) return;
-      pc.animateToPage((page + 1) % items.length, duration: const Duration(milliseconds: 420), curve: Curves.easeOutCubic);
+      if (!mounted || items.length < 2) return;
+      setState(() => page = (page + 1) % items.length); // 서서히 바뀜 (페이드)
     });
   }
 
   @override
   void dispose() {
     auto?.cancel();
-    pc.dispose();
     super.dispose();
   }
 
@@ -203,6 +201,46 @@ class _TodayHeroState extends State<TodayHero> {
       items = list.take(5).toList();
       loading = false;
     });
+  }
+
+  Widget _slide(int i) {
+    final (f, b) = items[i];
+    return GestureDetector(
+      key: ValueKey('slide$i${b.kicker}'),
+      behavior: HitTestBehavior.opaque,
+      onTap: () => openFeature(context, f),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 18, 16, 16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Container(
+              width: 26,
+              height: 26,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+              child: LineIcon(b.icon, size: 20),
+            ),
+            const SizedBox(width: 7),
+            Flexible(child: Text(b.kicker, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Color(0xE6FFFFFF), fontWeight: FontWeight.w600))),
+            const SizedBox(width: 60), // 오른쪽 위 점 자리
+          ]),
+          const Spacer(),
+          Text.rich(
+            TextSpan(children: [
+              TextSpan(text: b.bold),
+              if (b.hot.isNotEmpty) TextSpan(text: b.hot, style: const TextStyle(color: Color(0xFFFFD84D))),
+              TextSpan(text: b.rest),
+            ]),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.7, height: 1.25, shadows: [Shadow(color: Color(0x33000000), blurRadius: 6)]),
+          ),
+          const SizedBox(height: 4),
+          Text(b.sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, color: Color(0xE6FFFFFF))),
+          const SizedBox(height: 4),
+        ]),
+      ),
+    );
   }
 
   @override
@@ -240,51 +278,26 @@ class _TodayHeroState extends State<TodayHero> {
             ]),
           )
         else
-          PageView.builder(
-            controller: pc,
-            itemCount: items.length,
-            onPageChanged: (i) => setState(() => page = i),
-            itemBuilder: (_, i) {
-              final (f, b) = items[i];
-              return GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => openFeature(context, f),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 18, 16, 16),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Row(children: [
-                      Container(
-                        width: 26,
-                        height: 26,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
-                        child: LineIcon(b.icon, size: 20),
-                      ),
-                      const SizedBox(width: 7),
-                      Flexible(child: Text(b.kicker, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Color(0xE6FFFFFF), fontWeight: FontWeight.w600))),
-                    ]),
-                    const SizedBox(height: 10),
-                    Text.rich(
-                      TextSpan(children: [
-                        TextSpan(text: b.bold),
-                        if (b.hot.isNotEmpty) TextSpan(text: b.hot, style: const TextStyle(color: Color(0xFFFFD84D))),
-                        TextSpan(text: b.rest),
-                      ]),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.7, height: 1.25, shadows: [Shadow(color: Color(0x33000000), blurRadius: 6)]),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(b.sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, color: Color(0xE6FFFFFF))),
-                  ]),
-                ),
-              );
+          GestureDetector(
+            // 손으로 옆으로 밀어도 넘어감
+            onHorizontalDragEnd: (d) {
+              if (items.length < 2) return;
+              final v = d.primaryVelocity ?? 0;
+              if (v.abs() < 100) return;
+              setState(() => page = (page + (v < 0 ? 1 : -1) + items.length) % items.length);
             },
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 600),
+              switchInCurve: Curves.easeOut,
+              switchOutCurve: Curves.easeIn,
+              layoutBuilder: (cur, prev) => Stack(children: [...prev, if (cur != null) cur]),
+              child: _slide(page.clamp(0, items.length - 1)),
+            ),
           ),
         if (items.length > 1)
           Positioned(
-            left: 20,
-            bottom: 14,
+            right: 16,
+            top: 20,
             child: Row(children: [
               for (var i = 0; i < items.length; i++)
                 AnimatedContainer(
