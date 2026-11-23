@@ -50,6 +50,19 @@ abstract class Feature {
 
   // 지도 탭에 올릴 점 (없으면 빈 목록)
   Future<List<MapPoint>> mapPoints(Complex c) async => const [];
+
+  // 단지 홈 맨 위 「지금 우리 단지」 카드에 낼 한 장 (없으면 null). 점수가 높을수록 앞에 나온다.
+  // 시간대·날씨·배출일에 맞춰 기능이 스스로 점수를 매긴다 (예: 출근 시간 버스 80, 비 오기 전 날씨 90).
+  Future<Brief?> brief(Complex c, DateTime now) async => null;
+}
+
+class Brief {
+  final String icon; // 색 아이콘 이름
+  final String kicker; // 맨 위 작은 글 (예: 「출근길 · 단지 앞 버스」)
+  final String bold, hot, rest; // 큰 글: 굵게 + 노랑 강조 + 나머지
+  final String sub; // 아래 작은 글
+  final int score;
+  const Brief({required this.icon, required this.kicker, this.bold = '', this.hot = '', this.rest = '', this.sub = '', this.score = 50});
 }
 
 void openFeature(BuildContext context, Feature f) {

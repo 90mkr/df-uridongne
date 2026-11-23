@@ -81,6 +81,8 @@ class _HomeTabState extends State<HomeTab> {
           padding: const EdgeInsets.fromLTRB(kPad, 14, kPad, 28),
           children: [
             for (final f in at(Slot.hero)) ...[card(f), const SizedBox(height: 12)],
+            // 맨 위 자리: 「지금 우리 단지」 — 시간대·날씨·배출일에 맞춰 기능들이 낸 카드가 넘어간다
+            if (at(Slot.hero).isEmpty) ...[TodayHero(key: ValueKey('today${c.id}$gen'), c: c), const SizedBox(height: 12)],
             for (var i = 0; i < halves.length; i += 2) ...[
               IntrinsicHeight(
                 child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -152,6 +154,148 @@ class _Header extends StatelessWidget {
           onPressed: () => toast(context, '알림은 준비하고 있어요'),
           icon: const LineIcon('bell', size: 23, fill: Colors.transparent),
         ),
+      ]),
+    );
+  }
+}
+
+// ---------------- 지금 우리 단지 (맨 위 상황 맞춤 카드) ----------------
+class TodayHero extends StatefulWidget {
+  final Complex c;
+  const TodayHero({super.key, required this.c});
+  @override
+  State<TodayHero> createState() => _TodayHeroState();
+}
+
+class _TodayHeroState extends State<TodayHero> {
+  List<(Feature, Brief)> items = [];
+  bool loading = true;
+  final pc = PageController();
+  int page = 0;
+  Timer? auto;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+    auto = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!pc.hasClients || items.length < 2) return;
+      pc.animateToPage((page + 1) % items.length, duration: const Duration(milliseconds: 420), curve: Curves.easeOutCubic);
+    });
+  }
+
+  @override
+  void dispose() {
+    auto?.cancel();
+    pc.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    final now = DateTime.now();
+    final got = await Future.wait([
+      for (final f in features.where((f) => f.ready))
+        f.brief(widget.c, now).timeout(const Duration(seconds: 8), onTimeout: () => null).catchError((_) => null).then((b) => b == null ? null : (f, b)),
+    ]);
+    final list = got.whereType<(Feature, Brief)>().toList()..sort((a, b) => b.$2.score.compareTo(a.$2.score));
+    if (!mounted) return;
+    setState(() {
+      items = list.take(5).toList();
+      loading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final h = DateTime.now().hour;
+    final greet = h < 6 ? '늦은 밤이에요' : h < 11 ? '좋은 아침이에요' : h < 17 ? '좋은 오후예요' : '편안한 저녁이에요';
+    return Container(
+      height: 168,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF1570EA), Color(0xFF0B4DBA)]),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: const Color(0xFF0B4DBA).withValues(alpha: 0.18), blurRadius: 18)],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(children: [
+        Positioned(
+          right: 0,
+          top: 0,
+          bottom: 0,
+          width: 236,
+          child: ShaderMask(
+            blendMode: BlendMode.dstIn,
+            shaderCallback: (r) => const LinearGradient(colors: [Color(0x00000000), Color(0x8C000000), Color(0xE6000000)], stops: [0, 0.5, 1]).createShader(r),
+            child: Image.asset('assets/art/hero.png', fit: BoxFit.cover, alignment: Alignment.centerRight, filterQuality: FilterQuality.medium),
+          ),
+        ),
+        if (loading || items.isEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('지금 우리 단지 · $greet', style: const TextStyle(fontSize: 12, color: Color(0xD9FFFFFF))),
+              const SizedBox(height: 6),
+              Text(loading ? '오늘 소식을 모으고 있어요' : '오늘도 좋은 하루 보내세요',
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.6)),
+            ]),
+          )
+        else
+          PageView.builder(
+            controller: pc,
+            itemCount: items.length,
+            onPageChanged: (i) => setState(() => page = i),
+            itemBuilder: (_, i) {
+              final (f, b) = items[i];
+              return GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => openFeature(context, f),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 18, 16, 16),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Row(children: [
+                      Container(
+                        width: 26,
+                        height: 26,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+                        child: LineIcon(b.icon, size: 20),
+                      ),
+                      const SizedBox(width: 7),
+                      Flexible(child: Text(b.kicker, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Color(0xE6FFFFFF), fontWeight: FontWeight.w600))),
+                    ]),
+                    const SizedBox(height: 10),
+                    Text.rich(
+                      TextSpan(children: [
+                        TextSpan(text: b.bold),
+                        if (b.hot.isNotEmpty) TextSpan(text: b.hot, style: const TextStyle(color: Color(0xFFFFD84D))),
+                        TextSpan(text: b.rest),
+                      ]),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.7, height: 1.25, shadows: [Shadow(color: Color(0x33000000), blurRadius: 6)]),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(b.sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, color: Color(0xE6FFFFFF))),
+                  ]),
+                ),
+              );
+            },
+          ),
+        if (items.length > 1)
+          Positioned(
+            left: 20,
+            bottom: 14,
+            child: Row(children: [
+              for (var i = 0; i < items.length; i++)
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  margin: const EdgeInsets.only(right: 5),
+                  width: i == page ? 16 : 6,
+                  height: 6,
+                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: i == page ? 1 : 0.45), borderRadius: BorderRadius.circular(3)),
+                ),
+            ]),
+          ),
       ]),
     );
   }

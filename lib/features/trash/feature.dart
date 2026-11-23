@@ -33,6 +33,36 @@ class TrashFeature extends Feature {
 
   @override
   Widget page(BuildContext context, Complex c) => TrashPage(complex: c);
+
+  // 「지금 우리 단지」 카드: 오늘 배출일이면 저녁에 높게
+  @override
+  Future<Brief?> brief(Complex c, DateTime now) async {
+    final info = await trashOf(c);
+    if (info.empty) return null;
+    final today = info.kindsOn(now);
+    if (today.isNotEmpty) {
+      final h = rangeText(info.hoursOf(today.first));
+      return Brief(
+        icon: 'trash',
+        kicker: '오늘의 배출 안내',
+        bold: '오늘은 ',
+        hot: today.map((k) => kKindShort[k]).join('·'),
+        rest: ' 배출일',
+        sub: h.isEmpty ? '정해진 장소에 내 주세요' : '$h 사이에 내 주세요',
+        score: now.hour >= 15 ? 85 : 55,
+      );
+    }
+    final n = info.nextDay(now);
+    if (n == null) return null;
+    final tomorrow = n.difference(DateTime(now.year, now.month, now.day)).inDays == 1;
+    return Brief(
+      icon: 'trash',
+      kicker: '오늘의 배출 안내',
+      bold: '오늘은 배출하지 않는 날',
+      sub: '${tomorrow ? '내일' : '${dayChar(n)}요일'} ${info.kindsOn(n).map((k) => kKindShort[k]).join('·')} 배출',
+      score: 25,
+    );
+  }
 }
 
 // 오늘의 배출 안내 카드 (분리수거 화면 맨 위)

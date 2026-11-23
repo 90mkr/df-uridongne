@@ -36,6 +36,27 @@ class BusFeature extends Feature {
   @override
   Widget page(BuildContext context, Complex c) => BusPage(complex: c);
 
+  // 「지금 우리 단지」 카드: 출퇴근 시간에 높게, 곧 오는 버스 두 대
+  @override
+  Future<Brief?> brief(Complex c, DateTime now) async {
+    final stops = await stopsFor(c);
+    if (stops.isEmpty) return null;
+    final arr = await arrivals(stops.first);
+    if (arr == null || arr.isEmpty) return null;
+    final a = [...arr]..sort((x, y) => x.secs.compareTo(y.secs));
+    final f = a.first;
+    final rush = (now.hour >= 6 && now.hour < 10) || (now.hour >= 17 && now.hour < 20);
+    return Brief(
+      icon: 'bus',
+      kicker: '${rush ? (now.hour < 12 ? '출근길' : '퇴근길') : '지금'} · ${stops.first.name}',
+      bold: '${f.routeNo}번 ',
+      hot: f.soon ? '곧 도착' : '${f.mins}분 뒤',
+      rest: f.soon ? '' : ' 도착',
+      sub: a.length > 1 ? '다음 ${a[1].routeNo}번 ${a[1].mins}분 · ${a[1].left}정거장 전' : '${f.left}정거장 전',
+      score: rush ? 80 : 45,
+    );
+  }
+
   @override
   Future<List<MapPoint>> mapPoints(Complex c) async {
     final list = await stopsNear(c);

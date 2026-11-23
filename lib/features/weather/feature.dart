@@ -37,6 +37,29 @@ class WeatherFeature extends Feature {
 
   @override
   Widget page(BuildContext context, Complex c) => _WeatherPage(c: c);
+
+  // 「지금 우리 단지」 카드: 비·눈이 오거나 미세먼지가 나쁘면 높게, 아침엔 기본으로 조금 높게
+  @override
+  Future<Brief?> brief(Complex c, DateTime now) async {
+    final w = await weatherFor(c);
+    if (w == null || w.temp == null) return null;
+    const wet = {Sky.rain, Sky.snow, Sky.sleet, Sky.shower};
+    final soon = w.hours.take(4).where((h) => wet.contains(h.sky) || (h.pop ?? 0) >= 60).firstOrNull;
+    final g = w.dust == null ? 0 : (w.dust!.g10 > w.dust!.g25 ? w.dust!.g10 : w.dust!.g25);
+    const gt = ['', '좋음', '보통', '나쁨', '매우 나쁨'];
+    final t = '${w.temp!.round()}°';
+    if (wet.contains(w.sky)) {
+      return Brief(icon: 'weather', kicker: '지금 날씨', bold: '지금 ', hot: skyText(w.sky), rest: ' · $t', sub: '우산 챙기세요${g > 0 ? ' · 미세먼지 ${gt[g]}' : ''}', score: 92);
+    }
+    if (soon != null) {
+      final hh = soon.t.hour;
+      return Brief(icon: 'weather', kicker: '지금 날씨', bold: '$hh시쯤 ', hot: wet.contains(soon.sky) ? skyText(soon.sky) : '비 소식', rest: '', sub: '나갈 때 우산 챙기세요 · 지금 $t', score: 88);
+    }
+    if (g >= 3) {
+      return Brief(icon: 'weather', kicker: '지금 공기', bold: '미세먼지 ', hot: gt[g], rest: '', sub: '마스크 챙기세요 · 지금 $t ${skyText(w.sky)}', score: 78);
+    }
+    return Brief(icon: 'weather', kicker: '지금 날씨', bold: '$t ', hot: skyText(w.sky), rest: '', sub: g > 0 ? '미세먼지 ${gt[g]}' : '', score: now.hour < 10 ? 60 : 35);
+  }
 }
 
 String _deg(double? t) => t == null ? '-' : '${t.round()}°';
