@@ -522,7 +522,7 @@ Future<Weather?> weatherFor(Complex c, {bool force = false}) {
   final have = _cache[k];
   final keep = force ? const Duration(minutes: 5) : const Duration(minutes: 30);
   if (have != null && _nowKst.difference(have.at) < keep) return Future.value(have);
-  return _loading[k] ??= _fetch(c).whenComplete(() => _loading.remove(k)).then((w) {
+  return _loading[k] ??= _fetchSafe(c).whenComplete(() => _loading.remove(k)).then((w) {
     if (w != null) _cache[k] = w;
     return w ?? have;
   });
@@ -533,12 +533,39 @@ Weather? cachedWeather(Complex c) {
   return _cache['${g.nx}_${g.ny}'];
 }
 
+String lastWeatherError = '';
+
+Future<Weather?> _fetchSafe(Complex c) async {
+  try {
+    lastWeatherError = '';
+    return await _fetch(c).timeout(const Duration(seconds: 40));
+  } catch (e, st) {
+    lastWeatherError = '$e';
+    // ignore: avoid_print
+    print('[날씨] $e\n$st');
+    return null;
+  }
+}
+
+// 부분 실패는 다른 자료를 막지 않게 하나씩 감싼다
+Future<T?> _safe<T>(Future<T?> f, String what) async {
+  try {
+    return await f.timeout(const Duration(seconds: 30));
+  } catch (e) {
+    // ignore: avoid_print
+    print('[날씨] $what: $e');
+    return null;
+  }
+}
+
 Future<Weather?> _fetch(Complex c) async {
   final p = c.pos;
-  final r = await Future.wait<Object?>([_kma(p), _airkorea(p, c), _dustTomorrow(c.area?.sido ?? '')]);
-  var w = r[0] as Weather?;
-  var d = r[1] as Dust?;
-  final tm = r[2] as (int, int);
+  final kma = _safe(_kma(p), '기상청');
+  final air = _safe(_airkorea(p, c), '에어코리아');
+  final fc = _safe(_dustTomorrow(c.area?.sido ?? ''), '미세먼지 예보');
+  var w = await kma;
+  var d = await air;
+  final tm = await fc ?? (0, 0);
   if (d != null) d = d.withTomorrow(tm.$1, tm.$2);
   if (w == null && kIsWeb) {
     final o = await _openMeteo(p);

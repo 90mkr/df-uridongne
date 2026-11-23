@@ -26,7 +26,7 @@ class WeatherFeature extends Feature {
   @override
   int get order => 10;
   @override
-  String get version => '0.1.0';
+  String get version => '0.1.1';
   @override
   bool get ready => true;
   @override
@@ -152,7 +152,7 @@ class _WeatherPageState extends State<_WeatherPage> {
                         const SizedBox(height: 14),
                         const Text('날씨를 받지 못했어요', style: T.h2),
                         const SizedBox(height: 6),
-                        const Text('잠시 뒤 다시 눌러 주세요.', style: T.small),
+                        Text(lastWeatherError.isEmpty ? '잠시 뒤 다시 눌러 주세요.' : '잠시 뒤 다시 눌러 주세요.\n($lastWeatherError)', textAlign: TextAlign.center, style: T.small),
                         const SizedBox(height: 16),
                         SizedBox(width: 160, child: Btn('다시 받기', onTap: () => _load(force: true))),
                       ]),
