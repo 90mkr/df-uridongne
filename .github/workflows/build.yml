@@ -31,16 +31,13 @@ permissions:
 
 # 실행 전체가 아니라 작업마다 줄을 세운다.
 # (전체에 걸면 대기 중인 수동 실행이 뒤에 온 다른 방 올리기 실행으로 바뀌어 취소됨)
-#  - collect: 자료 모으기끼리만 한 줄 (취소 없음)
+#  - collect: 줄 세우지 않음 (같은 줄에 대기가 둘이면 앞의 것이 취소되므로) — 저장할 때 겹치면 다시 시도
 #  - deploy : 미리보기 게시끼리만 한 줄 (뒤 실행이 최신 main 으로 게시)
 
 jobs:
   collect:
     if: github.event_name != 'push'
     runs-on: ubuntu-latest
-    concurrency:
-      group: collect
-      cancel-in-progress: false
     steps:
       - name: 저장소 받기
         uses: actions/checkout@v4
@@ -80,8 +77,13 @@ jobs:
           git config user.email "dfmail@naver.com"
           git add -f web/data/
           git commit -m "업체 자료 갱신" || exit 0
-          git pull --rebase origin main
-          git push
+          # 다른 실행·다른 방과 동시에 올려도 되게: 자료는 이번에 모은 쪽을 살려 다시 시도
+          for i in 1 2 3 4 5; do
+            git pull --rebase -X theirs origin main && git push && exit 0
+            git rebase --abort 2>/dev/null || true
+            sleep $((i * 7))
+          done
+          exit 1
 
   # 크롬 미리보기 (휴대폰 없이 화면 확인용)
   web:
