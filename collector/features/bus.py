@@ -58,6 +58,9 @@ def fetch(params, tries=3):
             j = json.loads(text)
             resp = j.get("response") or {}
             code = str((resp.get("header") or {}).get("resultCode", ""))
+            if code == "99" and n < tries - 1:  # 동시 접속 한도 — 잠깐 쉬고 다시
+                time.sleep(2.0 * (n + 1))
+                continue
             if code not in ("", "00", "0"):
                 print("  ! 결과 코드", code, (resp.get("header") or {}).get("resultMsg"))
                 return None
