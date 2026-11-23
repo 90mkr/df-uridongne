@@ -1,5 +1,6 @@
 // 충전소 상세 화면 · 충전소 창 · 내 차 · 타이머 · 고장 제보 (이 폴더는 충전소 담당 방만 고침)
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -18,8 +19,6 @@ import 'watch.dart';
 const kFree = Color(0xFF1E9E5A);
 const kBusy = Color(0xFFEF7D22);
 const kOff = Color(0xFFA3A7B0);
-const _freeBg = Color(0xFFE7F6EE);
-const _busyBg = Color(0xFFFFF1E5);
 
 enum Mode { all, fast, free }
 
@@ -424,7 +423,7 @@ class _Tail extends CustomPainter {
   _Tail(this.c);
   @override
   void paint(Canvas canvas, Size s) {
-    final path = Path()
+    final path = ui.Path()
       ..moveTo(0, 0)
       ..lineTo(s.width, 0)
       ..lineTo(s.width / 2, s.height)
