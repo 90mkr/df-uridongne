@@ -85,3 +85,20 @@
 - 다리(클라우드플레어 dongne-dari)가 열쇠를 붙이고 30초 묶어 둔다. 잘 안 바뀌는 목록은 `cache: 43200`.
 - 「열쇠 있나」 확인은 `hasDataKey` 만 쓴다 (`kDataGoKrKey.isEmpty` 직접 확인 금지 — 곧 앱에서 열쇠를 뺌).
 - 모든 기능이 옮기면 본부가 앱 제작에서 DATA_GO_KR_KEY 를 뺀다.
+
+## 지도는 공용 지도로 (11-24 본부 · 대표님 지시: 네이버 지도로 통일)
+휴대폰 앱은 **네이버 지도**, 웹 미리보기는 오픈스트리트맵으로 자동으로 바뀌는 공용 지도가 있다. **`FlutterMap` 을 직접 쓰지 말 것.**
+- 점만 찍으면 되는 지도: `core/map.dart` 의 `DongneMap(points: [MapPoint...], icon: '기능아이콘')`
+- 내 모양 점·선·원이 필요한 지도: `core/dnmap.dart` 의 `DnMap`
+  - 점 `DnMark(id, pos, key, size, child: 내 위젯, onTap)` — 아래 가운데가 위치. **모양이 바뀌면 key 도 바꿀 것** (예: `'${s.id}|${s.price}|$sel'`). 네이버 지도는 위젯을 그림으로 한 번 바꿔 다시 쓴다.
+  - 선 `DnLine(points)` (버스 노선) · 원 `DnCircle(pos, 미터)` (반경 표시)
+  - 조종 `DnMapCtl` → `ctl.move(pos, 16)` · `ctl.fit([a, b], EdgeInsets.all(60))`
+  - 지도 누름 `onMapTap`, 움직임 끝 `onIdle(center, zoom, bounds, gesture)`
+  - 우리 단지 파란 이름표는 자동으로 들어감 (따로 그리지 말 것)
+
+### 바꿔 주세요 (방마다)
+- 버스: `bus/route_page.dart` 노선 지도 → `DnMap(lines: [DnLine(line)], marks: 정류장 점)`
+- 주유소: `gas/page.dart` 가격 말풍선 지도 → `DnMap(marks: [DnMark(child: _Bubble(...))], circles: 반경)`
+- 충전소: `charger/page.dart` → `DnMap(marks: ...)`
+- 약국: `pharmacy/page.dart` → `DnMap(marks: ..., ctl: 로 처음 화면 맞추기 fit)`
+바꾼 뒤 휴대폰 설치 파일에서 네이버 지도로 나오는지 확인하고 작업판에 적을 것.
