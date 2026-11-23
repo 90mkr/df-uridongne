@@ -28,3 +28,7 @@
       allow delete: if isAdmin();
     }
 ```
+
+---
+## 처리 (11-23 21:55, 본부)
+- `dn_trash_days/{단지id}` 규칙을 제안 그대로 `firestore.dongne.rules` 에 넣고, 파이어베이스(콕플과 같은 규칙)에 덧붙여 게시함. 이제 로그인 회원은 저장 가능.

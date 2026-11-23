@@ -11,3 +11,10 @@
 - 다른 기능도 쓸 수 있음 (예: 사장님 등록 때 사업자 QR, 주차장 QR 등).
 - 급한 정도: 보통 (복권 화면 1차는 이것 없이도 돌아감)
 - 작업판 버전: lotto 0.1.0
+
+---
+## 처리 (11-23 21:55, 본부)
+- `pubspec.yaml` 에 `mobile_scanner`, `tool/patch_android.py` 에 카메라 권한(required=false).
+- `lib/core/qr.dart` 의 `Future<String?> scanQr(BuildContext context, {String title})` — 전체 화면 카메라·가운데 네모 틀·플래시, 읽히면 글자 그대로 돌려줌. 웹이면 null(붙여 넣기 창 그대로 두기).
+- 쓰는 법: `import '../../core/qr.dart';` 뒤 `final t = await scanQr(context, title: '로또 용지 QR');`
+- 아이폰은 나중에 Info.plist 카메라 문구를 본부가 넣음.
