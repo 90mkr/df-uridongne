@@ -310,3 +310,48 @@ Future<T?> showSheet<T>(BuildContext context, Widget Function(BuildContext) buil
         ),
       ),
     );
+
+
+// 단지 홈 본문 한 줄 카드 (「내 차 어디 댔지」·「충전소 찾기」·「제일 싼 주유소」 같은 모양)
+// 왼쪽 아이콘 · 굵은+얇은 제목 · 작은 설명 · 오른쪽(단추나 큰 숫자)
+class MainRowCard extends StatelessWidget {
+  final String icon, bold, thin, sub;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+  const MainRowCard({super.key, required this.icon, required this.bold, required this.thin, this.sub = '', this.trailing, this.onTap});
+
+  @override
+  Widget build(BuildContext context) => Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(kRadius),
+          onTap: onTap,
+          child: Ink(
+            decoration: cardBox(),
+            padding: const EdgeInsets.fromLTRB(14, 13, 12, 13),
+            child: Row(children: [
+              LineIcon(icon, size: 34),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                  MixTitle(bold, thin, size: 15),
+                  if (sub.isNotEmpty) ...[const SizedBox(height: 3), Text(sub, style: T.tiny, maxLines: 2, overflow: TextOverflow.ellipsis)],
+                ]),
+              ),
+              if (trailing != null) ...[const SizedBox(width: 8), trailing!],
+            ]),
+          ),
+        ),
+      );
+}
+
+// 오른쪽 큰 값 (예: 「1,598원」 + 「휘발유」)
+class MainValue extends StatelessWidget {
+  final String value, label;
+  const MainValue(this.value, this.label, {super.key});
+  @override
+  Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
+        Text(value, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: kBlue, letterSpacing: -0.5, height: 1.15)),
+        if (label.isNotEmpty) Text(label, style: T.tiny),
+      ]);
+}

@@ -68,6 +68,7 @@ abstract class Feature {
 
   // 단지 홈 본문 큰 카드 (slot 과 별개, 「생활 도구」 위) — 예: 주차장의 「내 차 어디 댔지」. null 이면 없음
   Widget? mainCard(BuildContext context, Complex c) => null;
+  int get mainOrder => order; // 본문 큰 카드끼리 순서 (작을수록 위)
 
   // 상세 화면
   Widget page(BuildContext context, Complex c);

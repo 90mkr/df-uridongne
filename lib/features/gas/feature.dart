@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../core/data.dart';
 import '../../core/feature.dart';
 import '../../core/theme.dart';
+import '../../core/ui.dart';
 import 'data.dart';
 import 'page.dart';
 
@@ -30,6 +31,12 @@ class GasFeature extends Feature {
   @override
   Widget page(BuildContext context, Complex c) => GasPage(c);
 
+  // 단지 홈 본문: 「제일 싼 주유소」 (단지 3km 안, 고른 기름 기준) — 자료 없으면 빈칸
+  @override
+  Widget? mainCard(BuildContext context, Complex c) => _CheapCard(f: this, c: c);
+  @override
+  int get mainOrder => 2;
+
   // 지도 탭: 단지 3km 안 주유소 (휘발유 싼 순, 이름 옆에 가격)
   @override
   Future<List<MapPoint>> mapPoints(Complex c) async {
@@ -49,4 +56,40 @@ class GasFeature extends Feature {
         ),
     ];
   }
+}
+
+class _CheapCard extends StatelessWidget {
+  final Feature f;
+  final Complex c;
+  const _CheapCard({required this.f, required this.c});
+
+  Future<(GasStation, String)?> _load() async {
+    final d = await loadGas(c.areaId);
+    if (d == null) return null;
+    final p = await prefGet('gas.fuel') ?? 'B027';
+    final fuel = kFuels.any((x) => x.$1 == p) ? p : 'B027';
+    final l = d.around(c.pos, fuel, 3000);
+    return l.isEmpty ? null : (l.first, fuel);
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<(GasStation, String)?>(
+        future: _load(),
+        builder: (_, snap) {
+          final r = snap.data;
+          if (r == null) return const SizedBox.shrink();
+          final (s, fuel) = r;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 0),
+            child: MainRowCard(
+              icon: 'gas',
+              bold: '제일 싼',
+              thin: '주유소',
+              sub: '${s.name} · ${distText(s.dist)}',
+              trailing: MainValue('${won(s.price(fuel)!)}원', fuelName(fuel)),
+              onTap: () => openFeature(context, f),
+            ),
+          );
+        },
+      );
 }

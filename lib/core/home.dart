@@ -97,7 +97,7 @@ class _HomeTabState extends State<HomeTab> {
             for (final f in at(Slot.section)) ...[card(f), const SizedBox(height: 12)],
             for (final f in at(Slot.wide)) ...[card(f), const SizedBox(height: 12)],
             // 본문 큰 카드 (예: 주차장 「내 차 어디 댔지」)
-            for (final f in features)
+            for (final f in [...features]..sort((a, b) => a.mainOrder.compareTo(b.mainOrder)))
               if (f.mainCard(context, c) case final w?) ...[KeyedSubtree(key: ValueKey('m${f.id}$gen'), child: w), const SizedBox(height: 12)],
             if (tools.isNotEmpty) ...[
               const Padding(padding: EdgeInsets.fromLTRB(2, 8, 0, 10), child: Text('생활 도구', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: -0.3))),

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../core/data.dart';
 import '../../core/feature.dart';
 import '../../core/theme.dart';
+import '../../core/ui.dart';
 import 'data.dart';
 import 'page.dart';
 
@@ -30,6 +31,12 @@ class ChargerFeature extends Feature {
   @override
   Widget page(BuildContext context, Complex c) => ChargerPage(complex: c);
 
+  // 단지 홈 본문: 「충전소 찾기」 (가장 가까운, 빈 충전기 있는 곳) — 자료 없으면 빈칸
+  @override
+  Widget? mainCard(BuildContext context, Complex c) => _NearCard(f: this, c: c);
+  @override
+  int get mainOrder => 1;
+
   @override
   Future<List<MapPoint>> mapPoints(Complex c) async {
     final set = await stationsOf(c.areaId);
@@ -47,4 +54,41 @@ class ChargerFeature extends Feature {
         ),
     ];
   }
+}
+
+class _NearCard extends StatelessWidget {
+  final Feature f;
+  final Complex c;
+  const _NearCard({required this.f, required this.c});
+
+  Future<(Station, int, int)?> _load() async {
+    final set = await stationsOf(c.areaId);
+    await loadMyPlugs();
+    final mine = myPlugs.value;
+    final near = set.all.where((s) => meters(c.pos, s.pos) <= 3000 && s.pick(plugs: mine).isNotEmpty).toList()
+      ..sort((a, b) => meters(c.pos, a.pos).compareTo(meters(c.pos, b.pos)));
+    if (near.isEmpty) return null;
+    int free(Station s) => s.pick(plugs: mine).where((x) => x.use == Use.free).length;
+    final best = near.firstWhere((s) => free(s) > 0, orElse: () => near.first);
+    final spots = near.where((s) => free(s) > 0).length;
+    return (best, free(best), spots);
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<(Station, int, int)?>(
+        future: _load(),
+        builder: (_, snap) {
+          final r = snap.data;
+          if (r == null) return const SizedBox.shrink();
+          final (s, free, spots) = r;
+          return MainRowCard(
+            icon: 'charger',
+            bold: '충전소',
+            thin: '찾기',
+            sub: '${s.name} · ${distText(meters(c.pos, s.pos))}${s.hasFast ? ' · 급속' : ''}',
+            trailing: MainValue(free > 0 ? '빈 $free' : '꽉 참', spots > 0 ? '3km 안 $spots곳 비어요' : '3km 안'),
+            onTap: () => openFeature(context, f),
+          );
+        },
+      );
 }

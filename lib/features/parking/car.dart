@@ -286,22 +286,12 @@ class _CarMainCardState extends State<CarMainCard> {
         valueListenable: myCar,
         builder: (_, car, __) {
           if (car != null) return CarCard(car: car);
-          return Container(
-            decoration: cardBox(),
-            padding: const EdgeInsets.fromLTRB(14, 13, 12, 13),
-            child: Row(children: [
-              const LineIcon('car', size: 34),
-              const SizedBox(width: 11),
-              const Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                  MixTitle('내 차', '어디 댔지', size: 15),
-                  SizedBox(height: 3),
-                  Text('세운 곳을 남겨 두면 찾아가기와 예상 요금을 알려 드려요', style: T.tiny, maxLines: 2),
-                ]),
-              ),
-              const SizedBox(width: 8),
-              SizedBox(width: 104, child: Btn(busy ? '확인 중' : '여기 세웠어요', primary: true, h: 40, onTap: _park)),
-            ]),
+          return MainRowCard(
+            icon: 'car',
+            bold: '내 차',
+            thin: '어디 댔지',
+            sub: '세운 곳을 남겨 두면 찾아가기와 예상 요금을 알려 드려요',
+            trailing: SizedBox(width: 104, child: Btn(busy ? '확인 중' : '여기 세웠어요', primary: true, h: 40, onTap: _park)),
           );
         },
       );

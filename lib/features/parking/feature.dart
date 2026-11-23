@@ -41,6 +41,8 @@ class ParkingFeature extends Feature {
   // 단지 홈 본문: 「내 차 어디 댔지」 (주차 중이면 경과·요금·찾아가기, 아니면 「여기 세웠어요」)
   @override
   Widget? mainCard(BuildContext context, Complex c) => CarMainCard(c: c);
+  @override
+  int get mainOrder => 0;
   // 가게 화면 전화·길안내 아래 한 줄: 「근처 주차장 ○곳 · 가장 싼 곳 30분 ○원」 (없으면 null)
   static Future<String?> nearHint(LatLng p) => parkingHint(p);
   // 그 줄을 누르면: 그 가게 기준 주차장 지도
