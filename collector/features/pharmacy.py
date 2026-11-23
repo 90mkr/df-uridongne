@@ -16,6 +16,7 @@
 """
 import json
 import math
+import re
 import os
 import sys
 import time
@@ -45,6 +46,8 @@ HOLIDAYS_FALLBACK = [
     "2027-05-13", "2027-06-06", "2027-08-15", "2027-08-16", "2027-09-14", "2027-09-15", "2027-09-16",
     "2027-10-03", "2027-10-04", "2027-10-09", "2027-10-11", "2027-12-25", "2027-12-27",
 ]
+
+KIDS = re.compile(r"소아|어린이|아동|키즈|아이들|우리아이|달빛")
 
 calls = 0
 LOG = []  # 사람이 볼 기록 (status.json 에 남김)
@@ -202,7 +205,8 @@ def main():
         log(f"약국 자료가 너무 적어({len(pharm)}곳) 지난 자료를 그대로 둠")
         status("약국 실패")
         return
-    kids = [p for p in (place(it, "h") for it in fetch_all(HOSP, {"QD": "D002"})) if p]
+    # 진료과목 거르기(QD)가 듣지 않아 안과 등도 섞여 오므로, 이름으로 소아청소년과만 남긴다
+    kids = [p for p in (place(it, "h") for it in fetch_all(HOSP, {"QD": "D002"})) if p and KIDS.search(p["n"])]
     if not kids:
         # 지난 소아과 자료는 칸 파일 안에 있으니, 이번에 못 받으면 지난 칸에서 꺼내 다시 넣는다
         for f in os.listdir(OUT):

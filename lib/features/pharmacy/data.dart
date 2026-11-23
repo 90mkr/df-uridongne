@@ -18,7 +18,8 @@ class Place {
   const Place({required this.id, required this.kind, required this.name, required this.addr, required this.tel, this.tel2 = '', this.div = '', required this.pos, required this.hours});
 
   bool get isPharm => kind == 'p';
-  bool get isKids => kind == 'h';
+  // 병·의원 자료에 안과 등이 섞여 와서 이름으로 소아청소년과만
+  bool get isKids => kind == 'h' && RegExp(r'소아|어린이|아동|키즈|아이들|우리아이|달빛').hasMatch(name);
   bool get isEr => kind == 'e';
 
   static Place? from(dynamic j) {
@@ -194,7 +195,10 @@ String clockText(int min) {
 // "0900-2200" → "09:00 – 22:00"
 String spanText(String s) {
   if (s.length != 9) return '쉼';
-  return '${s.substring(0, 2)}:${s.substring(2, 4)} – ${s.substring(5, 7)}:${s.substring(7)}';
+  final ch = int.tryParse(s.substring(5, 7)) ?? 0;
+  final next = s.substring(5) != '2400' && (ch >= 24 || s.substring(5).compareTo(s.substring(0, 4)) <= 0);
+  final close = next ? '다음날 ${(ch % 24).toString().padLeft(2, '0')}:${s.substring(7)}' : '${s.substring(5, 7)}:${s.substring(7)}';
+  return '${s.substring(0, 2)}:${s.substring(2, 4)} – $close';
 }
 
 // ---- 자료 받기 ----
