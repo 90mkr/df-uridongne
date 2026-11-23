@@ -105,12 +105,14 @@ Future<List<Map>?> _call(String path, Map<String, String> q, {Duration keep = co
     }
     final j = jsonDecode(body);
     final resp = j is Map ? j['response'] : null;
-    final code = '${resp is Map ? (resp['header'] as Map?)?['resultCode'] : ''}';
+    final head = resp is Map ? resp['header'] : null;
+    final code = head is Map ? '${head['resultCode'] ?? ''}' : '';
     if (code.isNotEmpty && code != '00' && code != '0') {
       lastErr = BusErr.fail;
       return null;
     }
-    final items = resp is Map ? (resp['body'] as Map?)?['items'] : null;
+    final bodyMap = resp is Map ? resp['body'] : null;
+    final items = bodyMap is Map ? bodyMap['items'] : null;
     final it = items is Map ? items['item'] : null;
     final list = <Map>[];
     if (it is List) {
