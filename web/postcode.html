@@ -76,7 +76,17 @@
     </div>
   </div>
 
-  <div class="btns"><button class="b2" onclick="again()">다른 주소 찾기</button></div>
+  <div class="card">
+    <div class="t">해외직구 <i>칸별 복사</i></div>
+    <div class="hint">쇼핑몰 주소 칸에 하나씩 붙여 넣으세요</div>
+    <div id="engRows"></div>
+  </div>
+
+  <div class="btns">
+    <button class="b1" id="saveBtn" onclick="saveToApp()">우리동네에 저장</button>
+    <button class="b2" onclick="again()">다른 주소 찾기</button>
+  </div>
+  <div class="hint" id="saveHint" style="text-align:center;margin-top:8px">저장을 누르고 앱으로 돌아가면 이름을 붙여 저장해요</div>
 </div>
 
 <div class="recent" id="recentBox" style="display:none"></div>
@@ -107,11 +117,34 @@
   }
   function fullEn() {
     var u = unitEn();
-    return (u ? u + ', ' : '') + R.eng + ', ' + R.zip;
+    var e = engParts(); return [e.a2, e.a1, e.city, e.state, e.zip, 'Republic of Korea'].filter(Boolean).join(', ');
+  }
+  function engParts() {
+    var t = (R.eng || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean);
+    if (t.length && /korea/i.test(t[t.length - 1])) t.pop();
+    if (t.length < 3) return { a1: t.join(', '), a2: unitEn(), city: '', state: '', zip: R.zip };
+    var state = t.pop(), city = t.pop();
+    return { a1: t.join(', '), a2: unitEn(), city: city, state: state, zip: R.zip };
   }
   function fill() {
     $('fullKo').textContent = fullKo();
     $('fullEn').textContent = fullEn();
+    var e = engParts(), rows = [['Address 1', e.a1], ['Address 2', e.a2], ['City', e.city], ['State', e.state], ['ZIP', e.zip], ['Country', 'Republic of Korea']];
+    var box = $('engRows'); box.innerHTML = '';
+    rows.forEach(function (r) {
+      var d = document.createElement('div'); d.className = 'row';
+      d.innerHTML = '<div class="k" style="width:70px"></div><div class="v"></div>';
+      d.querySelector('.k').textContent = r[0];
+      d.querySelector('.v').textContent = r[1] || '—';
+      if (r[1]) { var b = document.createElement('button'); b.className = 'cp'; b.textContent = '복사'; b.onclick = function () { copy(r[1], r[0] + ' 칸을'); }; d.appendChild(b); }
+      box.appendChild(d);
+    });
+  }
+  // 앱의 「저장 주소」「영문 주소」 화면이 돌아올 때 읽어 가는 글 (머리글 + JSON)
+  function saveToApp() {
+    var p = { zip: R.zip, road: R.road, jibun: R.jibun, eng: R.eng, bname: R.bname, dong: $('dong').value.trim(), ho: $('ho').value.trim() };
+    copy('[우리동네 주소] ' + JSON.stringify(p), '저장할 주소를');
+    $('saveHint').textContent = '이제 앱으로 돌아가세요 (뒤로 가기)';
   }
 
   function show(r) {
