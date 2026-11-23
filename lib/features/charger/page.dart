@@ -47,7 +47,7 @@ class _ChargerPageState extends State<ChargerPage> {
   bool loading = true;
   Mode mode = Mode.all;
   bool byFree = false; // false 가까운 순 · true 빈자리 많은 순
-  bool openOnly = false;
+  bool openOnly = true; // 처음엔 누구나 쓸 수 있는 곳만 (우리 단지는 늘 보임)
   bool mapView = false;
   double radius = 2000;
   DateTime? liveAt;
@@ -117,7 +117,7 @@ class _ChargerPageState extends State<ChargerPage> {
     final all = set?.all ?? const <Station>[];
     var list = all.where((s) => meters(c.pos, s.pos) <= radius && mine(s).isNotEmpty).toList();
     if (mode == Mode.free) list = list.where((s) => freeN(s) > 0).toList();
-    if (openOnly) list = list.where((s) => !s.limited).toList();
+    if (openOnly) list = list.where((s) => !s.limited || _isHome(s)).toList();
     final d = {for (final s in list) s.id: meters(c.pos, s.pos)};
     list.sort((a, b) {
       if (byFree) {
@@ -486,7 +486,8 @@ class _StationCard extends StatelessWidget {
               if (price == null) const Pill('요금 확인 필요'),
               if (cheapest) const Pill('가까운 곳 중 가장 저렴', color: kBlue, bg: Color(0xFFEEF3FF)),
               if (s.limited) Pill(_limitShort(s.limit)),
-              Pill(s.parkFree ? '주차 무료' : '주차비 별도'),
+              if (s.parkFree) const Pill('주차 무료'),
+              if (!s.parkFree && s.kind != '공동주택') const Pill('주차비 별도'),
             ]),
             const SizedBox(height: 10),
             Row(children: [
@@ -776,7 +777,8 @@ class _StationSheetState extends State<_StationSheet> {
       Wrap(spacing: 5, runSpacing: 5, children: [
         if (s.hasFast) Pill('급속 최대 ${s.maxKw}kW'),
         if (s.limited) Pill(_limitShort(s.limit)),
-        Pill(s.parkFree ? '주차 무료' : '주차비 별도'),
+        if (s.parkFree) const Pill('주차 무료'),
+        if (!s.parkFree && s.kind != '공동주택') const Pill('주차비 별도'),
         if (s.kind.isNotEmpty) Pill(s.kind),
       ]),
       const SizedBox(height: 14),

@@ -45,6 +45,7 @@ String typeText(String t) => switch (t) {
       '08' => 'DC콤보(완속)',
       '09' => 'NACS',
       '10' => 'DC콤보·NACS',
+      '11' => '버스용 DC콤보',
       _ => '기타',
     };
 
@@ -59,7 +60,7 @@ class Charger {
   Use get use => useOf(stat);
   Set<String> get plugs => plugsOf(type);
   // 내 차 단자에 맞는지 (내 단자를 안 골랐으면 모두 맞음)
-  bool fits(Set<String> mine) => mine.isEmpty || plugs.any(mine.contains);
+  bool fits(Set<String> mine) => type != '11' && (mine.isEmpty || plugs.any(mine.contains)); // 11 = 버스 차고지용
 }
 
 // ---------------- 충전 단자 ----------------
