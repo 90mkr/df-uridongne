@@ -3,9 +3,9 @@
  "name": "동네 전화번호부",
  "folder": "lib/features/phonebook",
  "room": "우리동네 본부 방",
- "state": "작업 중",
- "doing": "지도 중심 개편 — 업종 누르면 지도+명함 카드 넘기기, 태블릿 좌우 나눔, 이웃 추천·영업 상태·근처 주차장",
- "version": "0.2.0",
- "updated": "2026-11-23 22:05",
+ "state": "확인 중",
+ "doing": "지도 중심 개편 올림 — 대표님 확인 대기 (이웃 추천 규칙 dn_recs·dn_owned 게시 필요)",
+ "version": "0.3.0",
+ "updated": "2026-11-23 22:40",
  "order": 4
 }
