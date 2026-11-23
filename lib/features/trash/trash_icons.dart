@@ -17,6 +17,18 @@ const _body = <String, String>{
   'b': '<path d="M12 24v-5a4 4 0 0 1 4-4h16a4 4 0 0 1 4 4v5" fill="F"/><path d="M12 24v-5a4 4 0 0 1 4-4h16a4 4 0 0 1 4 4v5"/><path d="M8 26a3 3 0 0 1 6 0v3h20v-3a3 3 0 0 1 6 0v8H8z" fill="F"/><path d="M8 26a3 3 0 0 1 6 0v3h20v-3a3 3 0 0 1 6 0v8H8z"/><path d="M11 34v4M37 34v4"/>',
   // 전용 수거함 (상자)
   's': '<rect x="11" y="17" width="26" height="22" rx="2" fill="F"/><rect x="11" y="17" width="26" height="22" rx="2"/><path d="M9 12h30v5H9z"/><path d="M19 12v-3h10v3"/><path d="M20 26h8"/>',
+  // 휴지통 (일반쓰레기 표)
+  'bin': '<path d="M14 15h20l-1.6 23a3 3 0 0 1-3 2.8H18.6a3 3 0 0 1-3-2.8z" fill="F"/><path d="M14 15h20l-1.6 23a3 3 0 0 1-3 2.8H18.6a3 3 0 0 1-3-2.8z"/><path d="M10 15h28"/><path d="M19 15v-3a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v3"/><path d="M21 21v13M27 21v13"/>',
+  // 확성기
+  'mega': '<path d="M8 20h7l16-9v26l-16-9H8z" fill="F"/><path d="M8 20h7l16-9v26l-16-9H8z"/><path d="M15 28l3 10h5l-2-9"/><path d="M36 18l4-3M37 24h5M36 30l4 3"/>',
+  // 바꾸기 화살표
+  'swap': '<path d="M10 17h28M31 10l7 7-7 7"/><path d="M38 31H10M17 24l-7 7 7 7"/>',
+  // 달력
+  'cal': '<rect x="8" y="11" width="32" height="29" rx="4" fill="F"/><rect x="8" y="11" width="32" height="29" rx="4"/><path d="M8 19h32M16 7v7M32 7v7"/><path d="M15 26h3M23 26h3M31 26h3M15 33h3M23 33h3"/>',
+  // 수거 없는 날
+  'calx': '<rect x="8" y="11" width="32" height="29" rx="4" fill="F"/><rect x="8" y="11" width="32" height="29" rx="4"/><path d="M8 19h32M16 7v7M32 7v7"/><path d="M19 25l10 9M29 25l-10 9"/>',
+  // 화살표
+  'arrow': '<path d="M12 24h24M27 15l9 9-9 9"/>',
   // 찾기
   'search': '<circle cx="21" cy="21" r="12"/><path d="M30 30l10 10"/>',
   // 장소
@@ -36,13 +48,14 @@ class TrashIcon extends StatelessWidget {
   final double size;
   final Color line;
   final Color fill;
-  const TrashIcon(this.name, {super.key, this.size = 24, this.line = kInk, this.fill = kSoft});
+  final double weight; // 선 굵기 (48칸 기준)
+  const TrashIcon(this.name, {super.key, this.size = 24, this.line = kInk, this.fill = kSoft, this.weight = 1.6});
 
   @override
   Widget build(BuildContext context) {
     String hex(Color c) => '#${(c.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
     final fo = fill.a < 0.99 ? ' fill-opacity="${fill.a.toStringAsFixed(2)}"' : '';
-    final svg = '$_head${_body[name] ?? _body['g']!}</svg>'.replaceAll('"L"', '"${hex(line)}"').replaceAll('fill="F"', 'fill="${hex(fill)}"$fo');
+    final svg = '$_head${_body[name] ?? _body['g']!}</svg>'.replaceAll('"L"', '"${hex(line)}"').replaceAll('fill="F"', 'fill="${hex(fill)}"$fo').replaceAll('stroke-width="1.6"', 'stroke-width="$weight"');
     return SvgPicture.string(svg, width: size, height: size);
   }
 }
