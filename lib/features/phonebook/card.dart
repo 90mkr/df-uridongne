@@ -278,34 +278,34 @@ class _ShopCardState extends State<ShopCard> {
             borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
             onTap: widget.onTap,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(9, 9, 8, 0),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(color: const Color(0xFFF3F6FB), borderRadius: BorderRadius.circular(10)),
-                  child: s.photo.startsWith('http')
-                      ? ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.network(s.photo, width: 44, height: 44, fit: BoxFit.cover))
-                      : LineIcon(s.cats.isEmpty ? 'pin' : s.cats.first, size: 32),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(s.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, height: 1.25, letterSpacing: -0.4)),
-                    const SizedBox(height: 1),
-                    Text(s.sub.isNotEmpty ? s.sub : (s.cats.isEmpty ? '' : catOf(s.cats.first).name),
-                        maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10.5, color: kSub, height: 1.3)),
-                    const SizedBox(height: 3),
-                    Row(children: [
-                      if (open != Open.unknown) ...[OpenMark(open), const SizedBox(width: 5)],
-                      Flexible(child: Text(distText(meters(c.pos, s.pos)), maxLines: 1, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700))),
-                      const SizedBox(width: 5),
-                      Text('추천 $n', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: n > 0 ? kBlue : kMute)),
+              padding: const EdgeInsets.fromLTRB(9, 8, 8, 0),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                // 제목은 맨 위 한 줄 전체 (좁은 카드에서도 덜 잘리게, 대표님 11-24)
+                Text(s.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, height: 1.25, letterSpacing: -0.4)),
+                const SizedBox(height: 5),
+                Row(children: [
+                  Container(
+                    width: 34,
+                    height: 34,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(color: const Color(0xFFF3F6FB), borderRadius: BorderRadius.circular(9)),
+                    child: s.photo.startsWith('http')
+                        ? ClipRRect(borderRadius: BorderRadius.circular(9), child: Image.network(s.photo, width: 34, height: 34, fit: BoxFit.cover))
+                        : LineIcon(s.cats.isEmpty ? 'pin' : s.cats.first, size: 26),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(s.sub.isNotEmpty ? s.sub : (s.cats.isEmpty ? '' : catOf(s.cats.first).name),
+                          maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, color: kSub, height: 1.25)),
+                      Row(children: [
+                        Flexible(child: Text(distText(meters(c.pos, s.pos)), maxLines: 1, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, height: 1.3))),
+                        if (n > 0) ...[const SizedBox(width: 4), Text('👍$n', style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: kBlue))],
+                      ]),
+                      if (open != Open.unknown) OpenMark(open),
                     ]),
-                  ]),
-                ),
-                Icon(Icons.place_outlined, size: 16, color: widget.selected ? kBlue : kMute),
+                  ),
+                ]),
               ]),
             ),
           ),
@@ -335,13 +335,14 @@ class _ShopCardState extends State<ShopCard> {
                   ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(9, 8, 9, 9),
+            padding: const EdgeInsets.fromLTRB(8, 7, 8, 8),
             child: Row(children: [
-              Expanded(child: _mini(s.tel.isEmpty ? '번호 없음' : '전화', 'phone', s.tel.isEmpty ? null : () => callTel(s.tel), primary: s.tel.isNotEmpty)),
-              const SizedBox(width: 5),
-              Expanded(child: _mini('길안내', 'route', () => startNav(context, name: s.name, lat: s.lat, lng: s.lng))),
-              const SizedBox(width: 5),
-              Expanded(child: _mini(editing ? '닫기' : '추천', 'owner', editing ? () => setState(() => editing = false) : _startRec, soft: true)),
+              Expanded(flex: 5, child: _mini(s.tel.isEmpty ? '번호없음' : '전화', Icons.call_rounded, s.tel.isEmpty ? null : () => callTel(s.tel), primary: s.tel.isNotEmpty)),
+              const SizedBox(width: 4),
+              Expanded(flex: 5, child: _mini('길안내', Icons.near_me_rounded, () => startNav(context, name: s.name, lat: s.lat, lng: s.lng))),
+              const SizedBox(width: 4),
+              // 추천: 엄지 손 (글 없이)
+              Expanded(flex: 3, child: _mini('', editing ? Icons.close_rounded : (rec?.mine == true ? Icons.thumb_up_alt_rounded : Icons.thumb_up_alt_outlined), editing ? () => setState(() => editing = false) : _startRec, soft: true)),
             ]),
           ),
         ]),
@@ -349,17 +350,23 @@ class _ShopCardState extends State<ShopCard> {
     );
   }
 
-  Widget _mini(String t, String icon, VoidCallback? f, {bool primary = false, bool soft = false}) => Material(
+  Widget _mini(String t, IconData icon, VoidCallback? f, {bool primary = false, bool soft = false}) => Material(
         color: primary ? kBlue : (soft ? const Color(0xFFEEF3FF) : Colors.white),
         borderRadius: BorderRadius.circular(8),
         child: InkWell(
           borderRadius: BorderRadius.circular(8),
           onTap: f,
           child: Container(
-            height: 30,
+            height: 28,
             alignment: Alignment.center,
             decoration: primary || soft ? null : BoxDecoration(borderRadius: BorderRadius.circular(8), border: Border.all(color: const Color(0xFFD5D9E0))),
-            child: Text(t, maxLines: 1, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: primary ? Colors.white : (soft ? kBlue : kInk))),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(icon, size: 13, color: primary ? Colors.white : (soft ? kBlue : kInk)),
+              if (t.isNotEmpty) ...[
+                const SizedBox(width: 2),
+                Flexible(child: Text(t, maxLines: 1, overflow: TextOverflow.clip, style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: primary ? Colors.white : kInk))),
+              ],
+            ]),
           ),
         ),
       );

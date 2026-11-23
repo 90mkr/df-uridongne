@@ -48,6 +48,7 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
   AnimationController? _glide;
   List<Shop> _lastPins = const []; // 지도 보기에 올린 가게들
   bool _userMoved = false;
+  bool listHidden = false; // 휴대폰 목록 보기: 지도 바탕을 누르면 목록이 쏙 들어감
   Shop? _pending; // 목록에서 눌러 지도로 넘어올 때 맞춰 볼 가게
   bool _wide = false;
   final Map<String, GlobalKey> _keys = {};
@@ -153,7 +154,10 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
 
   // 지도 핀을 누름: 그 가게 상세를 아래에 띄우고, 태블릿 목록은 그 카드로
   void _pin(Shop s) {
-    setState(() => sel = s.id);
+    setState(() {
+      sel = s.id;
+      listHidden = false;
+    });
     _glideTo(s.pos, z: mapCtl.camera.zoom, dy: _panelDy);
     if (!mapView) {
       final k = _keys[s.id];
@@ -433,11 +437,19 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
     final b = compact ? null : bounds;
     final inView = b == null ? list : list.where((s) => b.contains(s.pos)).toList();
     final shown = inView.take(120).toList();
-    final leftW = compact ? w * 0.6 : (w * 0.4).clamp(340.0, 460.0);
-    return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      SizedBox(
-        width: leftW,
-        child: Container(
+    final leftW = compact ? w * 0.46 : (w * 0.4).clamp(340.0, 460.0);
+    final hide = compact && listHidden;
+    return Stack(children: [
+      Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      AnimatedContainer(
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOutCubic,
+        width: hide ? 0 : leftW,
+        child: OverflowBox(
+          alignment: Alignment.centerRight,
+          minWidth: leftW,
+          maxWidth: leftW,
+          child: Container(
           color: kBg,
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Padding(
@@ -463,8 +475,34 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
           ]),
         ),
       ),
+        ),
       Container(width: 1, color: kLine),
       Expanded(child: _map(list.take(_maxPins * 2).toList(), wide: !compact)),
+    ]),
+      // 목록을 접었을 때 다시 펼치는 단추
+      if (hide)
+        Positioned(
+          left: 10,
+          bottom: 16 + MediaQuery.of(context).padding.bottom,
+          child: Material(
+            color: Colors.white,
+            elevation: 0,
+            borderRadius: BorderRadius.circular(20),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(20),
+              onTap: () => setState(() => listHidden = false),
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(12, 8, 14, 8),
+                decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), border: Border.all(color: kLine), boxShadow: kShadow),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(Icons.view_list_rounded, size: 17, color: kBlue),
+                  const SizedBox(width: 5),
+                  Text('목록 ${list.length}', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800)),
+                ]),
+              ),
+            ),
+          ),
+        ),
     ]);
   }
 
@@ -516,7 +554,10 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
               });
             });
           },
-          onTap: (_, __) => setState(() => sel = null),
+          onTap: (_, __) => setState(() {
+            sel = null;
+            if (!mapView && !_wide) listHidden = true;
+          }),
         ),
         children: [
           TileLayer(urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', userAgentPackageName: 'kr.designfeel.dongne'),
