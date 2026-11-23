@@ -12,13 +12,15 @@ import '../../core/ui.dart';
 import 'data.dart';
 
 // 상태 색: 영업 중 초록 / 30분 안에 닫음 주황 「곧 마감」 / 닫음 회색
-const kOpenC = Color(0xFF1E9E5A);
+const kOpenC = Color(0xFF22A861); // 영업 중 (핀·점·막대)
+const kOpenDark = Color(0xFF0E6B3A); // 영업 중 글자 (짙은 녹색)
+const kOpenSoft = Color(0xFFE3F5EA); // 영업 중 알약 바탕
 const kSoonC = Color(0xFFE58A00);
 const kWarn = Color(0xFFC76A00); // 곧 마감 글자
 const kOffC = Color(0xFFA3A8B1);
-const _barOpen = Color(0xFFD6F0E1);
-const _barSoon = Color(0xFFFFE3C2);
-const _barOff = Color(0xFFEDEFF3);
+const _barOpen = kOpenC;
+const _barSoon = Color(0xFFF29B1D);
+const _barOff = Color(0xFFE6E8EC);
 const kCallNote = '방문 전 전화 확인을 권해요';
 
 Color stateColor(OpenState s) => !s.open ? kOffC : (s.closingSoon ? kSoonC : kOpenC);
@@ -49,7 +51,7 @@ InlineSpan statusSpan(Place p, Complex c, When w, {bool dist = true}) {
       TextSpan(text: d),
       TextSpan(
           text: s.closingSoon ? '곧 마감 (${s.minsLeft}분)' : '영업 중',
-          style: TextStyle(color: s.closingSoon ? kWarn : kOpenC, fontWeight: FontWeight.w700)),
+          style: TextStyle(color: s.closingSoon ? kWarn : kOpenDark, fontWeight: FontWeight.w700)),
       TextSpan(text: ' · ${s.untilText}'),
     ]);
   }
@@ -147,13 +149,10 @@ class _PharmacyPageState extends State<PharmacyPage> {
               ],
               _controls(),
               const SizedBox(height: 16),
-              Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                Expanded(child: MixTitle(filterName(filter, ww), '5km 안 · ${list.length}곳', size: 16)),
-                if (ww.live && isHoliday(ww.date!)) const Text('오늘은 공휴일', style: T.tiny),
-              ]),
-              const SizedBox(height: 4),
-              const Text(kCallNote, style: T.tiny),
-              const SizedBox(height: 10),
+              _Summary(openCount: openCount, listCount: list.length, filter: filter, when: ww, nearest: pharm.where((p) => p.stateBy(ww).open).firstOrNull, complex: c),
+              const SizedBox(height: 6),
+              const Row(children: [Icon(Icons.info_outline_rounded, size: 13, color: kMute), SizedBox(width: 4), Text(kCallNote, style: T.tiny)]),
+              const SizedBox(height: 12),
               if (openCount == 0) ...[
                 _AltBlock(complex: c, places: all, when: ww, strong: true),
                 const SizedBox(height: 16),
@@ -490,7 +489,7 @@ class _Timeline extends StatelessWidget {
           bottom: 0,
           child: Align(
             alignment: Alignment.centerLeft,
-            child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: s.open ? kInk : kSub, height: 1.1)),
+            child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: s.open ? Colors.white : kSub, height: 1.1)),
           ),
         ),
       ]),
@@ -540,8 +539,12 @@ class _Featured extends StatelessWidget {
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(p.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: -0.4, height: 1.25)),
-                  const SizedBox(height: 3),
-                  Text.rich(statusSpan(p, complex, when), style: T.small),
+                  const SizedBox(height: 6),
+                  Row(children: [
+                    _StatePill(s),
+                    const SizedBox(width: 8),
+                    Flexible(child: Text('${distText(meters(complex.pos, p.pos))} · ${s.open ? s.untilText : (s.next.isEmpty ? '' : '${s.next} 열어요')}', maxLines: 1, overflow: TextOverflow.ellipsis, style: T.small)),
+                  ]),
                 ]),
               ),
               if (p.hasSunday || p.hasHoliday) ...[
@@ -557,6 +560,85 @@ class _Featured extends StatelessWidget {
           ]),
         ),
       ),
+    );
+  }
+}
+
+// 상태 알약: 영업 중(연녹 바탕·짙은 녹색 글자) / 곧 마감(주황) / 닫음(회색)
+class _StatePill extends StatelessWidget {
+  final OpenState s;
+  const _StatePill(this.s);
+  @override
+  Widget build(BuildContext context) {
+    final (bg, fg, t) = !s.open
+        ? (const Color(0xFFF0F1F4), kSub, '닫음')
+        : s.closingSoon
+            ? (const Color(0xFFFFF0DC), kWarn, '곧 마감 ${s.minsLeft}분')
+            : (kOpenSoft, kOpenDark, '영업 중');
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Container(width: 6, height: 6, decoration: BoxDecoration(color: s.open ? (s.closingSoon ? kSoonC : kOpenC) : kOffC, shape: BoxShape.circle)),
+        const SizedBox(width: 5),
+        Text(t, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: fg, height: 1.2)),
+      ]),
+    );
+  }
+}
+
+// 맨 위 요약: 지금 영업 중 ○곳 (초록 띠)
+class _Summary extends StatelessWidget {
+  final int openCount, listCount;
+  final PFilter filter;
+  final When when;
+  final Place? nearest;
+  final Complex complex;
+  const _Summary({required this.openCount, required this.listCount, required this.filter, required this.when, required this.nearest, required this.complex});
+
+  @override
+  Widget build(BuildContext context) {
+    final on = openCount > 0;
+    final head = when.live ? '지금' : when.label;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 16, 16, 16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(kRadius),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: on ? const [Color(0xFF26B36A), Color(0xFF13924F)] : const [Color(0xFF5B606B), Color(0xFF3F434C)],
+        ),
+      ),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('$head${when.live && isHoliday(when.date!) ? ' · 공휴일' : ''}', style: TextStyle(fontSize: 11.5, color: Colors.white.withValues(alpha: 0.82))),
+            const SizedBox(height: 2),
+            Text.rich(
+              TextSpan(children: [
+                TextSpan(text: on ? '영업 중 ' : '문 연 약국 ', style: const TextStyle(fontWeight: FontWeight.w300)),
+                TextSpan(text: on ? '$openCount' : '없음', style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: -0.5)),
+                if (on) const TextSpan(text: '곳', style: TextStyle(fontWeight: FontWeight.w600)),
+              ]),
+              style: const TextStyle(fontSize: 17, color: Colors.white, height: 1.15),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              nearest != null ? '가장 가까운 곳 ${nearest!.name} · ${distText(meters(complex.pos, nearest!.pos))}' : '아래 응급실·편의점을 이용해 주세요',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 11.5, color: Colors.white.withValues(alpha: 0.9)),
+            ),
+          ]),
+        ),
+        const SizedBox(width: 10),
+        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          LineIcon('pharm', size: 44, line: Colors.white, fill: Colors.white.withValues(alpha: 0.22)),
+          const SizedBox(height: 6),
+          Text('5km 안 · ${filter == PFilter.all ? '전체 ' : ''}$listCount곳', style: TextStyle(fontSize: 10.5, color: Colors.white.withValues(alpha: 0.85))),
+        ]),
+      ]),
     );
   }
 }
@@ -613,17 +695,28 @@ class _MiniBtn extends StatelessWidget {
   final VoidCallback onTap;
   const _MiniBtn(this.text, {required this.onTap});
   @override
-  Widget build(BuildContext context) => InkWell(
-        borderRadius: BorderRadius.circular(8),
-        onTap: onTap,
-        child: Container(
-          height: 32,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), border: Border.all(color: const Color(0xFFD5D9E0))),
-          child: Text(text, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: kInk)),
+  Widget build(BuildContext context) {
+    final call = text.startsWith('전화');
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: onTap,
+      child: Container(
+        height: 32,
+        padding: const EdgeInsets.fromLTRB(7, 0, 10, 0),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: call ? kOpenSoft : Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: call ? const Color(0xFFBFE6CE) : const Color(0xFFD5D9E0)),
         ),
-      );
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          LineIcon(call ? 'phone' : 'route', size: 17, line: call ? kOpenDark : kInk, fill: call ? Colors.white : kSoft),
+          const SizedBox(width: 3),
+          Text(call ? '전화' : '길안내', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: call ? kOpenDark : kInk)),
+        ]),
+      ),
+    );
+  }
 }
 
 // ---------------- 지도로 보기 ----------------
