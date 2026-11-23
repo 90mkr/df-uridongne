@@ -625,9 +625,9 @@ class _ShopPin extends StatelessWidget {
         decoration: BoxDecoration(color: col, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 1), boxShadow: kShadow),
       );
     } else {
-      final bg = selected ? kInk : Colors.white;
+      final bg = selected ? kBlue : Colors.white;
       final fg = selected ? Colors.white : kInk;
-      final sub = selected ? const Color(0xCCFFFFFF) : kSub;
+      final sub = selected ? const Color(0xD9FFFFFF) : kSub;
       final cat = shop.cats.isEmpty ? 'pin' : shop.cats.first;
       // 둘째 줄: 영업 상태가 있으면 그것, 없으면 이웃 추천, 그것도 없으면 세부 업종
       final Widget line2 = open == Open.open || open == Open.closing
@@ -647,8 +647,8 @@ class _ShopPin extends StatelessWidget {
         decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: selected ? kInk : const Color(0xFFD5DAE1)),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: selected ? 0.22 : 0.10), blurRadius: selected ? 14 : 8)],
+          border: Border.all(color: selected ? kBlue : const Color(0xFFD5DAE1)),
+          boxShadow: [BoxShadow(color: selected ? kBlue.withValues(alpha: 0.35) : Colors.black.withValues(alpha: 0.10), blurRadius: selected ? 16 : 8)],
         ),
         child: Row(children: [
           ClipRRect(
@@ -675,7 +675,7 @@ class _ShopPin extends StatelessWidget {
       );
       body = Column(mainAxisSize: MainAxisSize.min, children: [
         card,
-        CustomPaint(size: const Size(12, 6), painter: _Tail(bg, selected ? kInk : const Color(0xFFD5DAE1))),
+        CustomPaint(size: const Size(12, 6), painter: _Tail(bg, selected ? kBlue : const Color(0xFFD5DAE1))),
       ]);
     }
     return Align(
