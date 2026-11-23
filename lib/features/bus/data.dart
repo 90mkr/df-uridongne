@@ -110,7 +110,7 @@ Future<List<Map>?> _call(String path, Map<String, String> q, {Duration keep = co
     if (code == '99' && retry > 0) {
       // 동시 접속 한도 — 잠깐 쉬고 한 번 더
       await Future.delayed(const Duration(milliseconds: 1500));
-      return _call(path, q, keep: keep, retry: retry - 1);
+      return await _call(path, q, keep: keep, retry: retry - 1);
     }
     if (code.isNotEmpty && code != '00' && code != '0') {
       lastErr = BusErr.fail;
