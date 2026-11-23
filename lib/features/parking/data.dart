@@ -46,8 +46,58 @@ class Lot {
   // 「노외 · 공영」처럼 짧은 구분
   String get label => [if (kind.isNotEmpty) kind, if (type.isNotEmpty) type].join(' · ');
 
-  // 지도 점 글자: 「P 68」 (칸 수 모르면 무료·유료)
-  String get badge => spaces > 0 ? 'P $spaces' : (isFree ? 'P 무료' : 'P');
+  // 지도 말풍선 글자: 요금 (「30분 1,000원」 · 「무료」)
+  String get badge {
+    if (isFree) return '무료';
+    if (basicMin > 0 && basicWon > 0) return '$basicMin분 ${won(basicWon)}';
+    return '유료';
+  }
+
+  // 요금을 알 수 있는지
+  bool get priced => isFree || (basicMin > 0 && basicWon > 0);
+
+  // 세워 둔 시간(분)으로 요금 계산 (모르면 null). 하루 주차권이 있으면 그 값을 넘지 않게.
+  int? costFor(int minutes) {
+    if (isFree) return 0;
+    if (basicMin <= 0 || basicWon <= 0) return null;
+    var c = basicWon;
+    if (minutes > basicMin) {
+      final unit = addMin > 0 ? addMin : basicMin;
+      final per = addMin > 0 ? addWon : basicWon;
+      c += ((minutes - basicMin) / unit).ceil() * per;
+    }
+    if (dayWon > 0 && minutes <= 24 * 60 && c > dayWon) c = dayWon;
+    return c;
+  }
+
+  // 싼 순 정렬값: 1시간 요금 (무료 0, 모르면 맨 뒤)
+  int get hourCost => costFor(60) ?? 1 << 30;
+
+  // 지금 무료인지: 무료 주차장, 또는 노상 유료 주차장의 운영(요금) 시간 밖 (주말·야간 무료)
+  bool freeAt(DateTime now) {
+    if (isFree) return true;
+    if (type.contains('노상') && openAt(now) == false) return true;
+    return false;
+  }
+
+  // 노상 유료가 지금 시간 밖이라 무료일 때, 다시 요금이 붙는 시각 (오늘·내일 중 가까운 시작 시각)
+  DateTime? paidFrom(DateTime now) {
+    if (isFree || !type.contains('노상')) return null;
+    for (var add = 0; add < 3; add++) {
+      final day = DateTime(now.year, now.month, now.day).add(Duration(days: add));
+      final (o, _) = today(day);
+      final m = _min(o);
+      if (m == null) continue;
+      final at = day.add(Duration(minutes: m));
+      if (at.isAfter(now) && openAt(at.add(const Duration(minutes: 1))) == true) return at;
+    }
+    return null;
+  }
+
+  Map<String, dynamic> toCar() => {
+        'id': id, 'n': name, 'k': kind, 'ty': type, 'f': fee, 'bt': basicMin, 'bc': basicWon, 'at': addMin, 'ac': addWon,
+        'dt': dayMin, 'dc': dayWon, 'd': days, 'h': hours, 'y': lat, 'x': lng,
+      };
 
   // 요금 한 줄 (목록용)
   String get feeShort {
