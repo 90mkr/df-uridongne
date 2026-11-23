@@ -69,12 +69,10 @@ class _HomeCard extends StatelessWidget {
             ]),
           ),
           const SizedBox(height: 12),
-          GridView.count(
-            crossAxisCount: 4,
+          GridView(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 4, mainAxisExtent: 70, mainAxisSpacing: 4),
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 4,
-            childAspectRatio: 1.15,
             children: [
               for (final cat in kCats.take(8))
                 InkWell(
