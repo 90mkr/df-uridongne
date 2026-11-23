@@ -102,8 +102,10 @@
       37.445
      ],
      "zoom": 13,
-     "ready": false,
-     "collect": true
+     "ready": true,
+     "collect": true,
+     "updated": "2026-11-23 19:56",
+     "count": 9778
     },
     {
      "id": "yeongjong",
