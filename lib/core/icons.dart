@@ -83,6 +83,22 @@ class LineIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 기본 색으로 부르면 색 아이콘(대표님 시안 11-23)을 쓴다. 색을 따로 준 곳(파랑 카드 위 흰 아이콘 등)은 선 아이콘 그대로.
+    if (line == kInk && fill == kSoft) {
+      if (kColorPng.contains(name)) {
+        return SizedBox(
+          width: size,
+          height: size,
+          child: OverflowBox(
+            maxWidth: size * 1.18,
+            maxHeight: size * 1.18,
+            child: Image.asset('assets/icons/$name.png', width: size * 1.18, height: size * 1.18, filterQuality: FilterQuality.medium),
+          ),
+        );
+      }
+      final c = kColorSvg[name];
+      if (c != null) return SvgPicture.string(c, width: size, height: size);
+    }
     final body = kIconBody[name] ?? kIconBody['pin']!;
     // 반투명 면은 fill-opacity 로 (예: 파랑 카드 위 흰 면)
     final fo = fill.a < 0.99 && fill.a >= 0.02 ? ' fill-opacity="${fill.a.toStringAsFixed(2)}"' : '';
@@ -96,3 +112,23 @@ String _hex(Color c) {
   final v = c.toARGB32() & 0xFFFFFF;
   return '#${v.toRadixString(16).padLeft(6, '0')}';
 }
+
+// ---------------- 색 아이콘 (단지 홈 시안 11-23) ----------------
+// 업종 18개: 그림 파일 assets/icons/<이름>.png (시안 그림에서 오려 냄)
+const kColorPng = {
+  'laundry', 'repair', 'ricecake', 'hair', 'acad', 'kids', 'hosp', 'realty', 'food',
+  'cafe', 'mart', 'pharm', 'flower', 'hardware', 'bank', 'car', 'pet', 'public',
+};
+
+// 기능·도구: 남색 선 + 색 면 (시안 느낌으로 직접 그림)
+const _n = '#24539F'; // 남색 선
+const Map<String, String> kColorSvg = {
+  'bus': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect x="9" y="7" width="30" height="30" rx="7" fill="#4C8DF6" stroke="$_n" stroke-width="2"/><rect x="13" y="12" width="22" height="10" rx="2.5" fill="#fff"/><rect x="15" y="9" width="18" height="2" rx="1" fill="#CFE0FD"/><circle cx="17" cy="29" r="2.2" fill="#FFE27A"/><circle cx="31" cy="29" r="2.2" fill="#FFE27A"/><rect x="13" y="36" width="5" height="5" rx="1.5" fill="$_n"/><rect x="30" y="36" width="5" height="5" rx="1.5" fill="$_n"/></svg>',
+  'book': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect x="8" y="6" width="32" height="36" rx="8" fill="#3D7FF3"/><path d="M19 15l3 5-2 2c1.4 2.8 3.4 4.8 6 6l2-2 5 3-1 3.6c-8 .6-15.6-7-15-15z" fill="#fff"/><path d="M31 15h3M31 20h3" stroke="#BFD6FF" stroke-width="2.2" stroke-linecap="round"/></svg>',
+  'gas': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect x="8" y="7" width="22" height="34" rx="4" fill="#FF8A3D"/><rect x="12" y="11" width="14" height="10" rx="2" fill="#fff"/><rect x="6" y="39" width="26" height="4" rx="2" fill="#E2641E"/><path d="M30 17l6 4v12.5a2.75 2.75 0 0 0 5.5 0V19l-4-5" fill="none" stroke="#E2641E" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  'charger': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect x="8" y="6" width="24" height="36" rx="4" fill="#31C065"/><path d="M22 12l-7 12h6l-3 11 9-14h-6l3-9z" fill="#fff"/><path d="M32 18h4a3 3 0 0 1 3 3v9" fill="none" stroke="#1E9B4E" stroke-width="2.6" stroke-linecap="round"/><circle cx="39" cy="33" r="2.6" fill="#1E9B4E"/></svg>',
+  'parking': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect x="7" y="7" width="34" height="34" rx="8" fill="#2F7BF5"/><path d="M19 34V14h7.5a6 6 0 0 1 0 12H19" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  'post': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect x="6" y="11" width="36" height="26" rx="5" fill="#8C6CF2"/><path d="M8 14l16 12 16-12" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  'deals': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path d="M6 38l10-10 7 5 12-14 7-4v23H6z" fill="#D6E6FE"/><path d="M6 36l10-10 7 5 12-14" fill="none" stroke="#2F7BF5" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M30 15h7v7" fill="none" stroke="#2F7BF5" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  'lotto': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><circle cx="18" cy="21" r="10" fill="#FFC531"/><circle cx="31" cy="29" r="10" fill="#4C8DF6"/><circle cx="18" cy="21" r="4.5" fill="#fff"/><circle cx="31" cy="29" r="4.5" fill="#fff"/></svg>',
+};

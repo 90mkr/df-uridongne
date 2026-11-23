@@ -3,9 +3,9 @@
  "name": "본부 (공통 뼈대)",
  "folder": "lib/core · lib/main.dart · lib/features/registry.dart · .github · collector/collect.py",
  "room": "우리동네 본부 방",
- "state": "대기",
- "doing": "요청 6건 처리(단지 요일 규칙·복권 일정·QR 부품·지도 글자·버스·충전소 자료) · 다음 요청 대기",
+ "state": "작업 중",
+ "doing": "단지 홈 디자인 보완 (대표님 시안 11-23): 색 아이콘·카드 그림·배출 카드 그라데이션",
  "version": "0.3.0",
- "updated": "2026-11-23 21:55",
+ "updated": "2026-11-23 23:05",
  "order": 0
 }

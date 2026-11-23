@@ -43,6 +43,13 @@ class MixTitle extends StatelessWidget {
 }
 
 // 카드 틀: 기능이 단지 홈에 붙이는 카드는 모두 이 틀 안에 내용만 넣는다
+// 아이콘 이름에 맞는 그림(assets/art)이 있으면 오른쪽 위에 깔고 바탕을 그 그림 색으로 옅게 물들인다 (시안 11-23)
+const _art = <String, (String, Color)>{
+  'bus': ('assets/art/bus.png', Color(0xFFD6E9FD)),
+  'pharm': ('assets/art/pharm.png', Color(0xFFDDF5F1)),
+  'deals': ('assets/art/deals.png', Color(0xFFE6F1FD)),
+};
+
 class HomeCardBox extends StatelessWidget {
   final String icon;
   final String title;
@@ -53,30 +60,61 @@ class HomeCardBox extends StatelessWidget {
   const HomeCardBox({super.key, required this.icon, required this.title, required this.child, this.foot, this.onTap, this.padding = const EdgeInsets.all(14)});
 
   @override
-  Widget build(BuildContext context) => Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(kRadius),
-          onTap: onTap,
-          child: Ink(
-            decoration: cardBox(),
-            padding: padding,
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-              Row(children: [
-                LineIcon(icon, size: 19),
-                const SizedBox(width: 6),
-                Flexible(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.title)),
-              ]),
-              const SizedBox(height: 9),
-              child,
-              if (foot != null) ...[
-                const SizedBox(height: 8),
-                Text(foot!, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.tiny),
-              ],
+  Widget build(BuildContext context) {
+    final art = _art[icon];
+    final deco = art == null
+        ? cardBox()
+        : BoxDecoration(
+            gradient: LinearGradient(begin: Alignment.centerLeft, end: Alignment.centerRight, colors: [Colors.white, Color.lerp(Colors.white, art.$2, 0.75)!]),
+            borderRadius: BorderRadius.circular(kRadius),
+            border: Border.all(color: kLine, width: 1),
+            boxShadow: kShadow,
+          );
+    final body = Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+      Row(children: [
+        LineIcon(icon, size: 24),
+        const SizedBox(width: 7),
+        Flexible(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.title)),
+        if (art != null) const SizedBox(width: 60),
+      ]),
+      const SizedBox(height: 10),
+      child,
+      if (foot != null) ...[
+        const SizedBox(height: 8),
+        Text(foot!, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.tiny),
+      ],
+    ]);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(kRadius),
+        onTap: onTap,
+        child: Ink(
+          decoration: deco,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(kRadius),
+            child: Stack(children: [
+              if (art != null)
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  child: ShaderMask(
+                    blendMode: BlendMode.dstIn,
+                    shaderCallback: (r) => const LinearGradient(colors: [Color(0x00000000), Color(0xFF000000)], stops: [0, 0.45]).createShader(r),
+                    child: ShaderMask(
+                      blendMode: BlendMode.dstIn,
+                      shaderCallback: (r) => const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF000000), Color(0x00000000)], stops: [0.55, 1]).createShader(r),
+                      child: Image.asset(art.$1, height: 50, fit: BoxFit.contain, filterQuality: FilterQuality.medium),
+                    ),
+                  ),
+                ),
+              Padding(padding: padding, child: body),
             ]),
           ),
         ),
-      );
+      ),
+    );
+  }
 }
 
 // 아직 만들지 않은 기능 카드에 들어가는 안내

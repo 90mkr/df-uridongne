@@ -68,7 +68,7 @@ class HomeTab extends StatelessWidget {
             for (final f in at(Slot.section)) ...[card(f), const SizedBox(height: 12)],
             for (final f in at(Slot.wide)) ...[card(f), const SizedBox(height: 12)],
             if (tools.isNotEmpty) ...[
-              const Padding(padding: EdgeInsets.fromLTRB(2, 6, 0, 8), child: Text('생활 도구', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700))),
+              const Padding(padding: EdgeInsets.fromLTRB(2, 8, 0, 10), child: Text('생활 도구', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: -0.3))),
               Row(children: [
                 for (var i = 0; i < 4; i++) ...[
                   if (i > 0) const SizedBox(width: 8),
@@ -92,8 +92,8 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     final head = features.where((f) => f.slot == Slot.header).toList();
     return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(kPad, 12, 12, 10),
+      color: kBg,
+      padding: const EdgeInsets.fromLTRB(kPad, 12, 12, 4),
       child: Row(children: [
         Expanded(
           child: InkWell(
@@ -108,11 +108,11 @@ class _Header extends StatelessWidget {
                       : Text.rich(
                           TextSpan(children: [
                             if (c!.town.isNotEmpty) TextSpan(text: '${c!.town} ', style: const TextStyle(fontWeight: FontWeight.w800)),
-                            TextSpan(text: c!.name, style: const TextStyle(fontWeight: FontWeight.w300)),
+                            TextSpan(text: c!.name, style: const TextStyle(fontWeight: FontWeight.w700)),
                           ]),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 18, letterSpacing: -0.6, height: 1.25),
+                          style: const TextStyle(fontSize: 19, letterSpacing: -0.6, height: 1.25),
                         ),
                 ),
                 const Icon(Icons.keyboard_arrow_down_rounded, size: 18),
@@ -141,15 +141,15 @@ class ToolTile extends StatelessWidget {
   Widget build(BuildContext context) => Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           onTap: () => openFeature(context, f),
           child: Ink(
-            padding: const EdgeInsets.symmetric(vertical: 11),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: kLine)),
+            padding: const EdgeInsets.symmetric(vertical: 13),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: kLine), boxShadow: kShadow),
             child: Column(children: [
-              LineIcon(f.icon, size: 26, fill: f.tint),
-              const SizedBox(height: 4),
-              Text(f.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
+              LineIcon(f.icon, size: 30),
+              const SizedBox(height: 6),
+              Text(f.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: -0.2)),
             ]),
           ),
         ),

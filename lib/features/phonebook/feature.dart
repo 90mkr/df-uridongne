@@ -56,38 +56,47 @@ class _HomeCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => Container(
-        decoration: cardBox(r: 16),
-        padding: const EdgeInsets.fromLTRB(14, 16, 14, 12),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 2),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              MixTitle('동네', '전화번호부'),
-              Spacer(),
-              Text('단지에서 가까운 순', style: T.tiny),
+  Widget build(BuildContext context) {
+    Widget cell(Cat cat) => InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => _open(context, cat),
+          child: SizedBox(
+            height: 84,
+            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+              LineIcon(cat.id, size: 38),
+              const SizedBox(height: 7),
+              Text(cat.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, letterSpacing: -0.3)),
             ]),
           ),
-          const SizedBox(height: 12),
-          GridView(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 4, mainAxisExtent: 70, mainAxisSpacing: 4),
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            children: [
-              for (final cat in kCats.take(8))
-                InkWell(
-                  borderRadius: BorderRadius.circular(10),
-                  onTap: () => _open(context, cat),
-                  child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    LineIcon(cat.id, size: 32),
-                    const SizedBox(height: 5),
-                    Text(cat.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
-                  ]),
-                ),
-            ],
-          ),
-        ]),
-      );
+        );
+    Widget row(Iterable<Cat> cs) => Row(children: [
+          for (final (i, cat) in cs.indexed) ...[
+            if (i > 0) Container(width: 1, height: 44, color: const Color(0xFFEDF0F5)),
+            Expanded(child: cell(cat)),
+          ],
+        ]);
+    return Container(
+      decoration: cardBox(),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        InkWell(
+          onTap: () => openFeature(context, PhonebookFeature()),
+          child: const Row(children: [
+            LineIcon('book', size: 24),
+            SizedBox(width: 7),
+            Text('동네 전화번호부', style: T.title),
+            Spacer(),
+            Text('단지에서 가까운 순', style: TextStyle(fontSize: 11.5, color: kSub)),
+            Icon(Icons.chevron_right_rounded, size: 18, color: kMute),
+          ]),
+        ),
+        const SizedBox(height: 6),
+        row(kCats.take(4)),
+        const Divider(height: 1, color: Color(0xFFEDF0F5)),
+        row(kCats.skip(4).take(4)),
+      ]),
+    );
+  }
 }
 
 // 전화번호부 탭 · 상세 화면: 찾기 + 모든 업종 + 콕플 맛집

@@ -10,18 +10,18 @@ const kBlue = Color(0xFF2563EB); // 강조 (시안 색)
 const kInk = Color(0xFF17181C); // 글자·선
 const kSub = Color(0xFF6B6F7A);
 const kMute = Color(0xFF9A9EA8);
-const kLine = Color(0xFFE3E5EA);
+const kLine = Color(0xFFE1E6EE);
 const kSoft = Color(0xFFE8EEFF); // 아이콘 옅은 면 (파랑 계열)
 const kSoftGreen = Color(0xFFE7F6EE);
 const kSoftOrange = Color(0xFFFFEFE3);
 const kSoftYellow = Color(0xFFFFF4D6);
-const kBg = Color(0xFFF5F6F8);
+const kBg = Color(0xFFF1F5FB); // 아주 옅은 하늘빛 (시안 11-23)
 const kAppName = '우리동네';
 
-const kRadius = 14.0;
+const kRadius = 16.0;
 const kPad = 20.0; // 휴대폰 화면 양옆 여백
 
-final kShadow = [BoxShadow(color: const Color(0xFF141828).withValues(alpha: 0.05), blurRadius: 14, offset: Offset.zero)];
+final kShadow = [BoxShadow(color: const Color(0xFF1C3A6E).withValues(alpha: 0.06), blurRadius: 16, offset: Offset.zero)];
 
 // 기본 카드 모양: 모든 기능 카드는 이걸 쓴다
 BoxDecoration cardBox({double r = kRadius, Color color = Colors.white}) => BoxDecoration(
@@ -36,7 +36,7 @@ class T {
   static const h1 = TextStyle(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: -0.6, height: 1.25);
   static const h2 = TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: -0.4, height: 1.25);
   static const thin = TextStyle(fontWeight: FontWeight.w300);
-  static const title = TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, height: 1.25);
+  static const title = TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, height: 1.25, letterSpacing: -0.3);
   static const body = TextStyle(fontSize: 13, height: 1.4);
   static const small = TextStyle(fontSize: 11.5, color: kSub, height: 1.35);
   static const tiny = TextStyle(fontSize: 10.5, color: kSub, height: 1.3);

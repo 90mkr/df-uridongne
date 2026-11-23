@@ -85,15 +85,49 @@ class _Hero extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               onTap: () => openFeature(context, f),
               child: Container(
-                decoration: BoxDecoration(color: kBlue, borderRadius: BorderRadius.circular(16)),
-                padding: const EdgeInsets.fromLTRB(18, 15, 14, 14),
+                // 시안 11-23 (본부): 짙은 파랑 그라데이션 + 오른쪽 위 단지 그림
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF1570EA), Color(0xFF0B4DBA)]),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [BoxShadow(color: const Color(0xFF0B4DBA).withValues(alpha: 0.18), blurRadius: 18)],
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Stack(children: [
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    width: 250,
+                    bottom: info != null && !info.empty ? 58 : 0,
+                    child: ShaderMask(
+                      blendMode: BlendMode.dstIn,
+                      shaderCallback: (r) => const LinearGradient(colors: [Color(0x00000000), Color(0xCC000000), Color(0xFF000000)], stops: [0, 0.35, 1]).createShader(r),
+                      child: ShaderMask(
+                        blendMode: BlendMode.dstIn,
+                        shaderCallback: (r) => const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF000000), Color(0x00000000)], stops: [0.6, 1]).createShader(r),
+                        child: Image.asset('assets/art/hero.png', fit: BoxFit.cover, alignment: Alignment.centerRight, filterQuality: FilterQuality.medium),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                padding: const EdgeInsets.fromLTRB(18, 16, 14, 14),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Row(children: [
                     Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Text('오늘의 배출 안내${info?.fromApt == true ? ' · 우리 단지 요일' : ''}', style: const TextStyle(fontSize: 11, color: _w)),
                         const SizedBox(height: 3),
-                        MixTitle(bold, thin, size: 17, color: Colors.white),
+                        Text.rich(
+                          TextSpan(children: [
+                            TextSpan(text: '$bold ', style: const TextStyle(fontWeight: FontWeight.w800)),
+                            // 「일반·음식물 배출일」 → 종류만 노랑으로 강조
+                            if (thin.endsWith(' 배출일')) ...[
+                              TextSpan(text: thin.substring(0, thin.length - 4), style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFFFD84D))),
+                              const TextSpan(text: ' 배출일', style: TextStyle(fontWeight: FontWeight.w800)),
+                            ] else
+                              TextSpan(text: thin, style: const TextStyle(fontWeight: FontWeight.w400)),
+                          ]),
+                          style: const TextStyle(fontSize: 20, color: Colors.white, letterSpacing: -0.6, height: 1.3, shadows: [Shadow(color: Color(0x33000000), blurRadius: 6)]),
+                        ),
                         const SizedBox(height: 3),
                         Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11.5, color: _w)),
                       ]),
@@ -102,9 +136,11 @@ class _Hero extends StatelessWidget {
                     TrashIcon(today.isNotEmpty ? today.first : 'g', size: 46, line: Colors.white, fill: const Color(0x38FFFFFF)),
                   ]),
                   if (info != null && !info.empty) ...[
-                    const SizedBox(height: 11),
+                    const SizedBox(height: 14),
                     _Week(info: info, now: now),
                   ],
+                ]),
+              ),
                 ]),
               ),
             );
@@ -132,8 +168,9 @@ class _Week extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
-        color: today ? Colors.white : Colors.white.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(8),
+        color: today ? Colors.white : const Color(0xFF0A3F99).withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.white.withValues(alpha: today ? 1 : 0.16)),
       ),
       child: Column(children: [
         Text(today ? '오늘' : dayChar(d), style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: today ? kBlue : Colors.white)),
