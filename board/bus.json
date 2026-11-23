@@ -2,10 +2,10 @@
  "id": "bus",
  "name": "단지 앞 버스",
  "folder": "lib/features/bus",
- "room": "",
- "state": "대기",
- "doing": "",
+ "room": "단지 앞 버스 방",
+ "state": "작업 중",
+ "doing": "단지 홈 반쪽 카드·상세(가까운 정류장 실시간 도착·노선·자주 타는 정류장) 제작",
  "version": "0.0.1",
- "updated": "2026-11-23 19:50",
+ "updated": "2026-11-23 21:15",
  "order": 3
 }
