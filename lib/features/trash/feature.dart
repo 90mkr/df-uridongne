@@ -1,13 +1,14 @@
 // 쓰레기·분리수거 (이 폴더는 쓰레기·분리수거 담당 방만 고침)
-// 지금은 본부가 만든 빈 틀입니다. 담당 방이 이 폴더 안에서 채웁니다.
-// 할 일: 지자체 배출 요일·방법과 대형폐기물 수수료, 단지별 배출 요일(주민·관리사무소 입력)을 보여 드려요.
+// 단지 홈 맨 위 파랑 카드 「오늘의 단지 소식」 + 상세 화면(이번 주 배출표·방법·대형폐기물·품목 사전·우리 단지 요일 입력)
 import 'package:flutter/material.dart';
 
 import '../../core/data.dart';
 import '../../core/feature.dart';
-import '../../core/icons.dart';
 import '../../core/theme.dart';
 import '../../core/ui.dart';
+import 'data.dart';
+import 'page.dart';
+import 'trash_icons.dart';
 
 class TrashFeature extends Feature {
   @override
@@ -21,43 +22,131 @@ class TrashFeature extends Feature {
   @override
   int get order => 10;
   @override
-  String get version => '0.0.1';
+  String get version => '0.1.0';
+  @override
+  bool get ready => true;
   @override
   Color get tint => kSoft;
 
   @override
-  Widget? homeCard(BuildContext context, Complex c) => InkWell(borderRadius: BorderRadius.circular(16), onTap: () => openFeature(context, this), child: Container(
-        decoration: BoxDecoration(color: kBlue, borderRadius: BorderRadius.circular(16)),
-        padding: const EdgeInsets.fromLTRB(18, 16, 16, 16),
-        child: const Row(children: [
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('오늘의 단지 소식', style: TextStyle(fontSize: 11, color: Color(0xD9FFFFFF))),
-              SizedBox(height: 3),
-              MixTitle('쓰레기', '배출일을 준비하고 있어요', size: 17, color: Colors.white),
-              SizedBox(height: 3),
-              Text('단지별 배출 요일·시간을 곧 알려 드려요', style: TextStyle(fontSize: 11.5, color: Color(0xD9FFFFFF))),
-            ]),
-          ),
-          LineIcon('trash', size: 50, line: Colors.white, fill: Color(0x38FFFFFF)),
-        ]),
-      ));
+  Widget? homeCard(BuildContext context, Complex c) => _Hero(c: c, f: this);
 
   @override
-  Widget page(BuildContext context, Complex c) => DetailPage(
-        title: name,
-        icon: icon,
-        body: const Center(
-          child: Padding(
-            padding: EdgeInsets.all(30),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              LineIcon('trash', size: 54),
-              SizedBox(height: 14),
-              Text('준비하고 있어요', style: T.h2),
-              SizedBox(height: 6),
-              Text('지자체 배출 요일·방법과 대형폐기물 수수료, 단지별 배출 요일(주민·관리사무소 입력)을 보여 드려요.', textAlign: TextAlign.center, style: T.small),
-            ]),
-          ),
+  Widget page(BuildContext context, Complex c) => TrashPage(complex: c);
+}
+
+class _Hero extends StatelessWidget {
+  final Complex c;
+  final Feature f;
+  const _Hero({required this.c, required this.f});
+
+  static const _w = Color(0xD9FFFFFF);
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<int>(
+        valueListenable: trashTick,
+        builder: (context, _, __) => FutureBuilder<TrashInfo>(
+          key: ValueKey('${c.id}-${trashTick.value}'),
+          future: trashOf(c),
+          builder: (context, snap) {
+            final info = snap.data;
+            final now = DateTime.now();
+            String bold, thin, sub;
+            List<String> today = const [];
+            if (info == null) {
+              bold = '쓰레기';
+              thin = '배출일을 확인하고 있어요';
+              sub = '잠시만 기다려 주세요';
+            } else if (info.empty && info.needPick) {
+              bold = '배출 구역';
+              thin = '을 골라 주세요';
+              sub = '${info.gov!.gu}는 구역마다 배출 요일이 달라요';
+            } else if (info.empty) {
+              bold = '우리 단지';
+              thin = '배출 요일을 알려 주세요';
+              sub = '관리사무소가 정한 요일을 넣으면 이웃과 함께 봐요';
+            } else {
+              today = info.kindsOn(now);
+              if (today.isNotEmpty) {
+                bold = '오늘은';
+                thin = '${today.map((k) => kKindShort[k]).join('·')} 배출일';
+                final h = rangeText(info.hoursOf(today.first));
+                sub = h.isEmpty ? '정해진 장소에 내 주세요' : '$h 사이에 내 주세요';
+              } else {
+                bold = '오늘은';
+                thin = '배출하지 않는 날';
+                final n = info.nextDay(now);
+                sub = n == null
+                    ? '이번 주 배출 요일을 확인해 주세요'
+                    : '${n.difference(DateTime(now.year, now.month, now.day)).inDays == 1 ? '내일' : '${dayChar(n)}요일'} ${info.kindsOn(n).map((k) => kKindShort[k]).join('·')} 배출';
+              }
+            }
+            return InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () => openFeature(context, f),
+              child: Container(
+                decoration: BoxDecoration(color: kBlue, borderRadius: BorderRadius.circular(16)),
+                padding: const EdgeInsets.fromLTRB(18, 15, 14, 14),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('오늘의 단지 소식${info?.fromApt == true ? ' · 우리 단지 요일' : ''}', style: const TextStyle(fontSize: 11, color: _w)),
+                        const SizedBox(height: 3),
+                        MixTitle(bold, thin, size: 17, color: Colors.white),
+                        const SizedBox(height: 3),
+                        Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11.5, color: _w)),
+                      ]),
+                    ),
+                    const SizedBox(width: 8),
+                    TrashIcon(today.isNotEmpty ? today.first : 'g', size: 46, line: Colors.white, fill: const Color(0x38FFFFFF)),
+                  ]),
+                  if (info != null && !info.empty) ...[
+                    const SizedBox(height: 11),
+                    _Week(info: info, now: now),
+                  ],
+                ]),
+              ),
+            );
+          },
         ),
       );
+}
+
+// 파랑 카드 아래 이번 주 7칸 (오늘부터)
+class _Week extends StatelessWidget {
+  final TrashInfo info;
+  final DateTime now;
+  const _Week({required this.info, required this.now});
+
+  @override
+  Widget build(BuildContext context) => Row(children: [
+        for (var i = 0; i < 7; i++) ...[
+          if (i > 0) const SizedBox(width: 4),
+          Expanded(child: _cell(now.add(Duration(days: i)), i == 0)),
+        ],
+      ]);
+
+  Widget _cell(DateTime d, bool today) {
+    final ks = info.kindsOn(d);
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+        color: today ? Colors.white : Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(children: [
+        Text(today ? '오늘' : dayChar(d), style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: today ? kBlue : Colors.white)),
+        const SizedBox(height: 3),
+        SizedBox(
+          height: 14,
+          child: ks.isEmpty
+              ? Text('·', style: TextStyle(fontSize: 11, height: 1.1, color: today ? kMute : const Color(0x99FFFFFF)))
+              : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  for (final k in ks) TrashIcon(k, size: 14, line: today ? kInk : Colors.white, fill: today ? kSoft : const Color(0x33FFFFFF)),
+                ]),
+        ),
+      ]),
+    );
+  }
 }
