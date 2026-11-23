@@ -4,7 +4,7 @@
  "folder": "lib/features/bus",
  "room": "단지 앞 버스 방",
  "state": "완료",
- "doing": "0.2.0 노선 지도 완료 · 다음: 서울 버스(서울시 API, 도로 따라 그리기)",
+ "doing": "0.2.0 노선 지도 완료 · 다음: 서울 버스(서울시 API, 도로 따라 그리기) / 본부 11-23: _call 을 공공데이터 중간 다리(core/dg.dart dgGet)로 바꿈",
  "version": "0.2.0",
  "updated": "2026-11-23 22:10",
  "order": 3

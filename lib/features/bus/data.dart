@@ -13,10 +13,10 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
 import '../../core/data.dart';
+import '../../core/dg.dart';
 import '../../core/keys.dart';
 
 const _base = 'https://apis.data.go.kr/1613000';
@@ -82,19 +82,18 @@ BusErr lastErr = BusErr.none;
 
 final Map<String, (DateTime, List<Map>)> _cache = {};
 
-String get _key => kDataGoKrKey.contains('%') ? kDataGoKrKey : Uri.encodeQueryComponent(kDataGoKrKey);
-
 Future<List<Map>?> _call(String path, Map<String, String> q, {Duration keep = const Duration(seconds: 30), int retry = 1}) async {
   if (!hasDataKey) {
     lastErr = BusErr.noKey;
     return null;
   }
   final qs = q.entries.map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}').join('&');
-  final url = '$_base/$path?serviceKey=$_key&_type=json&$qs';
+  // 본부 11-23: 공공데이터 중간 다리 경유 (열쇠는 다리 서버에만). 잘 안 바뀌는 목록은 다리에서 12시간 묶음
+  final url = '$_base/$path?_type=json&$qs';
   final hit = _cache[url];
   if (hit != null && DateTime.now().difference(hit.$1) < keep) return hit.$2;
   try {
-    final r = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 12));
+    final r = await dgGet(url, cache: keep.inSeconds > 3600 ? 43200 : 30);
     if (r.statusCode != 200) {
       lastErr = BusErr.fail;
       return null;
