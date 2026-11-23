@@ -33,12 +33,22 @@ class _ParkingPageState extends State<ParkingPage> {
   }
 
   Future<void> _load() async {
-    final v = await lotsNear(widget.complex.pos, km: 3);
+    final v = await lotsNear(widget.complex.pos, km: 5);
     final u = await parkingUpdated();
     if (!mounted) return;
+    // 처음 거리: 3곳 이상 보이는 가장 가까운 범위 (송도처럼 공영이 드문 곳은 넓혀서)
+    final from = widget.complex.pos;
+    var k = 5;
+    for (final d in const [1, 2, 3]) {
+      if (v.where((l) => meters(from, l.pos) <= d * 1000).length >= 3) {
+        k = d;
+        break;
+      }
+    }
     setState(() {
       all = v;
       updated = u;
+      km = k;
     });
   }
 
@@ -77,7 +87,7 @@ class _ParkingPageState extends State<ParkingPage> {
               : DongneMap(
                   key: ValueKey('$km$kind'),
                   center: widget.complex.pos,
-                  zoom: km == 1 ? 15 : (km == 2 ? 14 : 13.3),
+                  zoom: km == 1 ? 15 : (km == 2 ? 14 : (km == 3 ? 13.3 : 12.5)),
                   pinFill: _fill,
                   points: [
                     for (final l in list.take(300))
@@ -98,7 +108,7 @@ class _ParkingPageState extends State<ParkingPage> {
           child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.fromLTRB(kPad, 10, kPad, 0), children: [
             for (final k in const ['전체', '공영', '무료', '지금 운영']) _chip(k, kind == k, () => setState(() => kind = k)),
             Container(width: 1, height: 20, margin: const EdgeInsets.fromLTRB(4, 7, 10, 7), color: kLine),
-            for (final d in const [1, 2, 3]) _chip('${d}km', km == d, () => setState(() => km = d)),
+            for (final d in const [1, 2, 3, 5]) _chip('${d}km', km == d, () => setState(() => km = d)),
           ]),
         ),
         Padding(
