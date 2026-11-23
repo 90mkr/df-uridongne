@@ -55,6 +55,7 @@ class Place {
   bool get lateAny => [for (var i = 0; i < 8; i++) span(i)].any((s) => s != null && s.$2 > 22 * 60);
 
   OpenState stateAt(DateTime now) => OpenState.of(this, now);
+  OpenState stateBy(When w) => OpenState.by(this, w);
 }
 
 int? _min(String hhmm) {
@@ -81,43 +82,98 @@ int dayIdx(DateTime d) => isHoliday(d) ? 7 : d.weekday - 1;
 
 const kDayNames = ['월', '화', '수', '목', '금', '토', '일', '공휴일'];
 
+// 언제 기준으로 볼지: 지금(live) 또는 대표님이 고른 요일·시각
+class When {
+  final int idx; // 0=월 … 6=일, 7=공휴일
+  final int prevIdx; // 전날 칸 (모르면 -1)
+  final int min; // 0시 기준 분
+  final DateTime? date; // 지금이면 실제 시각
+  const When(this.idx, this.prevIdx, this.min, [this.date]);
+  bool get live => date != null;
+
+  factory When.now() {
+    final n = DateTime.now();
+    return When(dayIdx(n), dayIdx(n.subtract(const Duration(days: 1))), n.hour * 60 + n.minute, n);
+  }
+  factory When.pick(int idx, int min) => When(idx, idx == 7 ? -1 : (idx + 6) % 7, min);
+
+  String get label => live ? '지금 ${_two(min ~/ 60)}:${_two(min % 60)}' : '${idx == 7 ? '공휴일' : '${kDayNames[idx]}요일'} ${clockText(min)}';
+}
+
+String _two(int v) => v.toString().padLeft(2, '0');
+
 class OpenState {
   final bool open;
-  final int closeMin; // 오늘 0시 기준 닫는 분 (다음 날 새벽이면 1440 넘음)
+  final int closeMin; // 그날 0시 기준 닫는 분 (다음 날 새벽이면 1440 넘음)
   final int minsLeft; // 닫을 때까지 남은 분
   final String next; // 닫혀 있을 때: 다음에 여는 때 (예: 「내일 오전 9시」)
-  final bool todayNone; // 오늘 운영 정보 없음 (쉬는 날)
+  final bool todayNone; // 그날 운영 정보 없음 (쉬는 날)
   const OpenState({required this.open, this.closeMin = 0, this.minsLeft = 0, this.next = '', this.todayNone = false});
 
-  bool get closingSoon => open && minsLeft <= 60;
+  bool get closingSoon => open && minsLeft <= 30; // 30분 안에 닫음 → 「곧 마감」
 
   String get untilText => '${clockText(closeMin)}까지';
 
-  static OpenState of(Place p, DateTime now) {
-    final nowMin = now.hour * 60 + now.minute;
-    // 어제 밤부터 새벽까지 이어지는 영업
-    final y = p.span(dayIdx(now.subtract(const Duration(days: 1))));
+  // 요일 칸·시각만으로 (고른 시각 미리 보기에 씀)
+  static OpenState at(Place p, int idx, int prevIdx, int nowMin) {
+    final y = prevIdx < 0 ? null : p.span(prevIdx);
     if (y != null && y.$2 > 1440 && nowMin < y.$2 - 1440) {
       final c = y.$2 - 1440;
       return OpenState(open: true, closeMin: c, minsLeft: c - nowMin);
     }
-    final t = p.span(dayIdx(now));
+    final t = p.span(idx);
     if (t != null && nowMin >= t.$1 && nowMin < t.$2) {
       return OpenState(open: true, closeMin: t.$2, minsLeft: t.$2 - nowMin);
     }
-    // 다음에 여는 때
+    if (t != null && nowMin < t.$1) return OpenState(open: false, next: clockText(t.$1));
+    return OpenState(open: false, todayNone: t == null);
+  }
+
+  static OpenState of(Place p, DateTime now) {
+    final nowMin = now.hour * 60 + now.minute;
+    final s = at(p, dayIdx(now), dayIdx(now.subtract(const Duration(days: 1))), nowMin);
+    if (s.open) return s;
+    final t = p.span(dayIdx(now));
     if (t != null && nowMin < t.$1) return OpenState(open: false, next: '오늘 ${clockText(t.$1)}');
     for (var i = 1; i <= 7; i++) {
       final d = now.add(Duration(days: i));
-      final s = p.span(dayIdx(d));
-      if (s != null) {
+      final sp = p.span(dayIdx(d));
+      if (sp != null) {
         final when = i == 1 ? '내일' : (isHoliday(d) ? '${d.month}/${d.day}' : '${kDayNames[d.weekday - 1]}요일');
-        return OpenState(open: false, next: '$when ${clockText(s.$1)}', todayNone: t == null);
+        return OpenState(open: false, next: '$when ${clockText(sp.$1)}', todayNone: t == null);
       }
     }
     return OpenState(open: false, todayNone: t == null);
   }
+
+  static OpenState by(Place p, When w) => w.live ? of(p, w.date!) : at(p, w.idx, w.prevIdx, w.min);
 }
+
+// ---- 연휴 ----
+bool isOff(DateTime d) => isHoliday(d) || d.weekday >= 6;
+DateTime _day(DateTime d) => DateTime(d.year, d.month, d.day);
+
+// 3일 안에 시작하는(또는 이미 시작한) 공휴일 낀 연휴 날짜들. 없으면 빈 목록.
+List<DateTime> holidayRun(DateTime now) {
+  final today = _day(now);
+  for (var i = 0; i <= 12; i++) {
+    final h = today.add(Duration(days: i));
+    if (!isHoliday(h)) continue;
+    var start = h;
+    while (start.isAfter(today) && isOff(start.subtract(const Duration(days: 1)))) {
+      start = start.subtract(const Duration(days: 1));
+    }
+    if (start.difference(today).inDays > 3) return const [];
+    final out = <DateTime>[];
+    for (var d = start; isOff(d); d = d.add(const Duration(days: 1))) {
+      out.add(d);
+    }
+    return out;
+  }
+  return const [];
+}
+
+String dateText(DateTime d) => '${d.month}/${d.day}(${kDayNames[d.weekday - 1]})';
 
 // 분 → 「밤 10시」「새벽 1시 30분」「오전 9시」
 String clockText(int min) {
@@ -199,6 +255,7 @@ class Store {
   final String name, tel;
   final LatLng pos;
   const Store(this.name, this.tel, this.pos);
+  bool get allDay => name.contains('24');
 }
 
 final Map<String, Future<List<Store>>> _stores = {};
