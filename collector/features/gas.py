@@ -4,7 +4,8 @@
 # 주유소·충전소의 휘발유·경유·고급휘발유·LPG 가격을 모아 web/data/gas/<동네id>.json 에 저장한다.
 # 앱은 이 파일만 읽는다 (열쇠값이 앱에 들어가지 않고, 오피넷 하루 조회 한도도 아낌).
 #
-# - 가격: 반경 검색(aroundAll) — 동네 범위를 5km 원 몇 개로 덮어 기름별로 한 번씩
+# - 가격: 반경 검색(aroundAll) — 동네 범위를 5km 원 몇 개로 덮어 휘발유·경유·LPG 한 번씩
+# - 무료 열쇠 하루 300회: 한 번 실행 상한 GAS_MAX_CALLS(기본 90), 상세는 새 주유소만
 # - 전화·주소·세차·편의점: 상세(detailById) — 처음 보는 주유소와 매주 월요일에만 (나머지는 지난 파일에서 그대로)
 # - 시도 평균: avgSidoPrice 한 번
 # - 오피넷 좌표는 KATEC(베셀 타원체 TM) → 위경도로 바꿔 저장 (아래 변환은 pyproj 없이 직접 계산)
@@ -27,8 +28,11 @@ API = 'https://www.opinet.co.kr/api/'
 KST = timezone(timedelta(hours=9))
 
 PRODS = ['B027', 'D047', 'B034', 'K015']  # 휘발유 · 경유 · 고급휘발유 · LPG(자동차부탄)
+AROUND = ['B027', 'D047', 'K015']  # 반경 검색은 셋만 (고급휘발유는 상세에서 채움)
 RADIUS = 5000  # 오피넷 최대
-STEP_LAT, STEP_LNG = 0.055, 0.065  # 5km 원이 빈틈없이 덮이는 간격 (약 6km 칸)
+STEP_LAT, STEP_LNG = 0.06, 0.075  # 5km 원이 빈틈없이 덮이는 간격 (약 6.7km 칸, 대각선 반이 5km 안)
+# 무료 열쇠는 하루 300회 — 한 번 실행에 쓰는 상한 (하루 3번 돌아도 넉넉하게)
+MAX_CALLS = int(os.environ.get('GAS_MAX_CALLS', '90'))
 MARGIN = 0.012  # 동네 범위 밖 약 1km 까지는 같이 담음 (경계 단지용)
 
 calls = 0
@@ -132,6 +136,8 @@ def katec_to_wgs(x, y):
 # ───────────────── 오피넷 부르기 ─────────────────
 def call(name, **params):
     global calls
+    if calls >= MAX_CALLS:
+        return None
     params.update({'certkey': KEY, 'out': 'json'})
     url = API + name + '?' + urllib.parse.urlencode(params)
     for attempt in range(3):
@@ -189,7 +195,7 @@ def collect_area(a, sido_avg, now):
     failed = 0
     for lat, lng in grid(b):
         kx, ky = wgs_to_katec(lat, lng)
-        for p in PRODS:
+        for p in AROUND:
             rows = call('aroundAll.do', x=f'{kx:.1f}', y=f'{ky:.1f}', radius=RADIUS, prodcd=p, sort=2)
             if rows is None:
                 failed += 1

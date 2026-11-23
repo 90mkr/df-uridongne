@@ -4,8 +4,8 @@
  "folder": "lib/features/gas",
  "room": "우리동네 주유소 방",
  "state": "대기",
- "doing": "화면·지도·가격 모으기 완료 — 오피넷 열쇠(OPINET_KEY)와 하루 3번 갱신을 본부에 요청(requests/gas-1123-…). 열쇠 들어오면 실제 가격 확인",
- "version": "0.1.0",
- "updated": "2026-11-23 21:20",
+ "doing": "오피넷 열쇠 발급됨(무료 하루 300회) — 깃허브 비밀 OPINET_KEY 넣기 대기, 넣으면 첫 가격 모으기 확인",
+ "version": "0.1.1",
+ "updated": "2026-11-23 21:15",
  "order": 5
 }
