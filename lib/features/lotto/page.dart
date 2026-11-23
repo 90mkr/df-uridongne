@@ -247,16 +247,37 @@ class _LottoPageState extends State<LottoPage> {
           child: Text(a == null ? '자료를 불러오지 못했어요.' : '단지 3km 안에 1등이 나온 판매점이 아직 없어요.', style: T.small),
         )
       else ...[
-        ClipRRect(
-          borderRadius: BorderRadius.circular(kRadius),
-          child: Container(
-            height: 210,
-            decoration: cardBox(),
-            child: DongneMap(
-              center: c.pos,
-              zoom: 13.6,
-              pinFill: kSoftYellow,
-              points: [for (final s in near.take(80)) _point(s.$1)],
+        // 목록 안 지도는 미리보기 (손가락 스크롤이 지도에 걸리지 않게), 누르면 크게
+        GestureDetector(
+          onTap: () => _bigMap(near),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(kRadius),
+            child: Container(
+              height: 200,
+              decoration: cardBox(),
+              child: Stack(children: [
+                IgnorePointer(
+                  child: DongneMap(
+                    center: c.pos,
+                    zoom: 13,
+                    pinFill: kSoftYellow,
+                    points: [for (final s in near.take(80)) _point(s.$1)],
+                  ),
+                ),
+                Positioned(
+                  right: 10,
+                  bottom: 10,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+                    decoration: cardBox(r: 20),
+                    child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                      LineIcon('map', size: 16),
+                      SizedBox(width: 4),
+                      Text('지도 크게', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600)),
+                    ]),
+                  ),
+                ),
+              ]),
             ),
           ),
         ),
@@ -282,6 +303,14 @@ class _LottoPageState extends State<LottoPage> {
       ],
     ]);
   }
+
+  void _bigMap(List<(Store, double)> near) => Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => DetailPage(
+          title: '1등 나온 집 지도',
+          icon: 'lotto',
+          body: DongneMap(center: c.pos, zoom: 14, pinFill: kSoftYellow, points: [for (final s in near) _point(s.$1)]),
+        ),
+      ));
 
   MapPoint _point(Store s) => MapPoint(
         id: s.id,

@@ -67,7 +67,7 @@ class PrizeTable extends StatelessWidget {
     const head = TextStyle(fontSize: 10.5, color: kMute, fontWeight: FontWeight.w500);
     const cell = TextStyle(fontSize: 11.5, height: 1.3);
     Widget col(String rank, String p, String w) => Container(
-          width: 86,
+          constraints: const BoxConstraints(minWidth: 86),
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
           decoration: const BoxDecoration(border: Border(left: BorderSide(color: Color(0xFFF0F1F4)))),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -77,26 +77,29 @@ class PrizeTable extends StatelessWidget {
             Text(w, maxLines: 1, style: cell.copyWith(color: kSub, fontSize: 10.5)),
           ]),
         );
-    return Container(
-      decoration: BoxDecoration(color: const Color(0xFFF8F9FB), borderRadius: BorderRadius.circular(10)),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(children: [
-          for (var r = 2; r <= 5; r++)
-            col('$r등', draw.prize(r) > 0 ? won(draw.prize(r)) : '-', draw.winners(r) > 0 ? people(draw.winners(r)) : ''),
-          Container(
-            width: 112,
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-            decoration: const BoxDecoration(border: Border(left: BorderSide(color: Color(0xFFF0F1F4)))),
-            child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('맞히는 기준', style: head),
-              SizedBox(height: 3),
-              Text('2등 5개+보너스', maxLines: 1, style: TextStyle(fontSize: 10.5, color: kSub, height: 1.3)),
-              Text('3등 5 · 4등 4 · 5등 3', maxLines: 1, style: TextStyle(fontSize: 10.5, color: kSub, height: 1.3)),
-            ]),
-          ),
+    final cols = <Widget>[
+      for (var r = 2; r <= 5; r++) col('$r등', draw.prize(r) > 0 ? won(draw.prize(r)) : '-', draw.winners(r) > 0 ? people(draw.winners(r)) : ''),
+      Container(
+        constraints: const BoxConstraints(minWidth: 112),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+        decoration: const BoxDecoration(border: Border(left: BorderSide(color: Color(0xFFF0F1F4)))),
+        child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('맞히는 기준', style: head),
+          SizedBox(height: 3),
+          Text('2등 5개+보너스', maxLines: 1, style: TextStyle(fontSize: 10.5, color: kSub, height: 1.3)),
+          Text('3등 5 · 4등 4 · 5등 3', maxLines: 1, style: TextStyle(fontSize: 10.5, color: kSub, height: 1.3)),
         ]),
       ),
+    ];
+    return Container(
+      decoration: BoxDecoration(color: const Color(0xFFF8F9FB), borderRadius: BorderRadius.circular(10)),
+      child: LayoutBuilder(builder: (ctx, box) {
+        // 넓으면 꽉 채우고, 휴대폰처럼 좁으면 옆으로 밀기
+        if (box.maxWidth >= 4 * 86 + 112) {
+          return Row(children: [for (final w in cols) Expanded(flex: w == cols.last ? 13 : 10, child: w)]);
+        }
+        return SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: cols));
+      }),
     );
   }
 }
