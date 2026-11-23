@@ -138,7 +138,7 @@ class _PharmacyPageState extends State<PharmacyPage> {
             final openCount = pharm.where((p) => p.stateBy(ww).open).length;
             final run = ww.live ? holidayRun(ww.date!) : const <DateTime>[];
             if (mapView) {
-              return _PharmMap(places: list, complex: c, when: ww, controls: _controls(onMap: true));
+              return _PharmMap(key: ValueKey('$filter-${pick?.label}'), places: list, complex: c, when: ww, controls: _controls(onMap: true));
             }
             return ListView(padding: const EdgeInsets.fromLTRB(kPad, 14, kPad, 30), children: [
               if (run.isNotEmpty) ...[
@@ -498,7 +498,7 @@ class _Timeline extends StatelessWidget {
   }
 
   static String _hh(int m) {
-    final h = m ~/ 60, mm = m % 60;
+    final h = (m ~/ 60) % 24, mm = m % 60;
     return mm == 0 ? '$h' : '$h:${mm.toString().padLeft(2, '0')}';
   }
 }
@@ -632,7 +632,7 @@ class _PharmMap extends StatefulWidget {
   final Complex complex;
   final When when;
   final Widget controls;
-  const _PharmMap({required this.places, required this.complex, required this.when, required this.controls});
+  const _PharmMap({super.key, required this.places, required this.complex, required this.when, required this.controls});
   @override
   State<_PharmMap> createState() => _PharmMapState();
 }
@@ -658,6 +658,10 @@ class _PharmMapState extends State<_PharmMap> {
         options: MapOptions(
           initialCenter: c.pos,
           initialZoom: 15,
+          // 단지와 가까운 약국 몇 곳이 한 화면에 들어오게
+          initialCameraFit: list.isEmpty
+              ? null
+              : CameraFit.coordinates(coordinates: [c.pos, for (final p in list.take(8)) p.pos], padding: const EdgeInsets.fromLTRB(40, 90, 40, 150), maxZoom: 16),
           interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
           onTap: (_, __) => setState(() => sel = null),
         ),

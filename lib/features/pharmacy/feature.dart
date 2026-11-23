@@ -23,7 +23,7 @@ class PharmacyFeature extends Feature {
   @override
   int get order => 20;
   @override
-  String get version => '0.2.1';
+  String get version => '0.2.2';
   @override
   bool get ready => true;
   @override
@@ -67,13 +67,13 @@ class _HomeCardState extends State<_HomeCard> {
   @override
   void initState() {
     super.initState();
-    _f = placesNear(widget.complex.pos, r: 3000);
+    _f = placesNear(widget.complex.pos, r: 5000);
   }
 
   @override
   void didUpdateWidget(covariant _HomeCard old) {
     super.didUpdateWidget(old);
-    if (old.complex.id != widget.complex.id) _f = placesNear(widget.complex.pos, r: 3000);
+    if (old.complex.id != widget.complex.id) _f = placesNear(widget.complex.pos, r: 5000);
   }
 
   @override
@@ -98,7 +98,7 @@ class _HomeCardState extends State<_HomeCard> {
             if (open.isNotEmpty) {
               final p = open.first, s = p.stateAt(now);
               callTo = p;
-              foot = run.isNotEmpty ? '연휴에 문 여는 약국 보기 ›' : (open.length > 1 ? '외 ${open.length - 1}곳 영업 중 · 3km 안' : '3km 안 1곳 영업 중');
+              foot = run.isNotEmpty ? '연휴에 문 여는 약국 보기 ›' : (open.length > 1 ? '외 ${open.length - 1}곳 영업 중 · 5km 안' : '5km 안 1곳 영업 중');
               body = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: -0.4, height: 1.25)),
                 const SizedBox(height: 3),
