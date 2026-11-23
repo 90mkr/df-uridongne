@@ -79,16 +79,14 @@ class _CheapCard extends StatelessWidget {
           final r = snap.data;
           if (r == null) return const SizedBox.shrink();
           final (s, fuel) = r;
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 0),
-            child: MainRowCard(
+          return MainRowCard(
               icon: 'gas',
               bold: '제일 싼',
               thin: '주유소',
-              sub: '${s.name} · ${distText(s.dist)}',
-              trailing: MainValue('${won(s.price(fuel)!)}원', fuelName(fuel)),
+              sub: s.name,
+              subLines: 1,
+              trailing: MainValue('${won(s.price(fuel)!)}원', '${fuelName(fuel)} · ${distText(s.dist)}'),
               onTap: () => openFeature(context, f),
-            ),
           );
         },
       );

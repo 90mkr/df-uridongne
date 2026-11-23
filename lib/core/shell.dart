@@ -8,7 +8,6 @@ import 'data.dart';
 import 'fb.dart';
 import 'feature.dart';
 import 'home.dart';
-import 'icons.dart';
 import 'map_tab.dart';
 import 'me.dart';
 import 'theme.dart';

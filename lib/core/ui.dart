@@ -318,7 +318,8 @@ class MainRowCard extends StatelessWidget {
   final String icon, bold, thin, sub;
   final Widget? trailing;
   final VoidCallback? onTap;
-  const MainRowCard({super.key, required this.icon, required this.bold, required this.thin, this.sub = '', this.trailing, this.onTap});
+  final int subLines;
+  const MainRowCard({super.key, required this.icon, required this.bold, required this.thin, this.sub = '', this.trailing, this.onTap, this.subLines = 2});
 
   @override
   Widget build(BuildContext context) => Material(
@@ -335,7 +336,7 @@ class MainRowCard extends StatelessWidget {
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
                   MixTitle(bold, thin, size: 15),
-                  if (sub.isNotEmpty) ...[const SizedBox(height: 3), Text(sub, style: T.tiny, maxLines: 2, overflow: TextOverflow.ellipsis)],
+                  if (sub.isNotEmpty) ...[const SizedBox(height: 3), Text(sub, style: T.tiny, maxLines: subLines, overflow: TextOverflow.ellipsis)],
                 ]),
               ),
               if (trailing != null) ...[const SizedBox(width: 8), trailing!],
