@@ -154,7 +154,8 @@ Future<dynamic> _get(String path) async {
 // 단지에 맞는 지자체 코드·후보 구역
 Future<(String?, List<String>, String)> _codeOf(Complex c) async {
   final m = await _get('apt_${c.areaId}.json');
-  final e = m is Map ? (m['apts'] as Map?)?[c.id] : null;
+  final Map? apts = m is Map ? m['apts'] as Map? : null;
+  final e = apts == null ? null : apts[c.id];
   if (e is Map && e['c'] != null) {
     return ('${e['c']}', [for (final z in (e['z'] as List? ?? const [])) '$z'], '${e['h'] ?? ''}');
   }
