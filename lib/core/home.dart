@@ -1,4 +1,5 @@
 // 우리 단지 홈 (본부 방만 고침): 등록된 기능들의 카드를 자리(slot) 순서대로 모아 그린다.
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../features/registry.dart';
@@ -9,8 +10,23 @@ import 'icons.dart';
 import 'theme.dart';
 import 'ui.dart';
 
-class HomeTab extends StatelessWidget {
+// 단지 홈을 아래로 당겨 새로고침하면 1씩 늘어난다. 기능 카드가 자료를 다시 받으려면 이 값을 들으면 된다.
+final homeRefresh = ValueNotifier<int>(0);
+
+class HomeTab extends StatefulWidget {
   const HomeTab({super.key});
+  @override
+  State<HomeTab> createState() => _HomeTabState();
+}
+
+class _HomeTabState extends State<HomeTab> {
+  int gen = 0; // 새로고침마다 카드들을 새로 만든다
+
+  Future<void> _refresh() async {
+    setState(() => gen++);
+    homeRefresh.value++;
+    await Future.delayed(const Duration(milliseconds: 700));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,13 +61,21 @@ class HomeTab extends StatelessWidget {
 
   Widget _body(BuildContext context, Complex c) {
     List<Feature> at(Slot s) => features.where((f) => f.slot == s).toList()..sort((a, b) => a.order.compareTo(b.order));
-    Widget card(Feature f) => f.homeCard(context, c) ?? const SizedBox();
+    Widget card(Feature f) => KeyedSubtree(key: ValueKey('${f.id}$gen'), child: f.homeCard(context, c) ?? const SizedBox());
     final halves = at(Slot.half);
     final tools = at(Slot.tool);
-    return Center(
+    return RefreshIndicator(
+      onRefresh: _refresh,
+      color: kBlue,
+      backgroundColor: Colors.white,
+      child: ScrollConfiguration(
+        behavior: ScrollConfiguration.of(context).copyWith(dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse, PointerDeviceKind.trackpad, PointerDeviceKind.stylus}),
+        child: Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 720),
         child: ListView(
+          key: ValueKey('home$gen'),
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(kPad, 14, kPad, 28),
           children: [
             for (final f in at(Slot.hero)) ...[card(f), const SizedBox(height: 12)],
@@ -79,6 +103,8 @@ class HomeTab extends StatelessWidget {
             const SizedBox(height: 22),
             const Text('정보는 공공데이터·카카오 장소 정보를 바탕으로 해요. 방문 전 전화로 한 번 확인해 주세요.', style: T.tiny),
           ],
+        ),
+      ),
         ),
       ),
     );
