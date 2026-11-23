@@ -27,17 +27,17 @@ const kCats = [
   Cat('acad', '학원', '학원·교습소'),
   Cat('kids', '어린이집', '어린이집·유치원'),
   Cat('hosp', '병원', '의원·치과·한의원'),
-  Cat('realty', '부동산', '공인중개사'),
+  Cat('flower', '꽃집', '꽃·화원'),
   Cat('food', '음식점', '밥집·분식·배달'),
   Cat('cafe', '카페', '커피·디저트'),
   Cat('mart', '마트·편의점', '장보기'),
   Cat('pharm', '약국', '약국'),
-  Cat('flower', '꽃집', '꽃·화원'),
   Cat('hardware', '철물·설비', '철물·인테리어·설비'),
   Cat('bank', '은행', '은행·금융'),
   Cat('car', '자동차', '주유·세차·정비'),
   Cat('pet', '반려동물', '동물병원·애견미용'),
   Cat('public', '공공기관', '주민센터·우체국'),
+  Cat('realty', '부동산', '공인중개사'),
 ];
 
 Cat catOf(String id) => kCats.firstWhere((c) => c.id == id, orElse: () => kCats.first);

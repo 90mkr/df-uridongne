@@ -45,9 +45,16 @@ class PhonebookFeature extends Feature {
 }
 
 // 단지 홈 카드: 「동네 전화번호부」 업종 8칸
-class _HomeCard extends StatelessWidget {
+class _HomeCard extends StatefulWidget {
   final Complex c;
   const _HomeCard({required this.c});
+  @override
+  State<_HomeCard> createState() => _HomeCardState();
+}
+
+class _HomeCardState extends State<_HomeCard> {
+  bool more = false; // 아래 화살표로 나머지 업종 펼치기
+  Complex get c => widget.c;
 
   void _open(BuildContext context, Cat? cat) async {
     final all = await shopsOf(c.areaId);
@@ -69,15 +76,18 @@ class _HomeCard extends StatelessWidget {
             ]),
           ),
         );
-    Widget row(Iterable<Cat> cs) => Row(children: [
-          for (final (i, cat) in cs.indexed) ...[
-            if (i > 0) Container(width: 1, height: 44, color: const Color(0xFFEDF0F5)),
-            Expanded(child: cell(cat)),
-          ],
-        ]);
+    Widget row(Iterable<Cat> cs, {int fill = 4}) {
+      final l = cs.toList();
+      return Row(children: [
+        for (var i = 0; i < fill; i++) ...[
+          if (i > 0) Container(width: 1, height: 44, color: i < l.length ? const Color(0xFFEDF0F5) : Colors.transparent),
+          Expanded(child: i < l.length ? cell(l[i]) : const SizedBox()),
+        ],
+      ]);
+    }
     return Container(
       decoration: cardBox(),
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         InkWell(
           onTap: () => openFeature(context, PhonebookFeature()),
@@ -94,6 +104,34 @@ class _HomeCard extends StatelessWidget {
         row(kCats.take(4)),
         const Divider(height: 1, color: Color(0xFFEDF0F5)),
         row(kCats.skip(4).take(4)),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 260),
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.topCenter,
+          child: !more
+              ? const SizedBox(width: double.infinity)
+              : Column(children: [
+                  for (var i = 8; i < kCats.length; i += 4) ...[
+                    const Divider(height: 1, color: Color(0xFFEDF0F5)),
+                    row([...kCats.skip(i).take(4), for (var k = kCats.skip(i).take(4).length; k < 4; k++) null].whereType<Cat>(), fill: 4),
+                  ],
+                ]),
+        ),
+        InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => setState(() => more = !more),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              Text(more ? '접기' : '업종 ${kCats.length - 8}개 더 보기', style: const TextStyle(fontSize: 11.5, color: kSub, fontWeight: FontWeight.w600)),
+              AnimatedRotation(
+                turns: more ? 0.5 : 0,
+                duration: const Duration(milliseconds: 220),
+                child: const Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: kSub),
+              ),
+            ]),
+          ),
+        ),
       ]),
     );
   }

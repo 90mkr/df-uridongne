@@ -1,4 +1,6 @@
 // 우리 단지 홈 (본부 방만 고침): 등록된 기능들의 카드를 자리(slot) 순서대로 모아 그린다.
+import 'dart:async';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
@@ -94,20 +96,7 @@ class _HomeTabState extends State<HomeTab> {
             if (tools.isNotEmpty) ...[
               const Padding(padding: EdgeInsets.fromLTRB(2, 8, 0, 10), child: Text('생활 도구', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: -0.3))),
               // 옆으로 넘기는 줄 (4개 반쯤 보여 더 있다는 걸 알게)
-              LayoutBuilder(builder: (ctx, box) {
-                final w = (box.maxWidth - 8 * 4) / 4.4;
-                final all = [...tools, ...features.where((f) => f.slot != Slot.tool && f.ready && _short.containsKey(f.id))];
-                return SizedBox(
-                  height: 92,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    clipBehavior: Clip.none,
-                    itemCount: all.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 8),
-                    itemBuilder: (_, i) => SizedBox(width: w, child: ToolTile(f: all[i])),
-                  ),
-                );
-              }),
+              _ToolStrip(tools: [...tools, ...features.where((f) => f.slot != Slot.tool && f.ready && _short.containsKey(f.id))]),
             ],
             const SizedBox(height: 22),
             const Text('정보는 공공데이터·카카오 장소 정보를 바탕으로 해요. 방문 전 전화로 한 번 확인해 주세요.', style: T.tiny),
@@ -166,6 +155,66 @@ class _Header extends StatelessWidget {
       ]),
     );
   }
+}
+
+// 생활 도구 줄: 저절로 천천히 흘러가고(끝없이 이어짐), 손으로 만지면 잠깐 멈춘다 (대표님 11-24)
+class _ToolStrip extends StatefulWidget {
+  final List<Feature> tools;
+  const _ToolStrip({required this.tools});
+  @override
+  State<_ToolStrip> createState() => _ToolStripState();
+}
+
+class _ToolStripState extends State<_ToolStrip> {
+  final ctl = ScrollController();
+  Timer? tick;
+  DateTime pauseUntil = DateTime(0);
+  double setW = 0; // 한 바퀴 길이
+
+  @override
+  void initState() {
+    super.initState();
+    tick = Timer.periodic(const Duration(milliseconds: 30), (_) {
+      if (!ctl.hasClients || setW <= 0 || DateTime.now().isBefore(pauseUntil)) return;
+      var o = ctl.offset + 0.6;
+      if (o >= setW) o -= setW;
+      ctl.jumpTo(o);
+    });
+  }
+
+  @override
+  void dispose() {
+    tick?.cancel();
+    ctl.dispose();
+    super.dispose();
+  }
+
+  void _pause() => pauseUntil = DateTime.now().add(const Duration(seconds: 4));
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(builder: (ctx, box) {
+        final w = (box.maxWidth - 8 * 4) / 4.4;
+        final n = widget.tools.length;
+        setW = n * (w + 8);
+        final loop = setW > box.maxWidth; // 넘칠 때만 흐름
+        return Listener(
+          onPointerDown: (_) => _pause(),
+          onPointerMove: (_) => _pause(),
+          child: SizedBox(
+            height: 92,
+            child: ListView.builder(
+              controller: ctl,
+              scrollDirection: Axis.horizontal,
+              clipBehavior: Clip.none,
+              itemCount: loop ? n * 3 : n,
+              itemBuilder: (_, i) => Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: SizedBox(width: w, child: ToolTile(f: widget.tools[i % n])),
+              ),
+            ),
+          ),
+        );
+      });
 }
 
 // 생활 도구 줄에 함께 넣는 다른 기능의 짧은 이름
