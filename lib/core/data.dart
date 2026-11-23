@@ -14,7 +14,9 @@ const kDataUrl = '${kSiteUrl}data/';
 const kKokpleDataUrl = 'https://90mkr.github.io/df-app-lab/data/';
 const kKokpleWeb = 'https://90mkr.github.io/df-app-lab/';
 
-String get dataBase => kIsWeb && Uri.base.host.endsWith('github.io') ? 'data/' : kDataUrl;
+// 자료는 저장소 main 에서 바로 받는다 (자료를 모아 올리면 미리보기 게시를 기다리지 않고 곧바로 보임 — 5분 안팎 캐시)
+const kRawDataUrl = 'https://raw.githubusercontent.com/90mkr/df-uridongne/main/web/data/';
+String get dataBase => kRawDataUrl;
 
 // JSON 받기 (실패하면 null). 10분 단위로 새로 받는다.
 Future<dynamic> getJson(String url, {Duration timeout = const Duration(seconds: 20)}) async {
