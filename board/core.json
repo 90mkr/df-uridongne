@@ -4,8 +4,8 @@
  "folder": "lib/core · lib/main.dart · lib/features/registry.dart · .github · collector/collect.py",
  "room": "우리동네 본부 방",
  "state": "대기",
- "doing": "단지 홈 디자인 보완 올림 (색 아이콘 assets/icons, 카드 그림 assets/art, HomeCardBox 그림 자동, 쓰레기 배출 카드 그라데이션 — 쓰레기 방 파일도 본부가 손댐)",
+ "doing": "단지 정보 화면(단지 이름 누르면, Slot.info) + 홈 본문 카드 Feature.mainCard — 시세는 단지 정보로, 「내 차 어디 댔지」는 홈 본문으로 (deals·parking 파일은 대표님 직접 요청으로 본부가 고침)",
  "version": "0.3.0",
- "updated": "2026-11-23 23:20",
+ "updated": "2026-11-24",
  "order": 0
 }
