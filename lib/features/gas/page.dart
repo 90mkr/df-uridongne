@@ -189,6 +189,7 @@ class _GasPageState extends State<GasPage> {
         final s = list[i];
         final p = s.price(fuel)!;
         final diff = avg == null ? null : (p - avg).round();
+        final cheapest = p == list.first.price(fuel);
         return InkWell(
           onTap: () => showStation(ctx, s, fuel, d),
           child: Padding(
@@ -205,7 +206,7 @@ class _GasPageState extends State<GasPage> {
               const SizedBox(width: 10),
               Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
                 Text.rich(TextSpan(children: [
-                  TextSpan(text: won(p), style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800, letterSpacing: -0.4, color: i == 0 ? kBlue : kInk)),
+                  TextSpan(text: won(p), style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800, letterSpacing: -0.4, color: cheapest ? kBlue : kInk)),
                   const TextSpan(text: '원', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w300)),
                 ])),
                 if (diff != null) Text(diff == 0 ? '평균과 같아요' : (diff < 0 ? '평균보다 ${-diff}원↓' : '평균보다 $diff원↑'), style: const TextStyle(fontSize: 10.5, color: kMute)),
@@ -220,7 +221,7 @@ class _GasPageState extends State<GasPage> {
   // 지도: 주유소마다 말풍선에 가격, 가장 싼 곳은 파랑
   Widget _map(GasData d, List<GasStation> list) {
     final c = widget.c;
-    final best = list.isEmpty ? null : list.first.id;
+    final minP = list.isEmpty ? null : list.first.price(fuel); // 같은 최저가가 여럿이면 모두 파랑
     final picked = list.where((s) => s.id == sel).firstOrNull;
     // 고른 것이 맨 위에 오게
     final order = [...list.reversed.where((s) => s.id != sel), if (picked != null) picked];
@@ -269,7 +270,7 @@ class _GasPageState extends State<GasPage> {
                 alignment: Alignment.topCenter,
                 child: _Bubble(
                   price: s.price(fuel)!,
-                  best: s.id == best,
+                  best: s.price(fuel) == minP,
                   on: s.id == sel,
                   onTap: () => setState(() => sel = s.id),
                 ),
@@ -283,7 +284,7 @@ class _GasPageState extends State<GasPage> {
         right: 12,
         bottom: 14,
         child: picked != null
-            ? _PickCard(s: picked, fuel: fuel, best: picked.id == best, onOpen: () => showStation(context, picked, fuel, d))
+            ? _PickCard(s: picked, fuel: fuel, best: picked.price(fuel) == minP, onOpen: () => showStation(context, picked, fuel, d))
             : Center(
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
