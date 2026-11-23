@@ -6,10 +6,21 @@ on:
   schedule:
     # 매주 월요일 새벽 3시 13분(한국 시각)에 업체 자료를 새로 모은다 (생활 업체는 자주 바뀌지 않음)
     - cron: '13 18 * * 0'
+    # 주유소 가격만 하루 3번 (한국 시각 07:40 · 12:40 · 18:40) — 카카오 업체 모으기는 건너뜀
+    - cron: '40 22,3,9 * * *'
   workflow_dispatch:
     inputs:
       areas:
         description: '이번에 모을 동네 id (쉼표로, 비우면 모으기가 켜진 동네 전부)'
+        required: false
+        default: ''
+      only_features:
+        description: '기능 자료만 (카카오 업체 모으기 건너뛰기 — 몇 분이면 끝남)'
+        type: boolean
+        required: false
+        default: false
+      features:
+        description: '기능 자료 중 이것만 (쉼표로, 예: pharmacy,gas — 비우면 전부)'
         required: false
         default: ''
 
@@ -18,19 +29,24 @@ permissions:
   pages: write
   id-token: write
 
-concurrency:
-  group: pages
-  cancel-in-progress: false
+# 실행 전체가 아니라 작업마다 줄을 세운다.
+# (전체에 걸면 대기 중인 수동 실행이 뒤에 온 다른 방 올리기 실행으로 바뀌어 취소됨)
+#  - collect: 자료 모으기끼리만 한 줄 (취소 없음)
+#  - deploy : 미리보기 게시끼리만 한 줄 (뒤 실행이 최신 main 으로 게시)
 
 jobs:
   collect:
     if: github.event_name != 'push'
     runs-on: ubuntu-latest
+    concurrency:
+      group: collect
+      cancel-in-progress: false
     steps:
       - name: 저장소 받기
         uses: actions/checkout@v4
 
       - name: 업체 자료 모으기
+        if: ${{ !inputs.only_features && github.event.schedule != '40 22,3,9 * * *' }}
         timeout-minutes: 240
         env:
           KAKAO_REST_KEY: ${{ secrets.KAKAO_REST_KEY }}
@@ -47,9 +63,12 @@ jobs:
           OPINET_KEY: ${{ secrets.OPINET_KEY }}
           AIRKOREA_KEY: ${{ secrets.AIRKOREA_KEY }}
           EV_KEY: ${{ secrets.EV_KEY }}
+          FEATURES: ${{ github.event.schedule == '40 22,3,9 * * *' && 'gas' || inputs.features }}
         run: |
           for f in collector/features/*.py; do
             [ -f "$f" ] || continue
+            n=$(basename "$f" .py)
+            if [ -n "$FEATURES" ] && ! echo ",$FEATURES," | tr -d ' ' | grep -q ",$n,"; then continue; fi
             echo "== $f"
             timeout 1800 python3 -u "$f" || echo "!! $f 실패 (다른 기능은 계속)"
           done
@@ -126,6 +145,9 @@ jobs:
     needs: web
     if: ${{ !cancelled() && needs.web.result == 'success' }}
     runs-on: ubuntu-latest
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

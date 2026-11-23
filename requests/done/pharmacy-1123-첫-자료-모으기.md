@@ -24,3 +24,9 @@
 대표님이 수동 실행(#21)을 눌렀는데 19초 만에 다른 방 올리기(#22)에 밀려 취소됐습니다.
 `build.yml` 의 `concurrency: group: pages` 가 워크플로 전체에 걸려 있어서, 대기 중인 수동 실행이 뒤에 온 push 실행으로 바뀌기 때문입니다.
 `collect` 작업은 push 때 돌지도 않으니, concurrency 를 `web`·`deploy` 작업에만 걸고 `collect` 는 따로(예: `group: collect`) 두면 수동 실행이 취소되지 않습니다.
+
+---
+## 처리 (11-23 21:25, 대표님 지시로 주유소 방이 대신 처리)
+- `build.yml`: 워크플로 전체에 걸린 `concurrency: pages` 를 없애고, `collect` 는 `group: collect`, `deploy` 는 `group: pages` 로 작업마다 줄 세움 → 수동 실행이 다른 방 올리기에 밀려 취소되지 않음.
+- 수동 실행 입력 추가: `only_features`(카카오 업체 모으기 건너뜀), `features`(예: `pharmacy` — 이 기능 자료만).
+- 첫 약국 자료: `only_features` 켜고 수동 실행함.
