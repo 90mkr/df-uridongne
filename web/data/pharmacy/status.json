@@ -1,0 +1,12 @@
+{
+ "at": "2026-11-23 22:06",
+ "state": "완료",
+ "calls": 45,
+ "log": [
+  "  getParmacyListInfoInqire : 25434곳 (전체 25434, 26쪽, 16초)",
+  "  getHsptlMdcncListInfoInqire {'QD': 'D002'}: 15164곳 (전체 15164, 16쪽, 11초)",
+  "  getEgytListInfoInqire : 530곳 (전체 530, 1쪽, 1초)",
+  "  부르기 실패: getRestDeInfo <urlopen error _ssl.c:1063: The handshake operation timed out>",
+  "약국 25434 · 소아과 15164 · 응급실 530 · 칸 704 · 부른 횟수 45 · 공휴일 기본 목록"
+ ]
+}
