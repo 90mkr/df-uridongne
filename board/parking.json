@@ -2,10 +2,10 @@
  "id": "parking",
  "name": "주차장",
  "folder": "lib/features/parking",
- "room": "",
- "state": "대기",
- "doing": "",
+ "room": "공공주차장 방",
+ "state": "작업 중",
+ "doing": "공영 주차장 자료 모으기(표준데이터) + 상세 화면·지도 1차 제작",
  "version": "0.0.1",
- "updated": "2026-11-23 19:50",
+ "updated": "2026-11-23 20:58",
  "order": 7
 }
