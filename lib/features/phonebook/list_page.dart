@@ -36,7 +36,6 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
   final q = TextEditingController();
   final mapCtl = MapController();
   final listCtl = ScrollController();
-  PageController? pageCtl;
   bool mapView = true;
   Sort sort = Sort.near;
   bool openOnly = false;
@@ -47,7 +46,9 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
   LatLng? _center;
   Timer? _deb;
   AnimationController? _glide;
-  int? _pageTarget;
+  Shop? _pending; // 목록에서 눌러 지도로 넘어올 때 맞춰 볼 가게
+  bool _wide = false;
+  final Map<String, GlobalKey> _keys = {};
 
   Complex get c => widget.complex;
   LatLng get from => c.pos;
@@ -65,7 +66,6 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
     recTick.removeListener(_re);
     _deb?.cancel();
     _glide?.dispose();
-    pageCtl?.dispose();
     listCtl.dispose();
     super.dispose();
   }
@@ -125,7 +125,6 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
   void _changed() {
     // 정렬·고르기가 바뀌면 첫 가게부터
     sel = null;
-    if (pageCtl?.hasClients ?? false) pageCtl!.jumpToPage(0);
     if (listCtl.hasClients) listCtl.jumpTo(0);
   }
 
@@ -147,28 +146,48 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
     g.forward();
   }
 
-  void _pick(Shop s, List<Shop> list, {required bool wide, bool fromPin = false}) {
+  // 아래 상세 카드에 가리지 않게 가게를 화면 위쪽으로
+  double get _panelDy => _wide ? 0 : 130;
+
+  // 지도 핀을 누름: 그 가게 상세를 아래에 띄우고, 태블릿 목록은 그 카드로
+  void _pin(Shop s) {
     setState(() => sel = s.id);
-    if (wide) {
-      _glideTo(s.pos);
-      if (fromPin) {
-        final i = list.indexWhere((x) => x.id == s.id);
-        if (i >= 0 && listCtl.hasClients) {
-          listCtl.animateTo(math.min(i * (kCardH + _gap), listCtl.position.maxScrollExtent), duration: const Duration(milliseconds: 380), curve: Curves.easeOutCubic);
-        }
+    _glideTo(s.pos, z: mapCtl.camera.zoom, dy: _panelDy);
+    if (!mapView) {
+      final k = _keys[s.id];
+      final ctx = k?.currentContext;
+      if (ctx != null) Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 380), curve: Curves.easeOutCubic, alignment: 0.05);
+    }
+  }
+
+  // 카드를 누름: 「이 가게가 우리 단지에서 어디쯤인지」 — 단지와 가게가 함께 보이게 알맞게 확대
+  void _focus(Shop s) {
+    setState(() {
+      sel = s.id;
+      if (!_wide) mapView = true;
+    });
+    if (!_wide) {
+      _pending = s; // 지도가 새로 그려진 뒤 onMapReady 에서 맞춤
+      return;
+    }
+    _fit(s, animate: true);
+  }
+
+  void _fit(Shop s, {bool animate = false}) {
+    try {
+      final fit = CameraFit.coordinates(
+        coordinates: [from, s.pos],
+        padding: EdgeInsets.fromLTRB(60, 90, 60, _wide ? 60 : 330),
+        maxZoom: 17.2,
+        minZoom: 12,
+      ).fit(mapCtl.camera);
+      if (animate) {
+        _glideTo(fit.center, z: fit.zoom);
+      } else {
+        mapCtl.move(fit.center, fit.zoom);
       }
-    } else {
-      final i = list.indexWhere((x) => x.id == s.id);
-      if (fromPin && i >= 0 && (pageCtl?.hasClients ?? false)) {
-        final cur = pageCtl!.page?.round() ?? 0;
-        if ((cur - i).abs() > 3) {
-          pageCtl!.jumpToPage(i);
-        } else {
-          _pageTarget = i;
-          pageCtl!.animateToPage(i, duration: const Duration(milliseconds: 320), curve: Curves.easeOutCubic);
-        }
-      }
-      _glideTo(s.pos, dy: (kCardH + 24) / 2);
+    } catch (_) {
+      mapCtl.move(s.pos, 16.5);
     }
   }
 
@@ -184,11 +203,12 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
         bottom: false,
         child: LayoutBuilder(builder: (ctx, box) {
           final wide = box.maxWidth >= 760 || (box.maxWidth > box.maxHeight && box.maxWidth >= 640);
+          _wide = wide;
           return Column(children: [
             _head(wide),
             _bar(list.length, wide),
             const Divider(height: 1, color: kLine),
-            Expanded(child: mapView ? _phoneMap(list, box.maxWidth) : (wide ? _split(list, box.maxWidth) : _phoneList(list))),
+            Expanded(child: mapView ? _fullMap(list, wide) : (wide ? _split(list, box.maxWidth) : _phoneList(list))),
           ]);
         }),
       ),
@@ -334,40 +354,30 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
         ),
       );
 
-  // ---------- 휴대폰: 지도 + 넘기는 카드 ----------
-  Widget _phoneMap(List<Shop> list, double w) {
+  // ---------- 지도 보기 (휴대폰·태블릿 같음): 지도만 넓게, 가게를 누르면 아래에 상세 카드 ----------
+  Widget _fullMap(List<Shop> list, bool wide) {
     final pins = list.take(_maxPins).toList();
-    final frac = math.min((w - 44) / w, 380 / w); // 넓은 화면에선 카드 여러 장이 나란히
-    if (pageCtl != null && (pageCtl!.viewportFraction - frac).abs() > 0.001) {
-      pageCtl!.dispose();
-      pageCtl = null;
-    }
-    final pc = pageCtl ??= PageController(viewportFraction: frac);
+    final selShop = list.where((s) => s.id == sel).firstOrNull;
+    final bottom = 12 + MediaQuery.of(context).padding.bottom;
     return Stack(children: [
-      Positioned.fill(child: _map(pins, wide: false, padBottom: kCardH + 30)),
+      Positioned.fill(child: _map(pins, wide: false, padBottom: selShop == null ? 0 : 280)),
       if (pins.isEmpty) Positioned(left: 20, right: 20, bottom: 30, child: _floatBox(_empty())),
-      if (pins.isNotEmpty)
+      if (selShop != null)
         Positioned(
-          left: 0,
-          right: 0,
-          bottom: 14 + MediaQuery.of(context).padding.bottom,
-          height: kCardH + 8,
-          child: PageView.builder(
-            controller: pc,
-            padEnds: frac > 0.8,
-            itemCount: pins.length,
-            onPageChanged: (i) {
-              if (_pageTarget != null && i != _pageTarget) return;
-              _pageTarget = null;
-              _pick(pins[i], pins, wide: false);
-            },
-            itemBuilder: (_, i) {
-              final s = pins[i];
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
-                child: ShopCard(shop: s, complex: c, selected: sel == s.id, onTap: () => showShop(context, s, c)),
-              );
-            },
+          left: 12,
+          right: wide ? null : 12,
+          width: wide ? 400 : null,
+          bottom: bottom,
+          child: TweenAnimationBuilder<double>(
+            key: ValueKey(selShop.id),
+            tween: Tween(begin: 24, end: 0),
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            builder: (_, v, child) => Transform.translate(offset: Offset(0, v), child: Opacity(opacity: 1 - v / 24, child: child)),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.62),
+              child: SingleChildScrollView(child: ShopCard(shop: selShop, complex: c, onClose: () => setState(() => sel = null))),
+            ),
           ),
         ),
     ]);
@@ -378,7 +388,7 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
         child: child,
       );
 
-  // ---------- 휴대폰: 목록 (명함 카드) ----------
+  // ---------- 휴대폰: 목록 (명함 카드, 누르면 지도에서 위치) ----------
   Widget _phoneList(List<Shop> list) {
     if (list.isEmpty) return _empty();
     final n = math.min(list.length, 300);
@@ -386,7 +396,7 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
       color: kBg,
       child: ListView.separated(
         controller: listCtl,
-        padding: EdgeInsets.fromLTRB(16, 12, 16, 30 + MediaQuery.of(context).padding.bottom),
+        padding: EdgeInsets.fromLTRB(14, 12, 14, 30 + MediaQuery.of(context).padding.bottom),
         itemCount: n + 1,
         separatorBuilder: (_, __) => const SizedBox(height: _gap),
         itemBuilder: (_, i) {
@@ -397,17 +407,17 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
             );
           }
           final s = list[i];
-          return ShopCard(shop: s, complex: c, maxStickers: 3, onTap: () => showShop(context, s, c));
+          return ShopCard(key: ValueKey(s.id), shop: s, complex: c, tapHint: '지도', onTap: () => _focus(s));
         },
       ),
     );
   }
 
-  // ---------- 태블릿·가로: 왼쪽 목록 40% + 오른쪽 지도 60% ----------
+  // ---------- 태블릿·가로 목록 보기: 왼쪽 목록 40% + 오른쪽 지도 60% ----------
   Widget _split(List<Shop> list, double w) {
     final b = bounds;
     final inView = b == null ? list : list.where((s) => b.contains(s.pos)).toList();
-    final shown = inView.take(_maxPins).toList();
+    final shown = inView.take(120).toList();
     final leftW = (w * 0.4).clamp(340.0, 460.0);
     return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       SizedBox(
@@ -422,33 +432,29 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
             Expanded(
               child: shown.isEmpty
                   ? _empty()
-                  : ListView.separated(
+                  : SingleChildScrollView(
                       controller: listCtl,
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 30),
-                      itemCount: shown.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: _gap),
-                      itemBuilder: (_, i) {
-                        final s = shown[i];
-                        return ShopCard(
-                          shop: s,
-                          complex: c,
-                          maxStickers: 3,
-                          selected: sel == s.id,
-                          onTap: () => sel == s.id ? showShop(context, s, c) : _pick(s, shown, wide: true),
-                        );
-                      },
+                      padding: const EdgeInsets.fromLTRB(14, 8, 14, 30),
+                      child: Column(children: [
+                        for (final s in shown)
+                          Padding(
+                            key: _keys.putIfAbsent(s.id, () => GlobalKey()),
+                            padding: const EdgeInsets.only(bottom: _gap),
+                            child: ShopCard(shop: s, complex: c, selected: sel == s.id, tapHint: '지도', onTap: () => _focus(s)),
+                          ),
+                      ]),
                     ),
             ),
           ]),
         ),
       ),
       Container(width: 1, color: kLine),
-      Expanded(child: _map(list.take(_maxPins * 2).toList(), wide: true, listForPick: shown)),
+      Expanded(child: _map(list.take(_maxPins * 2).toList(), wide: true)),
     ]);
   }
 
   // ---------- 지도 ----------
-  Widget _map(List<Shop> pins, {required bool wide, double padBottom = 0, List<Shop>? listForPick}) {
+  Widget _map(List<Shop> pins, {required bool wide, double padBottom = 0}) {
     final now = DateTime.now();
     final selShop = pins.where((s) => s.id == sel).firstOrNull;
     return LayoutBuilder(builder: (ctx, box) {
@@ -469,6 +475,11 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
           maxZoom: 19,
           interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
           onMapReady: () {
+            final p = _pending;
+            if (p != null) {
+              _pending = null;
+              _fit(p);
+            }
             if (wide) setState(() => bounds = mapCtl.camera.visibleBounds);
           },
           onPositionChanged: (cam, gesture) {
@@ -499,7 +510,7 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
                   open: s.openAt(now),
                   selected: s.id == sel,
                   label: named.contains(s.id),
-                  onTap: () => _pick(s, listForPick ?? pins, wide: wide, fromPin: true),
+                  onTap: () => _pin(s),
                 ),
               ),
             Marker(point: from, width: 150, height: 44, alignment: Alignment.topCenter, child: _AptPin(c.name)),
@@ -521,7 +532,7 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
       Positioned(
         right: 14,
         top: 12,
-        child: _MapBtn(icon: 'apt', tip: '우리 단지로', onTap: () => _glideTo(from, z: 16, dy: wide ? 0 : padBottom / 2 - 20)),
+        child: _MapBtn(icon: 'apt', tip: '우리 단지로', onTap: () => _glideTo(from, z: 16)),
       ),
       Positioned(
         right: 14,

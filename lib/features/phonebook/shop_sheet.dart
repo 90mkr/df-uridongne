@@ -9,9 +9,12 @@ import '../../core/me.dart' show openLogin;
 import '../../core/nav.dart';
 import '../../core/theme.dart';
 import '../../core/ui.dart';
+import 'card.dart';
 import 'data.dart';
 
-Future<void> showShop(BuildContext context, Shop s, Complex c) => showSheet(context, (ctx) => ShopSheet(shop: s, complex: c));
+// 가게 하나 보기 (지도 탭 등에서): 명함 카드 그대로 아래에서 올라온다
+Future<void> showShop(BuildContext context, Shop s, Complex c) =>
+    showSheet(context, (ctx) => Padding(padding: const EdgeInsets.fromLTRB(12, 4, 12, 12), child: ShopCard(shop: s, complex: c, onClose: () => Navigator.of(ctx).pop())));
 
 void openOwnerForm(BuildContext context, Complex c, {Shop? shop, String? cat}) =>
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => OwnerForm(complex: c, shop: shop, cat: cat)));

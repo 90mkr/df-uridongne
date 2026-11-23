@@ -60,6 +60,10 @@ def session(b, tag, W, H, steps):
     pg.goto(URL, wait_until="load", timeout=120000)
     time.sleep(9)
     sem()
+    global tap_xy
+    def tap_xy(x, y, wait=4.0):
+        pg.mouse.click(x, y)
+        time.sleep(wait)
     steps(shot, tap, drag, sem, W, H)
     ctx.close()
 
@@ -70,30 +74,20 @@ def phone(shot, tap, drag, sem, W, H):
     shot("전화번호부")
     tap(r"^세탁소\s*\d", wait=7)
     shot("세탁소_지도")
-    tap("+", wait=3)
-    shot("확대")
-    drag(W - 40, H - 110, 60, H - 110)
-    shot("카드_넘김")
-    drag(W - 40, H - 120, 60, H - 120)
-    shot("카드_넘김2")
-    tap("이웃 추천 순")
     tap("목록")
     shot("목록")
-    tap("지도")
-    pg_back = tap("−", wait=2)
-    shot("축소")
+    tap_xy(200, 200)
+    shot("카드_누름_지도")
 
 
 def tablet(shot, tap, drag, sem, W, H):
     tap("전화번호부")
-    shot("전화번호부")
     tap(r"^세탁소\s*\d", wait=7)
-    shot("세탁소_나눔")
-    drag(W * 0.75, H * 0.5, W * 0.6, H * 0.35)
-    shot("지도_옮김")
-    tap("−", wait=2)
-    tap("−", wait=3)
-    shot("지도_축소")
+    shot("세탁소_지도")
+    tap("목록")
+    shot("목록_나눔")
+    tap_xy(150, 220)
+    shot("카드_누름")
 
 
 with sync_playwright() as p:
