@@ -4,8 +4,8 @@
  "folder": "lib/core · lib/main.dart · lib/features/registry.dart · .github · collector/collect.py",
  "room": "우리동네 본부 방",
  "state": "대기",
- "doing": "뼈대 완료 · 카카오 열쇠 받으면 업체·단지 자료 모으기, 요청함 처리",
+ "doing": "카카오·공공데이터 열쇠 넣음(22건 신청, 21건 승인) · 기능 방 요청 처리 대기",
  "version": "0.2.0",
- "updated": "2026-11-23 20:00",
+ "updated": "2026-11-23 20:50",
  "order": 0
 }
