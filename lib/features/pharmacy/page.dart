@@ -712,7 +712,7 @@ class _MiniBtn extends StatelessWidget {
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           LineIcon(call ? 'phone' : 'route', size: 17, line: call ? kOpenDark : kInk, fill: call ? Colors.white : kSoft),
           const SizedBox(width: 3),
-          Text(call ? '전화' : '길안내', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: call ? kOpenDark : kInk)),
+          Text(call ? '전화하기' : '길안내', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: call ? kOpenDark : kInk)),
         ]),
       ),
     );
