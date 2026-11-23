@@ -5,6 +5,7 @@ import 'package:flutter_map/flutter_map.dart';
 import '../features/registry.dart';
 import 'data.dart';
 import 'feature.dart';
+import 'icons.dart';
 import 'map.dart';
 import 'theme.dart';
 
@@ -21,7 +22,10 @@ class _MapTabState extends State<MapTab> {
   bool loading = false;
   String? forComplex;
 
-  List<Feature> get mapFeatures => features.where((f) => f.ready).toList()..sort((a, b) => a.order.compareTo(b.order));
+  // 지도에 둘 필요 없는 기능 (대표님 11-23: 날씨·쓰레기 뺌)
+  static const _skip = {'weather', 'trash'};
+  static const _short = {'bus': '버스', 'pharmacy': '약국', 'phonebook': '전화번호부', 'lotto': '복권방', 'postcode': '우체국'};
+  List<Feature> get mapFeatures => features.where((f) => f.ready && !_skip.contains(f.id)).toList()..sort((a, b) => a.order.compareTo(b.order));
 
   Future<void> _show(Feature f, Complex c) async {
     setState(() {
@@ -56,28 +60,37 @@ class _MapTabState extends State<MapTab> {
         }
         return Scaffold(
           body: Stack(children: [
-            DongneMap(key: ValueKey(c.id), center: c.pos, points: pts, controller: ctl, pinFill: on?.tint ?? kSoft),
+            DongneMap(key: ValueKey(c.id), center: c.pos, points: pts, controller: ctl, pinFill: on?.tint ?? kSoft, icon: on?.icon ?? ''),
+            // 기능 고르기: 두 줄로 펼친 색 아이콘 단추
             SafeArea(
-              child: SizedBox(
-                height: 52,
-                child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.fromLTRB(12, 10, 12, 6), children: [
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
+                child: Wrap(spacing: 6, runSpacing: 6, children: [
                   for (final f in fs)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 6),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(18),
-                        onTap: () => _show(f, c),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14),
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: on == f ? kInk : Colors.white,
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: on == f ? kInk : kLine),
-                            boxShadow: kShadow,
-                          ),
-                          child: Text(f.name, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: on == f ? Colors.white : kInk)),
+                    GestureDetector(
+                      onTap: () => _show(f, c),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 160),
+                        height: 38,
+                        padding: const EdgeInsets.fromLTRB(6, 0, 13, 0),
+                        decoration: BoxDecoration(
+                          color: on == f ? kBlue : Colors.white,
+                          borderRadius: BorderRadius.circular(19),
+                          border: Border.all(color: on == f ? kBlue : const Color(0xFFDCE3EE)),
+                          boxShadow: [BoxShadow(color: (on == f ? kBlue : const Color(0xFF1C3A6E)).withValues(alpha: on == f ? 0.35 : 0.12), blurRadius: 12)],
                         ),
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          Container(
+                            width: 28,
+                            height: 28,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(color: on == f ? Colors.white : const Color(0xFFF1F5FB), shape: BoxShape.circle),
+                            child: LineIcon(f.icon, size: 21),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(_short[f.id] ?? f.name,
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: -0.3, color: on == f ? Colors.white : kInk)),
+                        ]),
                       ),
                     ),
                 ]),
