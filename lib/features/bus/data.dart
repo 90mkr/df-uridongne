@@ -340,6 +340,31 @@ Future<List<Stop>> stopsFor(Complex c) async {
 
 String errText(BusErr e) => switch (e) {
       BusErr.noKey => '실시간 열쇠를 준비하고 있어요',
-      BusErr.blocked => '실시간 도착은 휴대폰 앱에서 보여요',
+      BusErr.blocked => '도착 정보를 불러오지 못했어요',
       _ => '도착 정보를 불러오지 못했어요',
     };
+
+// ---------------- 즐겨찾는 노선 ----------------
+Future<List<Map>> favRoutes() async {
+  try {
+    final s = await prefGet('bus.favRoutes');
+    final j = s == null || s.isEmpty ? null : jsonDecode(s);
+    return j is List ? j.whereType<Map>().toList() : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+Future<bool> isFavRoute(int city, String routeId) async => (await favRoutes()).any((m) => m['r'] == routeId && m['c'] == city);
+
+Future<bool> toggleFavRoute(int city, String routeId, String no) async {
+  final l = await favRoutes();
+  final i = l.indexWhere((m) => m['r'] == routeId && m['c'] == city);
+  if (i >= 0) {
+    l.removeAt(i);
+  } else {
+    l.insert(0, {'c': city, 'r': routeId, 'no': no});
+  }
+  await prefSet('bus.favRoutes', jsonEncode(l.take(20).toList()));
+  return i < 0;
+}
