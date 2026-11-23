@@ -247,7 +247,7 @@ def collect_area(a, sido_avg, now):
             for k in ('tel', 'a', 'lpg', 'wash', 'cvs', 'maint', 'kp', 'd'):
                 if k in c:
                     r[k] = c[k]
-    sts = sorted((r for r in st.values() if r['p']), key=lambda r: (r['p'].get('B027') or r['p'].get('K015') or 9999, r['n']))
+    sts = sorted((r for r in st.values() if r['p']), key=lambda r: (0 if r['p'].get('B027') else 1, r['p'].get('B027') or r['p'].get('K015') or 9999, r['n']))
     avg = sido_avg.get(a['sido']) or {}
     data = {
         'area_id': a['id'],
