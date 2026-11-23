@@ -26,7 +26,7 @@ class WeatherFeature extends Feature {
   @override
   int get order => 10;
   @override
-  String get version => '0.1.2';
+  String get version => '0.1.3';
   @override
   bool get ready => true;
   @override
@@ -81,7 +81,7 @@ class _HeadChipState extends State<_HeadChip> {
                   Text('날씨', style: TextStyle(fontSize: 11, color: kMute)),
                 ])
               : Row(mainAxisSize: MainAxisSize.min, children: [
-                  SkyIcon(w!.sky, size: 20),
+                  SkyIcon(w!.sky, size: 20, night: isNightHour(w!.at)),
                   const SizedBox(width: 3),
                   Text(_deg(w!.temp), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: -0.3)),
                   if (d != null && d.worst > 0) ...[
@@ -168,7 +168,7 @@ class _WeatherPageState extends State<_WeatherPage> {
                   if (w!.dust != null) ...[_DustCard(d: w!.dust!), const SizedBox(height: 12)],
                   _LifeCard(w: w!),
                   const SizedBox(height: 12),
-                  if (w!.hours.isNotEmpty) ...[_HoursCard(hours: w!.hours), const SizedBox(height: 12)],
+                  if (w!.hours.isNotEmpty) ...[_HoursCard(hours: _withNow(w!)), const SizedBox(height: 12)],
                   if (w!.days.length > 1) ...[_DaysCard(days: w!.days.skip(1).toList()), const SizedBox(height: 14)],
                   Text(
                     '${w!.source == '기상청' ? '날씨 기상청 · 미세먼지 에어코리아' : '날씨·미세먼지 ${w!.source}'}'
@@ -183,6 +183,12 @@ class _WeatherPageState extends State<_WeatherPage> {
 }
 
 String _2(int v) => v.toString().padLeft(2, '0');
+
+// 시간별 첫 칸(지금)은 예보 대신 지금 관측값으로 — 위 큰 숫자와 어긋나지 않게
+List<Hour> _withNow(Weather w) {
+  final h = w.hours.first;
+  return [Hour(h.t, temp: w.temp ?? h.temp, sky: w.sky, pop: h.pop, rain: h.rain, hum: w.hum, wind: w.wind), ...w.hours.skip(1)];
+}
 
 // 지금 날씨 (상자 없이 바탕 위에 크게)
 class _Now extends StatelessWidget {
@@ -222,7 +228,7 @@ class _Now extends StatelessWidget {
               ])),
           ]),
         ),
-        SkyIcon(w.sky, size: 78),
+        SkyIcon(w.sky, size: 78, night: isNightHour(w.at)),
       ]),
       const SizedBox(height: 12),
       // 습도·바람·강수 한 줄 (상자 대신 가는 칸막이)
@@ -417,7 +423,12 @@ List<_Tip> lifeTips(Weather w) {
   if (dry && sunny && (w.hum ?? 60) < 70 && (d == null || d.worst <= 2)) {
     out.add(const _Tip('laundry', '빨래 잘 마르는 날', '바깥에 널어도 좋아요'));
   } else {
-    out.add(_Tip('laundry', '빨래는 실내에서', !dry ? '비 소식이 있어요' : (d != null && d.worst >= 3 ? '미세먼지가 나빠요' : '습하거나 흐려요')));
+    final why = next24.any((h) => (h.pop ?? 0) >= 60 || isWet(h.sky))
+        ? '비 소식이 있어요'
+        : !dry
+            ? '비 올 확률이 조금 있어요'
+            : (d != null && d.worst >= 3 ? '미세먼지가 나빠요' : '습하거나 흐려요');
+    out.add(_Tip('laundry', '빨래는 실내에서', why));
   }
 
   // 세차
@@ -555,7 +566,7 @@ class _HoursCard extends StatelessWidget {
                       Text(_label(hours, i),
                           style: TextStyle(fontSize: 11, color: i == 0 ? kInk : kSub, fontWeight: i == 0 || hours[i].t.hour == 0 ? FontWeight.w700 : FontWeight.w400)),
                       const SizedBox(height: 4),
-                      SkyIcon(hours[i].sky, size: 28),
+                      SkyIcon(hours[i].sky, size: 28, night: isNightHour(hours[i].t)),
                     ]),
                   ),
               ]),

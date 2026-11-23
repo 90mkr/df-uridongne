@@ -15,18 +15,20 @@ const _sunSmall = '<circle cx="18" cy="17" r="6" fill="$_sunFill"/><path d="M18 
 const _cloud = '<path d="M14 36h20a7 7 0 0 0 0-14 10 10 0 0 0-19-2 7.5 7.5 0 0 0-1 16z" fill="$_cloudFill"/>';
 const _cloudLow = '<path d="M13 31h20a6.5 6.5 0 0 0 0-13 9.5 9.5 0 0 0-18-2 7 7 0 0 0-2 15z" fill="$_cloudFill"/>';
 const _cloudBack = '<path d="M30 15a8 8 0 0 1 11 6 5.5 5.5 0 0 1-2 10" fill="none"/>';
+const _moon = '<path d="M30 10a14 14 0 1 0 8 25A12 12 0 0 1 30 10z" fill="#FFF1C2"/>';
+const _moonSmall = '<path d="M21 6a8.5 8.5 0 1 0 5 15A7 7 0 0 1 21 6z" fill="#FFF1C2"/>';
 const _rain = '<path d="M17 36l-2 5M24 36l-2 5M31 36l-2 5" stroke="#2563eb"/>';
 const _snow = '<path d="M17 37.5v3M15.5 39h3M28 37.5v3M26.5 39h3" stroke="#6b6f7a"/>';
 const _sleet = '<path d="M18 36l-2 5" stroke="#2563eb"/><path d="M28 37.5v3M26.5 39h3" stroke="#6b6f7a"/>';
 const _drop = '<path d="M24 34c-3 4-3 6 0 7 3-1 3-3 0-7z" fill="$_dropFill"/>';
 
-String _body(Sky s) => switch (s) {
-      Sky.clear => _sun,
-      Sky.partly => '$_sunSmall$_cloud',
-      Sky.cloudy => '$_sunSmall$_cloud$_cloudBack',
+String _body(Sky s, bool night) => switch (s) {
+      Sky.clear => night ? _moon : _sun,
+      Sky.partly => '${night ? _moonSmall : _sunSmall}$_cloud',
+      Sky.cloudy => '${night ? _moonSmall : _sunSmall}$_cloud$_cloudBack',
       Sky.overcast => '$_cloudBack$_cloud',
       Sky.rain => '$_cloudLow$_rain',
-      Sky.shower => '$_sunSmall$_cloudLow$_rain',
+      Sky.shower => '${night ? _moonSmall : _sunSmall}$_cloudLow$_rain',
       Sky.snow => '$_cloudLow$_snow',
       Sky.sleet => '$_cloudLow$_sleet',
     };
@@ -34,9 +36,17 @@ String _body(Sky s) => switch (s) {
 class SkyIcon extends StatelessWidget {
   final Sky sky;
   final double size;
-  const SkyIcon(this.sky, {super.key, this.size = 28});
+  final bool night;
+  const SkyIcon(this.sky, {super.key, this.size = 28, this.night = false});
   @override
-  Widget build(BuildContext context) => SvgPicture.string('$_head${_body(sky)}</svg>', width: size, height: size);
+  Widget build(BuildContext context) => SvgPicture.string('$_head${_body(sky, night)}</svg>', width: size, height: size);
+}
+
+// 밤인지 (서울 기준 달마다 대략의 해 뜨고 지는 시각)
+bool isNightHour(DateTime t) {
+  const rise = [8, 7, 7, 6, 6, 5, 5, 6, 6, 7, 7, 8];
+  const down = [18, 18, 19, 19, 19, 20, 20, 19, 19, 18, 18, 17];
+  return t.hour < rise[t.month - 1] || t.hour >= down[t.month - 1];
 }
 
 // 미세먼지 등급 색 (우리나라 앱들이 흔히 쓰는 순서: 파랑·초록·주황·빨강) — 글자·점에만 옅게
