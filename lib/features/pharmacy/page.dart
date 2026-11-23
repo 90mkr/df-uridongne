@@ -9,6 +9,7 @@ import '../../core/icons.dart';
 import '../../core/nav.dart';
 import '../../core/theme.dart';
 import '../../core/ui.dart';
+import 'art.dart';
 import 'data.dart';
 
 // 상태 색: 영업 중 초록 / 30분 안에 닫음 주황 「곧 마감」 / 닫음 회색
@@ -18,10 +19,12 @@ const kOpenSoft = Color(0xFFE3F5EA); // 영업 중 알약 바탕
 const kSoonC = Color(0xFFE58A00);
 const kWarn = Color(0xFFC76A00); // 곧 마감 글자
 const kOffC = Color(0xFFA3A8B1);
-const _barOpen = kOpenC;
-const _barSoon = Color(0xFFF29B1D);
+const _barOpen = Color(0xFFCDEFDB);
+const _barSoon = Color(0xFFFFDDB0);
 const _barOff = Color(0xFFE6E8EC);
 const kCallNote = '방문 전 전화 확인을 권해요';
+const kPageBg = Color(0xFFF4F7FD);
+const _btnGrad = LinearGradient(colors: [Color(0xFF4A8BFF), Color(0xFF1F5FE6)], begin: Alignment.topLeft, end: Alignment.bottomRight);
 
 Color stateColor(OpenState s) => !s.open ? kOffC : (s.closingSoon ? kSoonC : kOpenC);
 
@@ -142,17 +145,48 @@ class _PharmacyPageState extends State<PharmacyPage> {
             if (mapView) {
               return _PharmMap(key: ValueKey('$filter-${pick?.label}'), places: list, complex: c, when: ww, controls: _controls(onMap: true));
             }
-            return ListView(padding: const EdgeInsets.fromLTRB(kPad, 14, kPad, 30), children: [
+            return Stack(children: [
+              // 위쪽 옅은 파랑 물결 바탕
+              Positioned(
+                left: 0,
+                right: 0,
+                top: 0,
+                height: 260,
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFFDCE8FF), Color(0x00F4F7FD)]),
+                  ),
+                ),
+              ),
+              ListView(padding: const EdgeInsets.fromLTRB(kPad, 10, kPad, 30), children: [
               if (run.isNotEmpty) ...[
                 _HolidayBanner(run: run, onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => HolidayPage(complex: c, run: run, places: pharm)))),
                 const SizedBox(height: 14),
               ],
+              Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text.rich(
+                        TextSpan(children: [
+                          TextSpan(text: '${filterName(filter, ww)} '),
+                          TextSpan(text: '5km 안 · ${list.length}곳', style: const TextStyle(color: kBlue)),
+                        ]),
+                        style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, letterSpacing: -0.6, height: 1.25),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(openCount > 0 ? '아플 때, 가까운 약국을 빠르게 찾아보세요.' : '지금은 문 연 약국이 없어요. 아래 대안을 확인해 주세요.', style: T.small),
+                      const SizedBox(height: 3),
+                      const Row(children: [Icon(Icons.info_outline_rounded, size: 12, color: kMute), SizedBox(width: 3), Text(kCallNote, style: T.tiny)]),
+                    ]),
+                  ),
+                ),
+                const Art('store', w: 132, h: 90),
+              ]),
+              const SizedBox(height: 10),
               _controls(),
               const SizedBox(height: 16),
-              _Summary(openCount: openCount, listCount: list.length, filter: filter, when: ww, nearest: pharm.where((p) => p.stateBy(ww).open).firstOrNull, complex: c),
-              const SizedBox(height: 6),
-              const Row(children: [Icon(Icons.info_outline_rounded, size: 13, color: kMute), SizedBox(width: 4), Text(kCallNote, style: T.tiny)]),
-              const SizedBox(height: 12),
               if (openCount == 0) ...[
                 _AltBlock(complex: c, places: all, when: ww, strong: true),
                 const SizedBox(height: 16),
@@ -194,6 +228,7 @@ class _PharmacyPageState extends State<PharmacyPage> {
                   style: T.tiny,
                 ),
               ),
+            ]),
             ]);
           },
         ),
@@ -224,18 +259,21 @@ class _Chip extends StatelessWidget {
   final VoidCallback onTap;
   const _Chip(this.text, {required this.on, required this.onTap, this.onMap = false});
   @override
-  Widget build(BuildContext context) => Material(
-        color: on ? const Color(0xFFEEF3FF) : Colors.white,
-        borderRadius: BorderRadius.circular(9),
-        elevation: 0,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(9),
-          onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(9), border: Border.all(color: on ? kBlue : kLine), boxShadow: onMap ? kShadow : null),
-            child: Text(text, style: TextStyle(fontSize: 13, color: on ? kBlue : kInk, fontWeight: FontWeight.w500)),
+  Widget build(BuildContext context) => InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Container(
+          height: 38,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            gradient: on ? _btnGrad : null,
+            color: on ? null : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: on ? null : Border.all(color: const Color(0xFFDDE3EE)),
+            boxShadow: on ? [BoxShadow(color: kBlue.withValues(alpha: 0.25), blurRadius: 10)] : kShadow,
           ),
+          child: Text(text, style: TextStyle(fontSize: 13, color: on ? Colors.white : kInk, fontWeight: on ? FontWeight.w700 : FontWeight.w500)),
         ),
       );
 }
@@ -248,30 +286,31 @@ class _WhenChip extends StatelessWidget {
   const _WhenChip({required this.when, required this.onTap, this.onReset, this.onMap = false});
   @override
   Widget build(BuildContext context) => Container(
+        height: 38,
         decoration: BoxDecoration(
           color: when.live ? Colors.white : kInk,
-          borderRadius: BorderRadius.circular(9),
-          border: Border.all(color: when.live ? kLine : kInk),
-          boxShadow: onMap ? kShadow : null,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: when.live ? const Color(0xFFDDE3EE) : kInk),
+          boxShadow: kShadow,
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           InkWell(
-            borderRadius: BorderRadius.circular(9),
+            borderRadius: BorderRadius.circular(20),
             onTap: onTap,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+              padding: const EdgeInsets.fromLTRB(13, 0, 9, 0),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.schedule_rounded, size: 15, color: when.live ? kSub : Colors.white),
-                const SizedBox(width: 5),
+                Icon(Icons.schedule_rounded, size: 17, color: when.live ? kBlue : Colors.white),
+                const SizedBox(width: 6),
                 Text(when.label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: when.live ? kInk : Colors.white)),
-                Icon(Icons.expand_more_rounded, size: 17, color: when.live ? kSub : Colors.white),
+                Icon(Icons.expand_more_rounded, size: 18, color: when.live ? kBlue : Colors.white),
               ]),
             ),
           ),
           if (onReset != null)
             InkWell(
               onTap: onReset,
-              child: const Padding(padding: EdgeInsets.fromLTRB(2, 8, 10, 8), child: Icon(Icons.close_rounded, size: 16, color: Colors.white)),
+              child: const Padding(padding: EdgeInsets.fromLTRB(2, 0, 11, 0), child: Icon(Icons.close_rounded, size: 16, color: Colors.white)),
             ),
         ]),
       );
@@ -379,14 +418,14 @@ class _AltBlock extends StatelessWidget {
     Widget row(String icon, Color fill, String title, String sub, VoidCallback onTap, bool line) => InkWell(
           onTap: onTap,
           child: Container(
-            padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+            padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
             decoration: BoxDecoration(border: line ? const Border(bottom: BorderSide(color: Color(0xFFECEDF1))) : null),
             child: Row(children: [
-              LineIcon(icon, size: 28, fill: fill),
-              const SizedBox(width: 10),
+              Art(icon, w: 36, h: 36),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, height: 1.25)),
+                  Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, height: 1.25)),
                   const SizedBox(height: 2),
                   Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.tiny),
                 ]),
@@ -396,17 +435,38 @@ class _AltBlock extends StatelessWidget {
           ),
         );
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      MixTitle(strong ? (when.live ? '지금 문 연 약국이 없어요' : '그 시각엔 문 연 약국이 없어요') : '약국이 모두 닫았을 때', strong ? '' : '대안', size: 15),
-      const SizedBox(height: 4),
-      Text(strong ? '급하면 아래를 이용해 주세요. 생명이 위급하면 119.' : '밤늦게나 연휴에 약국이 다 닫았다면.', style: T.small),
-      const SizedBox(height: 10),
+      Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                const Icon(Icons.shield_outlined, size: 22, color: kBlue),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text.rich(
+                    TextSpan(children: [
+                      TextSpan(text: strong ? (when.live ? '지금 문 연 약국이 없어요' : '그 시각엔 문 연 약국이 없어요') : '약국이 모두 닫았을 때는'),
+                      if (!strong) const TextSpan(text: '?', style: TextStyle(color: kBlue)),
+                    ]),
+                    style: const TextStyle(fontSize: 16.5, fontWeight: FontWeight.w800, letterSpacing: -0.5),
+                  ),
+                ),
+              ]),
+              const SizedBox(height: 4),
+              Text(strong ? '급하면 아래를 이용해 주세요. 생명이 위급하면 119.' : '밤늦게나 연휴에 약국이 다 닫았다면 아래를 이용해 보세요.', style: T.small),
+            ]),
+          ),
+        ),
+        const Art('night', w: 96, h: 64),
+      ]),
       Container(
         decoration: cardBox(),
         child: Column(children: [
           if (showStores)
-            row('mart', kSoftYellow, '안전상비의약품 파는 편의점', '해열제·소화제 등 · 24시간 편의점 위주', () => showSheet(context, (ctx) => _StoreSheet(complex: c)), true),
-          row('kids', kSoft, '야간·휴일 소아과', kidsOpen > 0 ? '5km 안 지금 진료 중 $kidsOpen곳' : '밤·휴일 진료하는 소아청소년과', () => showSheet(context, (ctx) => _KidsSheet(complex: c, kids: kids, when: when)), true),
-          row('hosp', kSoftOrange, '가까운 응급실', '24시간 · 응급실 직통 전화', () => showSheet(context, (ctx) => _ErSheet(complex: c)), false),
+            row('cart', kSoftYellow, '안전상비의약품 파는 편의점', '해열제·소화제 등 · 24시간 편의점 위주', () => showSheet(context, (ctx) => _StoreSheet(complex: c)), true),
+          row('kit', kSoft, '야간·휴일 소아과', kidsOpen > 0 ? '5km 안 지금 진료 중 $kidsOpen곳' : '밤·휴일 진료하는 소아청소년과', () => showSheet(context, (ctx) => _KidsSheet(complex: c, kids: kids, when: when)), true),
+          row('er', kSoftOrange, '가까운 응급실', '24시간 · 응급실 직통 전화', () => showSheet(context, (ctx) => _ErSheet(complex: c)), false),
         ]),
       ),
     ]);
@@ -430,7 +490,11 @@ class _Timeline extends StatelessWidget {
       decoration: cardBox(),
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        MixTitle(when.live ? '오늘 영업시간' : '그날 영업시간', '한눈에', size: 14),
+        Row(children: [
+          const Icon(Icons.schedule_rounded, size: 20, color: kBlue),
+          const SizedBox(width: 6),
+          Text(when.live ? '오늘 영업시간 한눈에' : '그날 영업시간 한눈에', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: -0.4)),
+        ]),
         const SizedBox(height: 10),
         LayoutBuilder(builder: (context, box) {
           final w = box.maxWidth;
@@ -489,7 +553,7 @@ class _Timeline extends StatelessWidget {
           bottom: 0,
           child: Align(
             alignment: Alignment.centerLeft,
-            child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: s.open ? Colors.white : kSub, height: 1.1)),
+            child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: s.open ? kInk : kSub, height: 1.1)),
           ),
         ),
       ]),
@@ -528,117 +592,73 @@ class _Featured extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(kRadius),
+        borderRadius: BorderRadius.circular(16),
         onTap: () => showPlace(context, p, complex, when: when),
         child: Ink(
-          decoration: cardBox(),
-          padding: const EdgeInsets.all(16),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Padding(padding: const EdgeInsets.only(top: 6, right: 8), child: _Dot(stateColor(s), size: 9)),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(p.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: -0.4, height: 1.25)),
-                  const SizedBox(height: 6),
-                  Row(children: [
-                    _StatePill(s),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFD9E4FA)),
+            gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Colors.white, Color(0xFFEAF1FF)]),
+            boxShadow: [BoxShadow(color: kBlue.withValues(alpha: 0.10), blurRadius: 18)],
+          ),
+          child: Stack(children: [
+            // 오른쪽 아래 옅은 약국 그림
+            Positioned(right: -8, bottom: 30, child: Opacity(opacity: 0.18, child: const Art('store', w: 150, h: 100))),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Padding(padding: const EdgeInsets.only(top: 2), child: _StateIcon(s, size: 30)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(p.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: -0.5, height: 1.25)),
+                      const SizedBox(height: 3),
+                      Text.rich(statusSpan(p, complex, when), style: const TextStyle(fontSize: 12.5, color: kSub, height: 1.3)),
+                    ]),
+                  ),
+                  if (p.hasSunday || p.hasHoliday) ...[
                     const SizedBox(width: 8),
-                    Flexible(child: Text('${distText(meters(complex.pos, p.pos))} · ${s.open ? s.untilText : (s.next.isEmpty ? '' : '${s.next} 열어요')}', maxLines: 1, overflow: TextOverflow.ellipsis, style: T.small)),
-                  ]),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 4),
+                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFCFDAF0))),
+                      child: Text(p.hasSunday && p.hasHoliday ? '일·공휴일 영업' : (p.hasSunday ? '일요일 영업' : '공휴일 영업'),
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: kBlue)),
+                    ),
+                  ],
                 ]),
-              ),
-              if (p.hasSunday || p.hasHoliday) ...[
-                const SizedBox(width: 8),
-                Pill(p.hasSunday && p.hasHoliday ? '일·공휴일 영업' : (p.hasSunday ? '일요일 영업' : '공휴일 영업')),
-              ],
-            ]),
-            const SizedBox(height: 12),
-            Row(children: [
-              if (p.tel.isNotEmpty) ...[Expanded(child: Btn('전화하기', icon: 'phone', primary: true, h: 40, onTap: () => callTel(p.tel))), const SizedBox(width: 10)],
-              Expanded(child: Btn('길안내', icon: 'route', h: 40, onTap: () => startNav(context, name: p.name, lat: p.pos.latitude, lng: p.pos.longitude))),
-            ]),
-          ]),
-        ),
-      ),
-    );
-  }
-}
-
-// 상태 알약: 영업 중(연녹 바탕·짙은 녹색 글자) / 곧 마감(주황) / 닫음(회색)
-class _StatePill extends StatelessWidget {
-  final OpenState s;
-  const _StatePill(this.s);
-  @override
-  Widget build(BuildContext context) {
-    final (bg, fg, t) = !s.open
-        ? (const Color(0xFFF0F1F4), kSub, '닫음')
-        : s.closingSoon
-            ? (const Color(0xFFFFF0DC), kWarn, '곧 마감 ${s.minsLeft}분')
-            : (kOpenSoft, kOpenDark, '영업 중');
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Container(width: 6, height: 6, decoration: BoxDecoration(color: s.open ? (s.closingSoon ? kSoonC : kOpenC) : kOffC, shape: BoxShape.circle)),
-        const SizedBox(width: 5),
-        Text(t, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: fg, height: 1.2)),
-      ]),
-    );
-  }
-}
-
-// 맨 위 요약: 지금 영업 중 ○곳 (초록 띠)
-class _Summary extends StatelessWidget {
-  final int openCount, listCount;
-  final PFilter filter;
-  final When when;
-  final Place? nearest;
-  final Complex complex;
-  const _Summary({required this.openCount, required this.listCount, required this.filter, required this.when, required this.nearest, required this.complex});
-
-  @override
-  Widget build(BuildContext context) {
-    final on = openCount > 0;
-    final head = when.live ? '지금' : when.label;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(18, 16, 16, 16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(kRadius),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: on ? const [Color(0xFF26B36A), Color(0xFF13924F)] : const [Color(0xFF5B606B), Color(0xFF3F434C)],
-        ),
-      ),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('$head${when.live && isHoliday(when.date!) ? ' · 공휴일' : ''}', style: TextStyle(fontSize: 11.5, color: Colors.white.withValues(alpha: 0.82))),
-            const SizedBox(height: 2),
-            Text.rich(
-              TextSpan(children: [
-                TextSpan(text: on ? '영업 중 ' : '문 연 약국 ', style: const TextStyle(fontWeight: FontWeight.w300)),
-                TextSpan(text: on ? '$openCount' : '없음', style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: -0.5)),
-                if (on) const TextSpan(text: '곳', style: TextStyle(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 14),
+                Row(children: [
+                  if (p.tel.isNotEmpty) ...[Expanded(child: _BigBtn(call: true, onTap: () => callTel(p.tel))), const SizedBox(width: 10)],
+                  Expanded(child: _BigBtn(call: false, onTap: () => startNav(context, name: p.name, lat: p.pos.latitude, lng: p.pos.longitude))),
+                ]),
               ]),
-              style: const TextStyle(fontSize: 17, color: Colors.white, height: 1.15),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              nearest != null ? '가장 가까운 곳 ${nearest!.name} · ${distText(meters(complex.pos, nearest!.pos))}' : '아래 응급실·편의점을 이용해 주세요',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 11.5, color: Colors.white.withValues(alpha: 0.9)),
             ),
           ]),
         ),
-        const SizedBox(width: 10),
-        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          LineIcon('pharm', size: 44, line: Colors.white, fill: Colors.white.withValues(alpha: 0.22)),
-          const SizedBox(height: 6),
-          Text('5km 안 · ${filter == PFilter.all ? '전체 ' : ''}$listCount곳', style: TextStyle(fontSize: 10.5, color: Colors.white.withValues(alpha: 0.85))),
-        ]),
-      ]),
+      ),
+    );
+  }
+}
+
+// 상태 아이콘: 영업 중 초록 십자 / 곧 마감 주황 시계 / 닫음 회색
+class _StateIcon extends StatelessWidget {
+  final OpenState s;
+  final double size;
+  const _StateIcon(this.s, {this.size = 26});
+  @override
+  Widget build(BuildContext context) {
+    if (s.open && s.closingSoon) return Icon(Icons.schedule_rounded, size: size + 2, color: kSoonC);
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: s.open ? const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF4ED38A), Color(0xFF1FA463)]) : null,
+        color: s.open ? null : const Color(0xFFD5D9E0),
+        boxShadow: s.open ? [BoxShadow(color: kOpenC.withValues(alpha: 0.3), blurRadius: 6)] : null,
+      ),
+      child: Icon(s.open ? Icons.add_rounded : Icons.remove_rounded, size: size * 0.75, color: Colors.white),
     );
   }
 }
@@ -670,15 +690,15 @@ class PlaceRow extends StatelessWidget {
     return InkWell(
       onTap: () => showPlace(context, p, complex, when: when),
       child: Container(
-        padding: const EdgeInsets.fromLTRB(14, 11, 12, 11),
+        padding: const EdgeInsets.fromLTRB(14, 13, 12, 13),
         decoration: BoxDecoration(border: line ? const Border(bottom: BorderSide(color: Color(0xFFECEDF1))) : null),
         child: Row(children: [
-          if (hoursOf == null) ...[_Dot(stateColor(s)), const SizedBox(width: 8)],
+          if (hoursOf == null) ...[_StateIcon(s), const SizedBox(width: 10)],
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, height: 1.25)),
-              const SizedBox(height: 2),
-              Text.rich(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: kSub, height: 1.3)),
+              Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, letterSpacing: -0.3, height: 1.25)),
+              const SizedBox(height: 3),
+              Text.rich(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11.5, color: kSub, height: 1.3)),
             ]),
           ),
           const SizedBox(width: 8),
@@ -698,25 +718,55 @@ class _MiniBtn extends StatelessWidget {
   Widget build(BuildContext context) {
     final call = text.startsWith('전화');
     return InkWell(
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(10),
       onTap: onTap,
       child: Container(
-        height: 32,
-        padding: const EdgeInsets.fromLTRB(7, 0, 10, 0),
+        height: 34,
+        padding: const EdgeInsets.fromLTRB(9, 0, 11, 0),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: call ? kOpenSoft : Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: call ? const Color(0xFFBFE6CE) : const Color(0xFFD5D9E0)),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFFD6DEEC)),
+          boxShadow: kShadow,
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          LineIcon(call ? 'phone' : 'route', size: 17, line: call ? kOpenDark : kInk, fill: call ? Colors.white : kSoft),
-          const SizedBox(width: 3),
-          Text(call ? '전화하기' : '길안내', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: call ? kOpenDark : kInk)),
+          Icon(call ? Icons.call_rounded : Icons.turn_right_rounded, size: 16, color: kBlue),
+          const SizedBox(width: 4),
+          Text(call ? '전화하기' : '길안내', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: kInk)),
         ]),
       ),
     );
   }
+}
+
+// 큰 버튼: 전화하기(파랑 그러데이션) · 길안내(흰 바탕 파랑 화살표)
+class _BigBtn extends StatelessWidget {
+  final bool call;
+  final VoidCallback onTap;
+  final double h;
+  const _BigBtn({required this.call, required this.onTap, this.h = 46});
+  @override
+  Widget build(BuildContext context) => InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Container(
+          height: h,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            gradient: call ? _btnGrad : null,
+            color: call ? null : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: call ? null : Border.all(color: const Color(0xFFCFDAF0)),
+            boxShadow: call ? [BoxShadow(color: kBlue.withValues(alpha: 0.28), blurRadius: 12)] : kShadow,
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(call ? Icons.call_rounded : Icons.turn_right_rounded, size: 20, color: call ? Colors.white : kBlue),
+            const SizedBox(width: 7),
+            Text(call ? '전화하기' : '길안내', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: call ? Colors.white : kInk)),
+          ]),
+        ),
+      );
 }
 
 // ---------------- 지도로 보기 ----------------
@@ -893,8 +943,8 @@ class _PickCard extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         Row(children: [
-          if (p.tel.isNotEmpty) ...[Expanded(child: Btn('전화하기', icon: 'phone', primary: true, h: 38, onTap: () => callTel(p.tel))), const SizedBox(width: 10)],
-          Expanded(child: Btn('길안내', icon: 'route', h: 38, onTap: () => startNav(context, name: p.name, lat: p.pos.latitude, lng: p.pos.longitude))),
+          if (p.tel.isNotEmpty) ...[Expanded(child: _BigBtn(call: true, h: 40, onTap: () => callTel(p.tel))), const SizedBox(width: 10)],
+          Expanded(child: _BigBtn(call: false, h: 40, onTap: () => startNav(context, name: p.name, lat: p.pos.latitude, lng: p.pos.longitude))),
         ]),
         const SizedBox(height: 6),
         const Text(kCallNote, style: T.tiny),
