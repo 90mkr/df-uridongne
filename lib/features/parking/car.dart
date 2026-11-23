@@ -3,7 +3,9 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../core/data.dart';
@@ -60,12 +62,31 @@ class MyCar {
 final myCar = ValueNotifier<MyCar?>(null);
 bool _loaded = false;
 
+// 세운 자리 사진 — 이 휴대폰에만 저장 (서버로 안 보냄). 출차 완료하면 지움
+final carPhoto = ValueNotifier<Uint8List?>(null);
+
+Future<void> saveCarPhoto(Uint8List? b) async {
+  carPhoto.value = b;
+  await prefSet('parking.carPhoto', b == null ? '' : base64Encode(b));
+}
+
+Future<Uint8List?> takeCarPhoto() async {
+  try {
+    final x = await ImagePicker().pickImage(source: ImageSource.camera, maxWidth: 1280, maxHeight: 1280, imageQuality: 70);
+    return x == null ? null : await x.readAsBytes();
+  } catch (_) {
+    return null;
+  }
+}
+
 Future<MyCar?> loadCar() async {
   if (_loaded) return myCar.value;
   _loaded = true;
   try {
     final s = await prefGet('parking.car');
     if (s != null && s.isNotEmpty) myCar.value = MyCar.fromJson(jsonDecode(s));
+    final ph = await prefGet('parking.carPhoto');
+    if (ph != null && ph.isNotEmpty) carPhoto.value = base64Decode(ph);
   } catch (_) {}
   _watch();
   return myCar.value;
@@ -73,6 +94,7 @@ Future<MyCar?> loadCar() async {
 
 Future<void> saveCar(MyCar? c) async {
   myCar.value = c;
+  if (c == null) await saveCarPhoto(null);
   await prefSet('parking.car', c == null ? '' : jsonEncode(c.toJson()));
   _watch();
 }
@@ -311,13 +333,14 @@ Future<void> parkHere(BuildContext context, List<Lot> lots) async {
   Lot? pick = cands.isNotEmpty && meters(p, cands.first.pos) <= 150 ? cands.first : null;
   final memo = TextEditingController();
   var free = 0;
+  Uint8List? shot;
   await showSheet(
     context,
     (ctx) => StatefulBuilder(
       builder: (ctx, set) => ListView(shrinkWrap: true, padding: const EdgeInsets.fromLTRB(kPad, 14, kPad, 16), children: [
         const MixTitle('여기', '세웠어요', size: 16.5),
         const SizedBox(height: 4),
-        const Text('위치는 이 휴대폰에만 저장돼요. 서버로 보내지 않아요.', style: T.tiny),
+        const Text('위치·사진은 이 휴대폰에만 저장돼요. 서버로 보내지 않아요.', style: T.tiny),
         const SizedBox(height: 14),
         const Text('주차장', style: T.title),
         const SizedBox(height: 6),
@@ -326,7 +349,28 @@ Future<void> parkHere(BuildContext context, List<Lot> lots) async {
           ChoiceChipBox(cands.isEmpty ? '근처 주차장 정보 없음' : '목록에 없어요', on: pick == null, onTap: () => set(() => pick = null)),
         ]),
         const SizedBox(height: 14),
-        Field('층·구역 (선택)', memo, hint: '예: B2 · C-14, 기둥 번호', max: 30),
+        Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          Expanded(child: Field('층·구역 (선택)', memo, hint: '예: B2 · C-14, 기둥 번호', max: 30)),
+          const SizedBox(width: 8),
+          // 오른쪽 사진 단추: 기둥 번호·표지판을 찍어 두기
+          Padding(
+            padding: const EdgeInsets.only(bottom: 14),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () async {
+                final b = await takeCarPhoto();
+                if (b != null) set(() => shot = b);
+              },
+              child: Container(
+                width: 50,
+                height: 50,
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), border: Border.all(color: kLine), color: Colors.white),
+                child: shot != null ? Image.memory(shot!, fit: BoxFit.cover) : const Icon(Icons.photo_camera_outlined, size: 22, color: kSub),
+              ),
+            ),
+          ),
+        ]),
         const Text('받은 무료 시간 (마트·병원 등록 등)', style: T.title),
         const SizedBox(height: 6),
         Wrap(spacing: 6, runSpacing: 6, children: [
@@ -334,6 +378,7 @@ Future<void> parkHere(BuildContext context, List<Lot> lots) async {
         ]),
         const SizedBox(height: 18),
         Btn('저장하기', icon: 'car', primary: true, onTap: () {
+          saveCarPhoto(shot);
           saveCar(MyCar(lat: p.latitude, lng: p.longitude, at: DateTime.now(), memo: memo.text.trim(), freeMin: free, lot: pick));
           Navigator.pop(ctx);
         }),
@@ -375,6 +420,16 @@ Future<void> openCar(BuildContext context) => showSheet(context, (ctx) {
               _kv('요금표', '${c.lot!.basicMin}분 ${won(c.lot!.basicWon)}${c.lot!.addMin > 0 ? ' · ${c.lot!.addMin}분마다 ${won(c.lot!.addWon)}' : ''}${c.lot!.dayWon > 0 ? ' · 하루 ${won(c.lot!.dayWon)}' : ''}'),
           ]),
         ),
+        if (carPhoto.value case final ph?) ...[
+          const SizedBox(height: 10),
+          GestureDetector(
+            onTap: () => showDialog(
+              context: ctx,
+              builder: (d) => GestureDetector(onTap: () => Navigator.pop(d), child: InteractiveViewer(child: Image.memory(ph, fit: BoxFit.contain))),
+            ),
+            child: ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.memory(ph, height: 170, width: double.infinity, fit: BoxFit.cover)),
+          ),
+        ],
         const SizedBox(height: 6),
         const Text('예상 요금은 공공데이터 요금표로 계산한 값이에요. 실제 정산과 다를 수 있어요.', style: T.tiny),
         const SizedBox(height: 16),
