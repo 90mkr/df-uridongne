@@ -56,9 +56,6 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
   void initState() {
     super.initState();
     recTick.addListener(_re);
-    prefGet('phonebook.view').then((v) {
-      if (v == 'list' && mounted) setState(() => mapView = false);
-    });
     loadRecs(c.areaId);
     loadLotsAround(from).then((_) => _re());
   }
@@ -117,9 +114,12 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
     return e.length < 2 ? const [] : e.take(8).toList();
   }
 
+  // 언제나 지도로 먼저 열고, 목록은 원할 때만 (대표님 11-23)
   void _setView(bool map) {
-    setState(() => mapView = map);
-    prefSet('phonebook.view', map ? 'map' : 'list');
+    setState(() {
+      mapView = map;
+      sel = null;
+    });
   }
 
   void _changed() {
@@ -188,7 +188,7 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
             _head(wide),
             _bar(list.length, wide),
             const Divider(height: 1, color: kLine),
-            Expanded(child: wide ? _split(list, box.maxWidth) : (mapView ? _phoneMap(list, box.maxWidth) : _phoneList(list))),
+            Expanded(child: mapView ? _phoneMap(list, box.maxWidth) : (wide ? _split(list, box.maxWidth) : _phoneList(list))),
           ]);
         }),
       ),
@@ -222,7 +222,8 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
           ],
           const Spacer(),
         ],
-        if (!wide) ...[const SizedBox(width: 10), _toggle()],
+        const SizedBox(width: 10),
+        _toggle(),
       ]),
     );
   }
@@ -336,7 +337,11 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
   // ---------- 휴대폰: 지도 + 넘기는 카드 ----------
   Widget _phoneMap(List<Shop> list, double w) {
     final pins = list.take(_maxPins).toList();
-    final frac = (w - 44) / w;
+    final frac = math.min((w - 44) / w, 380 / w); // 넓은 화면에선 카드 여러 장이 나란히
+    if (pageCtl != null && (pageCtl!.viewportFraction - frac).abs() > 0.001) {
+      pageCtl!.dispose();
+      pageCtl = null;
+    }
     final pc = pageCtl ??= PageController(viewportFraction: frac);
     return Stack(children: [
       Positioned.fill(child: _map(pins, wide: false, padBottom: kCardH + 30)),
