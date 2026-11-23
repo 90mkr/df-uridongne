@@ -22,7 +22,7 @@ export default {
     const origin = req.headers.get('Origin') || '';
     const h = cors(origin);
     if (req.method === 'OPTIONS') return new Response(null, { headers: h });
-    if (url.pathname === '/' || url.pathname === '/ping') return new Response('우리동네 다리 OK', { headers: { ...h, 'content-type': 'text/plain; charset=utf-8' } });
+    if (url.pathname === '/' || url.pathname === '/ping') return new Response('dongne dari OK', { headers: { ...h, 'content-type': 'text/plain; charset=utf-8' } });
     if (req.method !== 'GET' || !url.pathname.startsWith('/dg/')) return new Response('not found', { status: 404, headers: h });
 
     const okOrigin = ORIGINS.some((o) => origin.startsWith(o));
