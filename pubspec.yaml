@@ -19,6 +19,7 @@ dependencies:
   firebase_core: any
   cloud_firestore: any
   firebase_auth: any
+  mobile_scanner: any
 
 dev_dependencies:
   flutter_test:

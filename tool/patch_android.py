@@ -14,6 +14,10 @@ for perm in ("ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"):
     if f"android.permission.{perm}" not in s:
         s = s.replace("<application", f'<uses-permission android:name="android.permission.{perm}"/>\n    <application', 1)
 
+# QR 읽기: 카메라 (없는 기기도 설치되게 required=false)
+if "android.permission.CAMERA" not in s:
+    s = s.replace("<application", '<uses-permission android:name="android.permission.CAMERA"/>\n    <uses-feature android:name="android.hardware.camera" android:required="false"/>\n    <application', 1)
+
 s = re.sub(r'android:label="[^"]*"', f'android:label="{label}"', s, count=1)
 
 if "android.intent.action.DIAL" not in s:

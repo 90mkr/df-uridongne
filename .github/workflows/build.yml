@@ -8,6 +8,9 @@ on:
     - cron: '13 18 * * 0'
     # 주유소 가격만 하루 3번 (한국 시각 07:40 · 12:40 · 18:40) — 카카오 업체 모으기는 건너뜀
     - cron: '40 22,3,9 * * *'
+    # 로또 당첨번호만 — 토요일 21:20, (막혔을 때) 일요일 09:07 (한국 시각)
+    - cron: '20 12 * * 6'
+    - cron: '7 0 * * 0'
   workflow_dispatch:
     inputs:
       areas:
@@ -43,7 +46,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: 업체 자료 모으기
-        if: ${{ !inputs.only_features && github.event.schedule != '40 22,3,9 * * *' }}
+        if: ${{ !inputs.only_features && github.event.schedule != '40 22,3,9 * * *' && github.event.schedule != '20 12 * * 6' && github.event.schedule != '7 0 * * 0' }}
         timeout-minutes: 240
         env:
           KAKAO_REST_KEY: ${{ secrets.KAKAO_REST_KEY }}
@@ -60,7 +63,7 @@ jobs:
           OPINET_KEY: ${{ secrets.OPINET_KEY }}
           AIRKOREA_KEY: ${{ secrets.AIRKOREA_KEY }}
           EV_KEY: ${{ secrets.EV_KEY }}
-          FEATURES: ${{ github.event.schedule == '40 22,3,9 * * *' && 'gas' || inputs.features }}
+          FEATURES: ${{ github.event.schedule == '40 22,3,9 * * *' && 'gas' || ((github.event.schedule == '20 12 * * 6' || github.event.schedule == '7 0 * * 0') && 'lotto' || inputs.features) }}
         run: |
           for f in collector/features/*.py; do
             [ -f "$f" ] || continue

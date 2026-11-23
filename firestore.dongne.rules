@@ -19,3 +19,21 @@
         && (!('cat' in request.resource.data) || (request.resource.data.cat is string && request.resource.data.cat.size() <= 20));
       allow read, update, delete: if isAdmin();
     }
+
+    // 우리 단지 배출 요일 (쓰레기 방 요청 11-23): 누구나 보기 · 로그인 회원이 쓰기(자기 uid로) · 지우기는 관리자
+    match /dn_trash_days/{cid} {
+      allow read: if true;
+      allow create, update: if request.auth != null
+        && request.resource.data.keys().hasOnly(['g', 'f', 'r', 's', 'e', 'note', 'apt', 'uid', 'name', 'at'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.at == request.time
+        && request.resource.data.g is string && request.resource.data.g.size() <= 7
+        && request.resource.data.f is string && request.resource.data.f.size() <= 7
+        && request.resource.data.r is string && request.resource.data.r.size() <= 7
+        && request.resource.data.s is string && request.resource.data.s.size() <= 5
+        && request.resource.data.e is string && request.resource.data.e.size() <= 5
+        && request.resource.data.note is string && request.resource.data.note.size() <= 80
+        && request.resource.data.apt is string && request.resource.data.apt.size() <= 60
+        && request.resource.data.name is string && request.resource.data.name.size() <= 40;
+      allow delete: if isAdmin();
+    }

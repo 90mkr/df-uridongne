@@ -25,9 +25,10 @@ enum Slot { header, hero, half, section, wide, tool }
 
 class MapPoint {
   final String id, name, sub;
+  final String badge; // 지도에 핀 대신 보일 짧은 글자 (예: 「240면」·「1,689원」·「빈 3」) — 비우면 핀
   final LatLng pos;
   final void Function(BuildContext context)? onTap;
-  const MapPoint({required this.id, required this.name, this.sub = '', required this.pos, this.onTap});
+  const MapPoint({required this.id, required this.name, this.sub = '', this.badge = '', required this.pos, this.onTap});
 }
 
 abstract class Feature {
