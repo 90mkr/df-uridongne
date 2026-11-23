@@ -1,13 +1,13 @@
 // 복권 (이 폴더는 복권 담당 방만 고침)
-// 지금은 본부가 만든 빈 틀입니다. 담당 방이 이 폴더 안에서 채웁니다.
-// 할 일: 이번 주 로또 당첨번호, 단지 근처 1등 나온 판매점 지도, 가까운 복권 판매점.
+// 이번 주 로또 당첨번호 · 내 번호 확인(QR·번호) · 단지 근처 1등 나온 집 · 가까운 복권 판매점
+// 자료: collector/features/lotto.py 가 web/data/lotto/ 에 모아 둔 것만 읽는다 (앱은 동행복권을 직접 부르지 않음).
 import 'package:flutter/material.dart';
 
 import '../../core/data.dart';
 import '../../core/feature.dart';
-import '../../core/icons.dart';
 import '../../core/theme.dart';
-import '../../core/ui.dart';
+import 'data.dart';
+import 'page.dart';
 
 class LottoFeature extends Feature {
   @override
@@ -21,25 +21,29 @@ class LottoFeature extends Feature {
   @override
   int get order => 50;
   @override
-  String get version => '0.0.1';
+  String get version => '0.1.0';
+  @override
+  bool get ready => true;
   @override
   Color get tint => kSoftYellow;
 
   @override
-  Widget page(BuildContext context, Complex c) => DetailPage(
-        title: name,
-        icon: icon,
-        body: const Center(
-          child: Padding(
-            padding: EdgeInsets.all(30),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              LineIcon('lotto', size: 54),
-              SizedBox(height: 14),
-              Text('준비하고 있어요', style: T.h2),
-              SizedBox(height: 6),
-              Text('이번 주 로또 당첨번호, 단지 근처 1등 나온 판매점과 가까운 복권 판매점.', textAlign: TextAlign.center, style: T.small),
-            ]),
+  Widget page(BuildContext context, Complex c) => LottoPage(complex: c);
+
+  // 지도 탭: 단지 3km 안 1등 나온 집
+  @override
+  Future<List<MapPoint>> mapPoints(Complex c) async {
+    final a = await loadArea(c.areaId);
+    return [
+      for (final s in a.wins)
+        if (meters(c.pos, s.pos) <= kNear)
+          MapPoint(
+            id: s.id,
+            name: '${s.name} · 1등 ${s.wins}회',
+            sub: s.addr,
+            pos: s.pos,
+            onTap: (ctx) => showStore(ctx, s, c),
           ),
-        ),
-      );
+    ];
+  }
 }
