@@ -2,10 +2,10 @@
  "id": "gas",
  "name": "주유소",
  "folder": "lib/features/gas",
- "room": "",
+ "room": "우리동네 주유소 방",
  "state": "대기",
- "doing": "",
- "version": "0.0.1",
- "updated": "2026-11-23 19:50",
+ "doing": "화면·지도·가격 모으기 완료 — 오피넷 열쇠(OPINET_KEY)와 하루 3번 갱신을 본부에 요청(requests/gas-1123-…). 열쇠 들어오면 실제 가격 확인",
+ "version": "0.1.0",
+ "updated": "2026-11-23 21:20",
  "order": 5
 }
