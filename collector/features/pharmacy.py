@@ -22,6 +22,7 @@ import time
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 
 KEY = os.environ.get("DATA_GO_KR_KEY", "").strip()
@@ -46,6 +47,13 @@ HOLIDAYS_FALLBACK = [
 ]
 
 calls = 0
+LOG = []  # 사람이 볼 기록 (status.json 에 남김)
+
+
+def log(*a):
+    m = " ".join(str(x) for x in a)
+    print(m, flush=True)
+    LOG.append(m)
 
 
 def fetch(url, params, tries=3):
@@ -69,33 +77,36 @@ def fetch(url, params, tries=3):
             root = ET.fromstring(raw)
             code = (root.findtext(".//resultCode") or "").strip()
             if code and code not in ("00", "0000"):
-                print("  응답 오류:", code, root.findtext(".//resultMsg"), root.findtext(".//returnAuthMsg"))
+                log("  응답 오류:", url.rsplit("/", 1)[-1], code, root.findtext(".//resultMsg"), root.findtext(".//returnAuthMsg"))
                 return None
             if root.find(".//returnAuthMsg") is not None:
-                print("  인증 오류:", root.findtext(".//returnAuthMsg"), root.findtext(".//returnReasonCode"))
+                log("  인증 오류:", url.rsplit("/", 1)[-1], root.findtext(".//returnAuthMsg"), root.findtext(".//returnReasonCode"))
                 return None
             items = [{c.tag: (c.text or "").strip() for c in it} for it in root.iter("item")]
             return items, int(root.findtext(".//totalCount") or 0)
         except Exception as e:
             if n == tries - 1:
-                print("  부르기 실패:", url.rsplit("/", 1)[-1], e)
+                log("  부르기 실패:", url.rsplit("/", 1)[-1], e)
                 return None
             time.sleep(2 * (n + 1))
 
 
-def fetch_all(url, extra=None, rows=500, limit=200):
-    out, page, total = [], 1, None
-    while page <= limit:
-        r = fetch(url, {**(extra or {}), "pageNo": page, "numOfRows": rows})
-        if r is None:
-            break
-        items, total = r
-        out += items
-        if not items or len(out) >= total:
-            break
-        page += 1
-        time.sleep(0.15)
-    print(f"  {url.rsplit('/', 1)[-1]} {extra or ''}: {len(out)}곳 (전체 {total})")
+def fetch_all(url, extra=None, rows=1000, limit=200):
+    """첫 쪽으로 전체 개수를 알아낸 뒤 나머지 쪽은 여러 개를 함께 받는다."""
+    t0 = time.time()
+    first = fetch(url, {**(extra or {}), "pageNo": 1, "numOfRows": rows})
+    if first is None:
+        return []
+    out, total = list(first[0]), first[1]
+    got = len(first[0]) or rows
+    pages = min(limit, -(-total // got)) if total else 1
+    if pages > 1:
+        with ThreadPoolExecutor(max_workers=6) as ex:
+            res = list(ex.map(lambda pg: fetch(url, {**(extra or {}), "pageNo": pg, "numOfRows": got}), range(2, pages + 1)))
+        for r in res:
+            if r is not None:
+                out += r[0]
+    log(f"  {url.rsplit('/', 1)[-1]} {extra or ''}: {len(out)}곳 (전체 {total}, {pages}쪽, {time.time() - t0:.0f}초)")
     return out
 
 
@@ -164,19 +175,43 @@ def holidays():
     return sorted(days | set(HOLIDAYS_FALLBACK)), "특일 정보"
 
 
+def save(name, obj, pretty=False):
+    with open(os.path.join(OUT, name), "w", encoding="utf-8") as fp:
+        json.dump(obj, fp, ensure_ascii=False, indent=1 if pretty else None, separators=None if pretty else (",", ":"))
+
+
+def status(state):
+    try:
+        os.makedirs(OUT, exist_ok=True)
+        save("status.json", {"at": datetime.now(KST).strftime("%Y-%m-%d %H:%M"), "state": state, "calls": calls, "log": LOG[-40:]}, pretty=True)
+    except Exception as e:
+        print("기록 저장 실패:", e)
+
+
 def main():
     if not KEY:
-        print("약국: 공공데이터 열쇠(DATA_GO_KR_KEY)가 없어 건너뜀")
+        log("약국: 공공데이터 열쇠(DATA_GO_KR_KEY)가 없어 건너뜀")
+        status("열쇠 없음")
         return
     os.makedirs(OUT, exist_ok=True)
+    status("모으는 중")
 
+    # 1) 약국 → 바로 저장 (소아과·응급실이 실패해도 약국은 남게)
     pharm = [p for p in (place(it, "p") for it in fetch_all(PHARM)) if p]
-    kids = [p for p in (place(it, "h") for it in fetch_all(HOSP, {"QD": "D002"})) if p]
-    ers = [p for p in (place(it, "e") for it in fetch_all(ER)) if p]
-
     if len(pharm) < 1000:
-        print(f"약국 자료가 너무 적어({len(pharm)}곳) 지난 자료를 그대로 둠")
+        log(f"약국 자료가 너무 적어({len(pharm)}곳) 지난 자료를 그대로 둠")
+        status("약국 실패")
         return
+    kids = [p for p in (place(it, "h") for it in fetch_all(HOSP, {"QD": "D002"})) if p]
+    if not kids:
+        # 지난 소아과 자료는 칸 파일 안에 있으니, 이번에 못 받으면 지난 칸에서 꺼내 다시 넣는다
+        for f in os.listdir(OUT):
+            if f.startswith("t_") and f.endswith(".json"):
+                try:
+                    kids += [x for x in json.load(open(os.path.join(OUT, f), encoding="utf-8")).get("items", []) if x.get("k") == "h"]
+                except Exception:
+                    pass
+        log(f"  소아과는 지난 자료 {len(kids)}곳 유지")
 
     tiles = {}
     seen = set()
@@ -187,21 +222,20 @@ def main():
         seen.add(key)
         t = f"t_{math.floor(p['y'] * 10)}_{math.floor(p['x'] * 10)}"
         tiles.setdefault(t, []).append(p)
-
-    # 지난 칸 파일 정리 후 새로 쓰기
     for f in os.listdir(OUT):
         if f.startswith("t_") and f.endswith(".json"):
             os.remove(os.path.join(OUT, f))
     for t, items in tiles.items():
-        with open(os.path.join(OUT, f"{t}.json"), "w", encoding="utf-8") as fp:
-            json.dump({"items": items}, fp, ensure_ascii=False, separators=(",", ":"))
+        save(f"{t}.json", {"items": items})
 
+    # 2) 응급실
+    ers = [p for p in (place(it, "e") for it in fetch_all(ER)) if p]
     if len(ers) >= 100:
-        with open(os.path.join(OUT, "er.json"), "w", encoding="utf-8") as fp:
-            json.dump({"items": ers}, fp, ensure_ascii=False, separators=(",", ":"))
+        save("er.json", {"items": ers})
 
+    # 3) 공휴일
     holi, holi_src = holidays()
-    meta = {
+    save("meta.json", {
         "updated": datetime.now(KST).strftime("%Y-%m-%d %H:%M"),
         "source": "국립중앙의료원 (공공데이터포털)",
         "pharmacy": len(pharm),
@@ -210,15 +244,15 @@ def main():
         "tiles": len(tiles),
         "holidays": holi,
         "holidaySource": holi_src,
-    }
-    with open(os.path.join(OUT, "meta.json"), "w", encoding="utf-8") as fp:
-        json.dump(meta, fp, ensure_ascii=False, indent=1)
-    print(f"약국 {len(pharm)} · 소아과 {len(kids)} · 응급실 {len(ers)} · 칸 {len(tiles)} · 부른 횟수 {calls}")
+    }, pretty=True)
+    log(f"약국 {len(pharm)} · 소아과 {len(kids)} · 응급실 {len(ers)} · 칸 {len(tiles)} · 부른 횟수 {calls} · 공휴일 {holi_src}")
+    status("완료")
 
 
 if __name__ == "__main__":
     try:
         main()
     except Exception as e:  # 다른 기능에 영향이 없게
-        print("약국 자료 모으기 실패:", e)
+        log("약국 자료 모으기 실패:", e)
+        status("실패")
         sys.exit(0)
