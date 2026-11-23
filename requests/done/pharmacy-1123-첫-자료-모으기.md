@@ -30,3 +30,4 @@
 - `build.yml`: 워크플로 전체에 걸린 `concurrency: pages` 를 없애고, `collect` 는 `group: collect`, `deploy` 는 `group: pages` 로 작업마다 줄 세움 → 수동 실행이 다른 방 올리기에 밀려 취소되지 않음.
 - 수동 실행 입력 추가: `only_features`(카카오 업체 모으기 건너뜀), `features`(예: `pharmacy` — 이 기능 자료만).
 - 첫 약국 자료: `only_features` 켜고 수동 실행함.
+- (21:30 보탬) `collect` 에 줄(group)을 걸면 대기 중인 수동 실행끼리 서로 취소돼서(앞의 대기가 뒤의 대기로 바뀜) 줄을 뺌. 대신 저장할 때 겹치면 `pull --rebase -X theirs` 로 5번까지 다시 시도.
