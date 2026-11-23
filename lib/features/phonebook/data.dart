@@ -286,13 +286,13 @@ String _fee(Map x) {
   return f.contains('유료') ? '유료' : '';
 }
 
-// 가게에서 가장 가까운 주차장 (400m 안, 없으면 null)
+// 가게에서 가장 가까운 주차장 (700m 안, 없으면 null)
 NearLot? nearestLot(LatLng p) {
   NearLot? best;
   for (final t in _lotTiles.values) {
     for (final (n, f, pos) in t) {
       final d = meters(p, pos);
-      if (d <= 400 && (best == null || d < best.m)) best = NearLot(n, f, d);
+      if (d <= 700 && (best == null || d < best.m)) best = NearLot(n, f, d);
     }
   }
   return best;

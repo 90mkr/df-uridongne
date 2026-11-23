@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -43,6 +44,7 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
   String? sel; // 고른 가게 id
   LatLngBounds? bounds; // 태블릿: 지도에 보이는 범위
   double zoom = 16;
+  LatLng? _center;
   Timer? _deb;
   AnimationController? _glide;
   int? _pageTarget;
@@ -174,7 +176,9 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     final list = items;
-    return Scaffold(
+    return ScrollConfiguration(
+      behavior: const _Drag(),
+      child: Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         bottom: false,
@@ -188,6 +192,7 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
           ]);
         }),
       ),
+    ),
     );
   }
 
@@ -448,9 +453,10 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
   // ---------- 지도 ----------
   Widget _map(List<Shop> pins, {required bool wide, double padBottom = 0, List<Shop>? listForPick}) {
     final now = DateTime.now();
-    final showNames = zoom >= 16.3;
     final selShop = pins.where((s) => s.id == sel).firstOrNull;
     final ordered = [...pins.where((s) => s.id != sel), if (selShop != null) selShop];
+    return LayoutBuilder(builder: (ctx, box) {
+    final named = _labels(pins, box.biggest, padBottom);
     return Stack(children: [
       FlutterMap(
         mapController: mapCtl,
@@ -465,17 +471,13 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
           },
           onPositionChanged: (cam, gesture) {
             _deb?.cancel();
-            _deb = Timer(const Duration(milliseconds: 160), () {
+            _deb = Timer(const Duration(milliseconds: 140), () {
               if (!mounted) return;
-              final zChanged = (cam.zoom >= 16.3) != (zoom >= 16.3);
-              if (wide || zChanged) {
-                setState(() {
-                  zoom = cam.zoom;
-                  if (wide) bounds = cam.visibleBounds;
-                });
-              } else {
+              setState(() {
                 zoom = cam.zoom;
-              }
+                _center = cam.center;
+                if (wide) bounds = cam.visibleBounds;
+              });
             });
           },
           onTap: (_, __) => setState(() => sel = null),
@@ -483,7 +485,6 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
         children: [
           TileLayer(urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', userAgentPackageName: 'kr.designfeel.dongne'),
           MarkerLayer(markers: [
-            Marker(point: from, width: 150, height: 44, alignment: Alignment.topCenter, child: _AptPin(c.name)),
             for (final s in ordered)
               Marker(
                 point: s.pos,
@@ -494,10 +495,11 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
                   name: s.name,
                   open: s.openAt(now),
                   selected: s.id == sel,
-                  label: showNames || s.id == sel,
+                  label: named.contains(s.id),
                   onTap: () => _pick(s, listForPick ?? pins, wide: wide, fromPin: true),
                 ),
               ),
+            Marker(point: from, width: 150, height: 44, alignment: Alignment.topCenter, child: _AptPin(c.name)),
           ]),
           const RichAttributionWidget(attributions: [TextSourceAttribution('OpenStreetMap')]),
         ],
@@ -517,7 +519,56 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
         ]),
       ),
     ]);
+    });
   }
+
+  // 말풍선끼리 겹치지 않게: 가까운(목록 앞) 가게부터 이름을 달고, 겹치면 점으로만
+  Set<String> _labels(List<Shop> pins, Size size, double padBottom) {
+    final out = <String>{};
+    if (sel != null) out.add(sel!);
+    if (zoom < 14.5) return out;
+    final c0 = _center ?? from;
+    final scale = 256 * math.pow(2, zoom).toDouble();
+    Offset pr(LatLng p) {
+      final x = (p.longitude + 180) / 360 * scale;
+      final r = p.latitude * math.pi / 180;
+      final y = (1 - math.log(math.tan(r) + 1 / math.cos(r)) / math.pi) / 2 * scale;
+      return Offset(x, y);
+    }
+
+    final o = pr(c0);
+    final placed = <Rect>[];
+    Rect rectOf(Shop s) {
+      final q = pr(s.pos) - o + Offset(size.width / 2, size.height / 2);
+      final w = math.min(160.0, s.name.length * 11.5 + 30);
+      return Rect.fromLTWH(q.dx - w / 2, q.dy - 34, w, 28);
+    }
+
+    // 단지 이름표 자리는 비워 둠
+    final apt = pr(from) - o + Offset(size.width / 2, size.height / 2);
+    placed.add(Rect.fromLTWH(apt.dx - 75, apt.dy - 34, 150, 30));
+    final sp = pins.where((s) => s.id == sel).firstOrNull;
+    if (sp != null) placed.add(rectOf(sp).inflate(4));
+    final view = Rect.fromLTWH(0, 0, size.width, size.height - padBottom);
+    for (final s in pins) {
+      if (s.id == sel) continue;
+      if (out.length >= 45) break;
+      final r = rectOf(s);
+      if (!view.overlaps(r)) continue;
+      final rr = r.inflate(3);
+      if (placed.any((x) => x.overlaps(rr))) continue;
+      placed.add(rr);
+      out.add(s.id);
+    }
+    return out;
+  }
+}
+
+// 마우스로도 끌어 넘길 수 있게 (PC 화면에서 카드 넘기기)
+class _Drag extends MaterialScrollBehavior {
+  const _Drag();
+  @override
+  Set<PointerDeviceKind> get dragDevices => {PointerDeviceKind.touch, PointerDeviceKind.mouse, PointerDeviceKind.trackpad, PointerDeviceKind.stylus};
 }
 
 // 가게 핀: 확대하면 상호 말풍선, 멀리서는 점. 영업 중 = 파랑, 곧 마감 = 주황, 그 밖 = 회색

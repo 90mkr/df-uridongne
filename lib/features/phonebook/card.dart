@@ -8,7 +8,7 @@ import '../../core/theme.dart';
 import '../../core/ui.dart';
 import 'data.dart';
 
-const kCardH = 178.0; // 카드마다 같은 크기
+const kCardH = 174.0; // 카드마다 같은 크기
 
 class ShopCard extends StatelessWidget {
   final Shop shop;
@@ -69,24 +69,30 @@ class ShopCard extends StatelessWidget {
               ),
             ]),
             const Spacer(),
-            if (lot != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(children: [
+            // 근처 주차장 (없으면 주소)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 9),
+              child: Row(children: [
+                if (lot != null)
                   Container(
                     width: 15,
                     height: 15,
                     alignment: Alignment.center,
-                    decoration: BoxDecoration(borderRadius: BorderRadius.circular(3), border: Border.all(color: kMute)),
+                    decoration: BoxDecoration(borderRadius: BorderRadius.circular(3), border: Border.all(color: const Color(0xFF9AA1AC))),
                     child: const Text('P', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w800, color: kSub, height: 1)),
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text('${lot.name} ${distText(lot.m)}${lot.fee.isEmpty ? '' : ' · ${lot.fee}'}',
-                        maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: kSub)),
-                  ),
-                ]),
-              ),
+                  )
+                else
+                  const LineIcon('pin', size: 16, line: Color(0xFF9AA1AC), fill: Colors.transparent),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                      lot != null ? '근처 주차장  ${lot.name} ${distText(lot.m)}${lot.fee.isEmpty ? '' : ' · ${lot.fee}'}' : (s.addr.isEmpty ? '주소 정보 없음' : s.addr),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 11.5, color: kSub)),
+                ),
+              ]),
+            ),
             Row(children: [
               Expanded(
                 child: Btn(s.tel.isEmpty ? '번호 없음' : '전화하기', icon: 'phone', primary: s.tel.isNotEmpty, h: 36, onTap: s.tel.isEmpty ? null : () => callTel(s.tel)),

@@ -1,5 +1,6 @@
 """우리동네 화면 사진 (휴대폰 390x844 · 태블릿 가로 1180x820). 사용: shot.py 주소 저장폴더"""
 import json
+import re
 import os
 import sys
 import time
@@ -31,7 +32,9 @@ def session(b, tag, W, H, steps):
         time.sleep(1)
 
     def tap(text, wait=3.0, exact=True):
-        for get in (lambda: pg.get_by_role("button", name=text, exact=exact), lambda: pg.get_by_text(text, exact=exact)):
+        pat = re.compile(text) if isinstance(text, re.Pattern) is False and text.startswith("^") else None
+        gets = (lambda: pg.get_by_text(pat),) if pat else (lambda: pg.get_by_role("button", name=text, exact=exact), lambda: pg.get_by_text(text, exact=exact))
+        for get in gets:
             try:
                 loc = get()
                 for i in range(loc.count()):
@@ -65,9 +68,11 @@ def phone(shot, tap, drag, sem, W, H):
     shot("홈")
     tap("전화번호부")
     shot("전화번호부")
-    tap("세탁소", wait=7, exact=False)
+    tap(r"^세탁소\s*\d", wait=7)
     shot("세탁소_지도")
-    drag(W - 40, H - 120, 60, H - 120)
+    tap("+", wait=3)
+    shot("확대")
+    drag(W - 40, H - 110, 60, H - 110)
     shot("카드_넘김")
     drag(W - 40, H - 120, 60, H - 120)
     shot("카드_넘김2")
@@ -75,7 +80,6 @@ def phone(shot, tap, drag, sem, W, H):
     tap("목록")
     shot("목록")
     tap("지도")
-    tap("음식점", wait=1) if False else None
     pg_back = tap("−", wait=2)
     shot("축소")
 
@@ -83,7 +87,7 @@ def phone(shot, tap, drag, sem, W, H):
 def tablet(shot, tap, drag, sem, W, H):
     tap("전화번호부")
     shot("전화번호부")
-    tap("세탁소", wait=7, exact=False)
+    tap(r"^세탁소\s*\d", wait=7)
     shot("세탁소_나눔")
     drag(W * 0.75, H * 0.5, W * 0.6, H * 0.35)
     shot("지도_옮김")
