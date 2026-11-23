@@ -354,7 +354,7 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
           height: kCardH + 8,
           child: PageView.builder(
             controller: pc,
-            padEnds: true,
+            padEnds: frac > 0.8,
             itemCount: pins.length,
             onPageChanged: (i) {
               if (_pageTarget != null && i != _pageTarget) return;
@@ -451,9 +451,14 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
   Widget _map(List<Shop> pins, {required bool wide, double padBottom = 0, List<Shop>? listForPick}) {
     final now = DateTime.now();
     final selShop = pins.where((s) => s.id == sel).firstOrNull;
-    final ordered = [...pins.where((s) => s.id != sel), if (selShop != null) selShop];
     return LayoutBuilder(builder: (ctx, box) {
     final named = _labels(pins, box.biggest, padBottom);
+    // 점 → 카드 → 고른 가게 순으로 그려 카드 위에 점이 올라오지 않게
+    final ordered = [
+      ...pins.where((s) => s.id != sel && !named.contains(s.id)),
+      ...pins.where((s) => s.id != sel && named.contains(s.id)),
+      if (selShop != null) selShop,
+    ];
     return Stack(children: [
       FlutterMap(
         mapController: mapCtl,
