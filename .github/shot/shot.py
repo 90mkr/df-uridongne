@@ -65,7 +65,7 @@ def phone(shot, tap, drag, sem, W, H):
     shot("홈")
     tap("전화번호부")
     shot("전화번호부")
-    tap("세탁소", wait=7)
+    tap("세탁소", wait=7, exact=False)
     shot("세탁소_지도")
     drag(W - 40, H - 120, 60, H - 120)
     shot("카드_넘김")
@@ -83,7 +83,7 @@ def phone(shot, tap, drag, sem, W, H):
 def tablet(shot, tap, drag, sem, W, H):
     tap("전화번호부")
     shot("전화번호부")
-    tap("세탁소", wait=7)
+    tap("세탁소", wait=7, exact=False)
     shot("세탁소_나눔")
     drag(W * 0.75, H * 0.5, W * 0.6, H * 0.35)
     shot("지도_옮김")
