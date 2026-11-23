@@ -1,0 +1,11 @@
+{
+ "id": "lotto",
+ "name": "복권",
+ "folder": "lib/features/lotto",
+ "room": "",
+ "state": "대기",
+ "doing": "",
+ "version": "0.0.1",
+ "updated": "2026-11-23 20:45",
+ "order": 11
+}

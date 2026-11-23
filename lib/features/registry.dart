@@ -5,6 +5,7 @@ import 'bus/feature.dart';
 import 'charger/feature.dart';
 import 'deals/feature.dart';
 import 'gas/feature.dart';
+import 'lotto/feature.dart';
 import 'parking/feature.dart';
 import 'pharmacy/feature.dart';
 import 'phonebook/feature.dart';
@@ -23,6 +24,7 @@ final List<Feature> features = [
   ChargerFeature(),
   ParkingFeature(),
   PostcodeFeature(),
+  LottoFeature(),
 ];
 
 Feature? featureById(String id) => features.where((f) => f.id == id).firstOrNull;

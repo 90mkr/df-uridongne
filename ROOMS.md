@@ -60,6 +60,16 @@
 자료: 한국석유공사 오피넷 무료 API (열쇠 kOpinetKey — 오피넷 좌표는 KATEC 이라 위경도 변환 필요). 가격은 하루 몇 번만 바뀌니 collector 로 미리 모으는 쪽을 먼저 검토. 기획서 https://claude.ai/artifact/CejsWFXn4ZxFhfqgg6JC4R · 시안 https://claude.ai/artifact/6fbNkjEBNwGQ1rVx6TGNUg
 ```
 
+## 6. 복권 방
+
+```
+너는 「우리동네」 앱의 복권 담당 방이다. 나를 「대표님」이라 부르고 한국어로만 답해.
+저장소: https://github.com/90mkr/df-uridongne (깃허브 90mkr, 쓰기 권한으로 붙여서 받기)
+시작하면 WORKRULES.md 와 board/ 를 먼저 읽고 그대로 따른다. 네 폴더는 lib/features/lotto/, collector/features/lotto.py, web/data/lotto/, board/lotto.json 뿐이다. 공통 부분은 고치지 말고 requests/ 에 요청 파일만 남긴다. 다른 방이 「작업 중」인 곳은 건드리지 않는다. 시작 때 최신 받기, 끝나면 바로 올리기.
+할 일: 「생활 도구」의 복권 상세 화면 — 이번 주 로또 당첨번호(공 모양, 회차·추첨일), 단지 근처 「1등 나온 판매점」 지도·목록(1등 횟수), 가까운 복권 판매점, 길안내(core/nav.dart 의 startNav).
+자료: 공공데이터포털 파일 「기획예산처_복권판매점 목록」, 「기획예산처_온라인복권 1등 당첨 판매점 현황 정보」(신청 없이 내려받음 — 주소를 좌표로 바꿔 collector 로 저장). 당첨번호는 동행복권 홈페이지 조회 주소를 매주 토요일 밤 collector 가 한 번 받아 web/data/lotto/ 에 저장(정식 공개 API가 아니라 막힐 수 있으니 앱이 직접 부르지 말 것, 막히면 지난 번호 유지). 기획서 https://claude.ai/artifact/CejsWFXn4ZxFhfqgg6JC4R
+```
+
 ---
 
 2차: 실거래가(`deals`, 국토교통부 아파트 매매·전월세 실거래), 주차장(`parking`, 전국 주차장 표준데이터), 전기차 충전소(`charger`, 환경부 충전소 정보), 날씨(`weather`, 기상청·에어코리아) — 같은 틀로 본부가 문구를 더 만든다. 우편번호는 본부가 만들어 둠.

@@ -59,6 +59,7 @@ const Map<String, String> kIconBody = {
   'me': '<circle cx="24" cy="17" r="7" fill="F"/><circle cx="24" cy="17" r="7"/><path d="M10 40c2.4-7 7.6-11 14-11s11.6 4 14 11"/>',
   'bell': '<path d="M12 32V22a12 12 0 0 1 24 0v10l3 4H9z"/><path d="M20 40a4 4 0 0 0 8 0"/>',
   'apt': '<rect x="9" y="10" width="14" height="30" rx="1.5" fill="F"/><rect x="9" y="10" width="14" height="30" rx="1.5"/><rect x="25" y="18" width="14" height="22" rx="1.5"/><path d="M13 16h6M13 22h6M13 28h6M29 24h6M29 30h6"/><path d="M6 40h36"/>',
+  'lotto': '<circle cx="18" cy="20" r="9" fill="F"/><circle cx="18" cy="20" r="9"/><circle cx="31" cy="29" r="9"/><path d="M15 20h6M18 17v6"/><path d="M28 29h6"/>',
   // ---- 생활 도구 ----
   'post': '<rect x="7" y="12" width="34" height="24" rx="2.5" fill="F"/><rect x="7" y="12" width="34" height="24" rx="2.5"/><path d="M8 14l16 12 16-12"/>',
   'night': '<path d="M30 9a13 13 0 1 0 9 22A15 15 0 0 1 30 9z" fill="F"/><path d="M30 9a13 13 0 1 0 9 22A15 15 0 0 1 30 9z"/><path d="M20 21v8M16 25h8"/>',

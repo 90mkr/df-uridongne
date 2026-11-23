@@ -50,7 +50,7 @@
   <div class="card" id="reqs"><div class="empty">불러오는 중…</div></div>
 </div>
 <script>
-  var IDS = ['core', 'trash', 'pharmacy', 'bus', 'phonebook', 'gas', 'deals', 'parking', 'charger', 'postcode', 'weather'];
+  var IDS = ['core', 'trash', 'pharmacy', 'bus', 'phonebook', 'gas', 'deals', 'parking', 'charger', 'postcode', 'weather', 'lotto'];
   var RAW = 'https://raw.githubusercontent.com/90mkr/df-uridongne/main/';
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function cls(st) { return st === '작업 중' ? 's-work' : st === '완료' ? 's-done' : st === '멈춤' ? 's-hold' : 's-wait'; }
