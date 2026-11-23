@@ -661,7 +661,7 @@ class _PharmMapState extends State<_PharmMap> {
           // 단지와 가까운 약국 몇 곳이 한 화면에 들어오게
           initialCameraFit: list.isEmpty
               ? null
-              : CameraFit.coordinates(coordinates: [c.pos, for (final p in list.take(8)) p.pos], padding: const EdgeInsets.fromLTRB(40, 90, 40, 150), maxZoom: 16),
+              : CameraFit.coordinates(coordinates: [c.pos, for (final p in list.take(8)) p.pos], padding: const EdgeInsets.fromLTRB(40, 120, 40, 170), maxZoom: 16, forceIntegerZoomLevel: true),
           interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
           onTap: (_, __) => setState(() => sel = null),
         ),
