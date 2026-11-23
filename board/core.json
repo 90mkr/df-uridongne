@@ -3,9 +3,9 @@
  "name": "본부 (공통 뼈대)",
  "folder": "lib/core · lib/main.dart · lib/features/registry.dart · .github · collector/collect.py",
  "room": "우리동네 본부 방",
- "state": "작업 중",
- "doing": "공통 뼈대 1차 마무리",
+ "state": "대기",
+ "doing": "뼈대 완료 · 카카오 열쇠 받으면 업체·단지 자료 모으기, 요청함 처리",
  "version": "0.2.0",
- "updated": "2026-11-23 19:50",
+ "updated": "2026-11-23 20:00",
  "order": 0
 }
