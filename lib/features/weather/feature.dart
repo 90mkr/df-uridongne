@@ -26,7 +26,7 @@ class WeatherFeature extends Feature {
   @override
   int get order => 10;
   @override
-  String get version => '0.1.3';
+  String get version => '0.2.0';
   @override
   bool get ready => true;
   @override
@@ -65,6 +65,8 @@ class _HeadChipState extends State<_HeadChip> {
   @override
   Widget build(BuildContext context) {
     final d = w?.dust;
+    final al = w?.alert;
+    final ac = al == null ? null : alertColor(al);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -73,7 +75,11 @@ class _HeadChipState extends State<_HeadChip> {
         child: Container(
           height: 32,
           padding: const EdgeInsets.symmetric(horizontal: 11),
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), border: Border.all(color: kLine)),
+          decoration: BoxDecoration(
+            color: ac?.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: ac?.withValues(alpha: 0.45) ?? kLine),
+          ),
           child: w == null
               ? const Row(mainAxisSize: MainAxisSize.min, children: [
                   LineIcon('weather', size: 17, line: kMute, fill: kSoftYellow),
@@ -84,7 +90,10 @@ class _HeadChipState extends State<_HeadChip> {
                   SkyIcon(w!.sky, size: 20, night: isNightHour(w!.at)),
                   const SizedBox(width: 3),
                   Text(_deg(w!.temp), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: -0.3)),
-                  if (d != null && d.worst > 0) ...[
+                  if (al != null) ...[
+                    Container(width: 1, height: 11, margin: const EdgeInsets.symmetric(horizontal: 7), color: ac!.withValues(alpha: 0.35)),
+                    Text(al.name, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: ac)),
+                  ] else if (d != null && d.worst > 0) ...[
                     Container(width: 1, height: 11, margin: const EdgeInsets.symmetric(horizontal: 7), color: kLine),
                     const Text('미세 ', style: TextStyle(fontSize: 11, color: kSub)),
                     Text(gradeText[d.worst], style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: gradeColor(d.worst))),
@@ -163,15 +172,18 @@ class _WeatherPageState extends State<_WeatherPage> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(kPad, 16, kPad, 30),
                 children: [
+                  if (w!.alert != null) ...[_AlertBar(a: w!.alert!), const SizedBox(height: 14)],
                   _Now(w: w!, c: widget.c),
                   const SizedBox(height: 14),
-                  if (w!.dust != null) ...[_DustCard(d: w!.dust!), const SizedBox(height: 12)],
+                  if (w!.hours.isNotEmpty) ...[_HoursCard(hours: _withNow(w!)), const SizedBox(height: 12)],
+                  if (w!.days.length > 1) ...[_DaysCard(days: w!.days), const SizedBox(height: 12)],
+                  if (w!.dust != null || w!.dustDays.isNotEmpty) ...[_DustCard(d: w!.dust, days: w!.dustDays), const SizedBox(height: 12)],
                   _LifeCard(w: w!),
                   const SizedBox(height: 12),
-                  if (w!.hours.isNotEmpty) ...[_HoursCard(hours: _withNow(w!)), const SizedBox(height: 12)],
-                  if (w!.days.length > 1) ...[_DaysCard(days: w!.days.skip(1).toList()), const SizedBox(height: 14)],
+                  const _AlarmCard(),
+                  const SizedBox(height: 14),
                   Text(
-                    '${w!.source == '기상청' ? '날씨 기상청 · 미세먼지 에어코리아' : '날씨·미세먼지 ${w!.source}'}'
+                    '${w!.source == '기상청' ? '날씨·특보·생활지수 기상청 · 미세먼지 에어코리아' : '날씨·미세먼지 ${w!.source}'}'
                     ' · ${_2(w!.at.hour)}:${_2(w!.at.minute)} 받음\n실시간 측정값은 확정 전 자료라 나중에 바뀔 수 있어요.',
                     style: T.tiny,
                   ),
@@ -201,9 +213,9 @@ class _Now extends StatelessWidget {
     final td = w.today;
     final feels = w.feels;
     final stats = <(String, String)>[
+      if (feels != null) ('체감', _deg(feels)),
       if (w.hum != null) ('습도', '${w.hum}%'),
       if (w.wind != null) ('바람', '${w.wind!.toStringAsFixed(1)}m/s'),
-      if (feels != null && w.temp != null && (feels - w.temp!).abs() >= 1) ('체감', _deg(feels)),
       ('강수', (w.rain1h ?? 0) > 0 ? '${w.rain1h!.toStringAsFixed(w.rain1h! < 1 ? 1 : 0)}mm' : '없음'),
     ];
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -250,49 +262,96 @@ class _Now extends StatelessWidget {
 // ---------------- 미세먼지 ----------------
 
 class _DustCard extends StatelessWidget {
-  final Dust d;
-  const _DustCard({required this.d});
+  final Dust? d;
+  final List<DustDay> days;
+  const _DustCard({required this.d, required this.days});
+
+  static const _wd = ['월', '화', '수', '목', '금', '토', '일'];
 
   @override
   Widget build(BuildContext context) {
-    final tm = [if (d.tomorrow10 > 0) '미세 ${gradeText[d.tomorrow10]}', if (d.tomorrow25 > 0) '초미세 ${gradeText[d.tomorrow25]}'];
-    final where = [
-      if (d.approx) '모델 추정값' else if (d.station.isNotEmpty) '측정소 ${d.station}',
-      if (d.time.length >= 13) '${d.time.substring(11)} 측정',
-    ].join(' · ');
+    final d = this.d;
+    final where = d == null
+        ? ''
+        : [
+            if (d.approx) '모델 추정값' else if (d.station.isNotEmpty) '측정소 ${d.station}',
+            if (d.time.length >= 13) '${d.time.substring(11)} 측정',
+          ].join(' · ');
+    final now = DateTime.now().toUtc().add(const Duration(hours: 9));
+    String label(DateTime t) {
+      final diff = DateTime(t.year, t.month, t.day).difference(DateTime(now.year, now.month, now.day)).inDays;
+      return diff == 0 ? '오늘' : diff == 1 ? '내일' : diff == 2 ? '모레' : _wd[t.weekday - 1];
+    }
+
     return Container(
       decoration: cardBox(),
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          const MixTitle('미세먼지', '지금', size: 14),
+          const MixTitle('미세먼지', '지금·예보', size: 14),
           const Spacer(),
           if (where.isNotEmpty) Text(where, style: T.tiny),
         ]),
-        const SizedBox(height: 12),
-        IntrinsicHeight(
-          child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Expanded(child: _Gauge(label: '미세먼지', sub: 'PM10', value: d.pm10, grade: d.g10, max: 150)),
-            Container(width: 1, margin: const EdgeInsets.symmetric(horizontal: 14), color: kLine),
-            Expanded(child: _Gauge(label: '초미세먼지', sub: 'PM2.5', value: d.pm25, grade: d.g25, max: 75)),
-          ]),
-        ),
-        if (tm.isNotEmpty || d.gO3 >= 3) ...[
+        if (d != null) ...[
+          const SizedBox(height: 12),
+          IntrinsicHeight(
+            child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Expanded(child: _Gauge(label: '미세먼지', sub: 'PM10', value: d.pm10, grade: d.g10, max: 150)),
+              Container(width: 1, margin: const EdgeInsets.symmetric(horizontal: 14), color: kLine),
+              Expanded(child: _Gauge(label: '초미세먼지', sub: 'PM2.5', value: d.pm25, grade: d.g25, max: 75)),
+            ]),
+          ),
+          if (d.gO3 >= 3) ...[
+            const SizedBox(height: 8),
+            Text('오존 ${gradeText[d.gO3]} · 한낮 바깥 활동 줄이기', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: gradeColor(d.gO3))),
+          ],
+        ],
+        if (days.isNotEmpty) ...[
           const SizedBox(height: 12),
           Container(height: 1, color: kLine),
           const SizedBox(height: 10),
-          Row(children: [
-            if (tm.isNotEmpty) ...[
-              const Text('내일 예보', style: TextStyle(fontSize: 11.5, color: kSub)),
-              const SizedBox(width: 8),
-              Text(tm.join(' · '), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-            ],
-            const Spacer(),
-            if (d.gO3 >= 3) Text('오존 ${gradeText[d.gO3]}', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: gradeColor(d.gO3))),
+          // 요일별 예보: 왼쪽 줄 이름 + 옆으로 넘기는 칸
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const SizedBox(
+              width: 44,
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                SizedBox(height: 20),
+                SizedBox(height: 20, child: Text('미세', style: TextStyle(fontSize: 11, color: kSub))),
+                SizedBox(height: 20, child: Text('초미세', style: TextStyle(fontSize: 11, color: kSub))),
+              ]),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(children: [
+                  for (final x in days)
+                    SizedBox(
+                      width: 52,
+                      child: Column(children: [
+                        SizedBox(height: 20, child: Text(label(x.date), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600))),
+                        SizedBox(height: 20, child: _gradeCell(x.g10, '')),
+                        SizedBox(height: 20, child: _gradeCell(x.g25, x.week25)),
+                      ]),
+                    ),
+                ]),
+              ),
+            ),
           ]),
+          const SizedBox(height: 2),
+          const Text('3일 뒤부터는 초미세먼지만 「낮음·높음」으로 예보돼요.', style: T.tiny),
         ],
       ]),
     );
+  }
+
+  Widget _gradeCell(int g, String week) {
+    if (g > 0) {
+      return Text(gradeText[g], style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: gradeColor(g)));
+    }
+    if (week.isNotEmpty) {
+      return Text(week, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: week == '높음' ? gradeColor(3) : gradeColor(1)));
+    }
+    return const Text('-', style: TextStyle(fontSize: 11.5, color: kMute));
   }
 }
 
@@ -386,14 +445,19 @@ List<_Tip> lifeTips(Weather w) {
   final d = w.dust;
   final td = w.today;
   final t = w.feels ?? w.temp;
+  final todayDust = w.dustDays.isEmpty ? null : w.dustDays.first;
+  final dustNow = d?.worst ?? 0;
+  final dustToday = math.max(todayDust?.g10 ?? 0, todayDust?.g25 ?? 0);
+  final dustBad = math.max(dustNow, dustToday) >= 3;
 
   // 우산
   final wet = next12.where((h) => (h.pop ?? 0) >= 60 || isWet(h.sky)).toList();
   if (isWet(w.sky)) {
-    out.add(_Tip('umbrella', '우산 꼭 챙기세요', '지금 ${skyText(w.sky)} 오고 있어요', alert: true));
+    out.add(_Tip('umbrella', '우산 챙기세요', '지금 ${skyText(w.sky)} 오고 있어요', alert: true));
   } else if (wet.isNotEmpty) {
     final h = wet.first;
-    out.add(_Tip('umbrella', '우산 챙기세요', '${_when(h.t)}부터 ${skyText(h.sky == Sky.clear || h.sky == Sky.partly || h.sky == Sky.cloudy || h.sky == Sky.overcast ? Sky.rain : h.sky)} 소식 (${h.pop ?? 0}%)', alert: true));
+    final what = h.sky == Sky.snow || h.sky == Sky.sleet ? skyText(h.sky) : '비';
+    out.add(_Tip('umbrella', '우산 챙기세요', '${_when(h.t)}부터 $what 소식 (${h.pop ?? 0}%)', alert: true));
   } else if (next12.any((h) => (h.pop ?? 0) >= 30)) {
     out.add(const _Tip('umbrella', '작은 우산 있으면 좋아요', '비 올 확률이 조금 있어요'));
   } else {
@@ -407,42 +471,63 @@ List<_Tip> lifeTips(Weather w) {
     out.add(_Tip('shirt', c.$1, gap ? '일교차가 커요, 겉옷 하나 더' : c.$2));
   }
 
-  // 미세먼지 → 마스크·환기
-  if (d != null && d.worst > 0) {
-    if (d.worst >= 3) {
-      out.add(_Tip('mask', '마스크 챙기세요', d.worst == 4 ? '바깥 운동은 오늘 쉬어 가세요' : 'KF80 이상이 좋아요', alert: true));
-      out.add(const _Tip('window', '창문은 닫아 두세요', '요리할 때만 잠깐 환기'));
-    } else if (!isWet(w.sky)) {
-      out.add(const _Tip('window', '환기하기 좋아요', '하루 세 번, 10분씩'));
+  // 미세먼지 → 마스크
+  if (dustBad) {
+    out.add(_Tip('mask', '마스크 챙기세요', math.max(dustNow, dustToday) == 4 ? '바깥 운동은 오늘 쉬어 가세요' : 'KF80 이상이 좋아요', alert: true));
+  }
+
+  // 환기 (미세먼지 예보 기준, 한낮이 공기가 잘 섞여 가장 좋음)
+  if (d != null || todayDust != null) {
+    if (dustBad) {
+      out.add(const _Tip('window', '창문은 닫아 두세요', '요리할 땐 3분만 짧게 환기'));
+    } else if (isWet(w.sky)) {
+      out.add(const _Tip('window', '비 그치면 환기하세요', '하루 세 번, 10분씩'));
+    } else {
+      out.add(const _Tip('window', '환기 좋은 시간 오후 2~4시', '공기가 잘 섞이는 한낮에 10분씩'));
     }
   }
 
-  // 빨래
+  // 빨래 (앞으로 비 예보 + 습도)
   final dry = next24.every((h) => (h.pop ?? 0) < 30 && !isWet(h.sky));
-  final sunny = w.sky == Sky.clear || w.sky == Sky.partly;
-  if (dry && sunny && (w.hum ?? 60) < 70 && (d == null || d.worst <= 2)) {
-    out.add(const _Tip('laundry', '빨래 잘 마르는 날', '바깥에 널어도 좋아요'));
+  final humid = next24.where((h) => h.t.hour >= 9 && h.t.hour <= 17 && h.hum != null).map((h) => h.hum!).toList();
+  final avgHum = humid.isEmpty ? (w.hum ?? 60) : humid.reduce((a, b) => a + b) / humid.length;
+  if (dry && avgHum < 65 && !dustBad) {
+    out.add(const _Tip('laundry', '빨래 말리기 좋은 날', '바깥에 널어도 잘 말라요'));
   } else {
     final why = next24.any((h) => (h.pop ?? 0) >= 60 || isWet(h.sky))
         ? '비 소식이 있어요'
         : !dry
             ? '비 올 확률이 조금 있어요'
-            : (d != null && d.worst >= 3 ? '미세먼지가 나빠요' : '습하거나 흐려요');
+            : dustBad
+                ? '미세먼지가 나빠요'
+                : '습도가 높아 더디 말라요';
     out.add(_Tip('laundry', '빨래는 실내에서', why));
   }
 
-  // 세차
-  final rainSoon = w.hours.any((h) => (h.pop ?? 0) >= 60) || w.days.skip(1).take(1).any((x) => x.pop >= 60);
-  out.add(_Tip('car', rainSoon ? '세차는 미뤄도 좋아요' : '세차하기 괜찮아요', rainSoon ? '곧 비 소식이 있어요' : '이틀 동안 비 소식 없어요'));
+  // 세차 (앞으로 2~3일)
+  final rain3 = w.hours.any((h) => (h.pop ?? 0) >= 60) || w.days.skip(1).take(2).any((x) => x.pop >= 60);
+  final rain3some = w.days.skip(1).take(2).any((x) => x.pop >= 40);
+  out.add(rain3
+      ? const _Tip('car', '세차는 미뤄 두세요', '2~3일 안에 비 소식이 있어요')
+      : rain3some
+          ? const _Tip('car', '세차는 조금 기다려 보세요', '비 올 확률이 조금 있어요')
+          : const _Tip('car', '세차하기 좋은 날', '2~3일 동안 비 소식 없어요'));
 
-  // 추위·더위
+  // 자외선 (기상청 생활기상지수)
+  final uv = w.uv;
+  if (uv != null) {
+    out.add(_Tip('sun', '자외선 ${uvText(uv)}', uv >= 6 ? '한낮엔 모자·선크림 챙기세요' : uv >= 3 ? '오래 밖에 있으면 선크림' : '선크림 없어도 괜찮아요', alert: uv >= 8));
+  }
+
+  // 동파 (겨울 생활기상지수) · 길 미끄럼 · 폭염
+  final fz = w.freeze;
   final low = td?.min;
-  if (low != null && low <= -5) {
-    out.add(const _Tip('thermo', '동파 조심하세요', '수도·보일러 배관을 살펴 주세요', alert: true));
+  if ((fz != null && fz >= 50) || (low != null && low <= -5)) {
+    out.add(_Tip('thermo', '동파 조심하세요', (fz ?? 0) >= 75 || (low ?? 0) <= -10 ? '수도꼭지를 조금 틀어 두세요' : '수도·보일러 배관을 살펴 주세요', alert: true));
   } else if (t != null && t <= 1 && (isWet(w.sky) || next12.any((h) => isWet(h.sky)))) {
     out.add(const _Tip('thermo', '길이 미끄러워요', '계단·단지 경사로 조심', alert: true));
   } else if ((td?.max ?? 0) >= 33) {
-    out.add(const _Tip('thermo', '폭염이에요', '한낮 바깥 활동은 줄이세요', alert: true));
+    out.add(const _Tip('thermo', '무더위 조심하세요', '한낮 바깥 활동은 줄이세요', alert: true));
   }
   return out;
 }
@@ -475,6 +560,7 @@ const _tipSvg = <String, String>{
   'shirt': '<path d="M17 8l-9 5 3 8 5-2v20h16V19l5 2 3-8-9-5c-1 3-4 5-7 5s-6-2-7-5z" fill="F"/>',
   'mask': '<path d="M12 17c8-4 16-4 24 0v10c-4 7-20 7-24 0z" fill="F"/><path d="M12 19c-5 0-6 8 0 9M36 19c5 0 6 8 0 9M17 21h14M17 26h14"/>',
   'window': '<rect x="10" y="8" width="28" height="32" rx="2" fill="F"/><path d="M24 8v32M10 24h28"/><path d="M15 14c2 1 4 1 6 0M27 30c2 1 4 1 6 0"/>',
+  'sun': '<circle cx="24" cy="24" r="7" fill="F"/><path d="M24 9v4M24 35v4M9 24h4M35 24h4M13.4 13.4l2.8 2.8M31.8 31.8l2.8 2.8M13.4 34.6l2.8-2.8M31.8 16.2l2.8-2.8"/>',
   'thermo': '<path d="M20 28V11a4 4 0 0 1 8 0v17a7 7 0 1 1-8 0z" fill="F"/><path d="M24 33V18"/><path d="M32 14h4M32 19h3M32 24h4"/>',
 };
 
@@ -502,7 +588,7 @@ class _LifeCard extends StatelessWidget {
       decoration: cardBox(),
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const MixTitle('오늘', '생활 안내', size: 14),
+        const MixTitle('오늘', '생활 지수', size: 14),
         const SizedBox(height: 6),
         // 짧은 글이라 휴대폰에서도 두 칸씩
         LayoutBuilder(builder: (context, box) {
@@ -643,7 +729,7 @@ class _TempLine extends CustomPainter {
   bool shouldRepaint(covariant _TempLine old) => old.temps != temps;
 }
 
-// ---------------- 내일·모레 ----------------
+// ---------------- 이번 주 (최대 10일) ----------------
 
 class _DaysCard extends StatelessWidget {
   final List<Day> days;
@@ -657,43 +743,48 @@ class _DaysCard extends StatelessWidget {
     final lo = all.isEmpty ? 0.0 : all.reduce(math.min), hi = all.isEmpty ? 1.0 : all.reduce(math.max);
     return Container(
       decoration: cardBox(),
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const MixTitle('내일·모레', '날씨', size: 14),
+        Row(children: [
+          const MixTitle('이번 주', '날씨', size: 14),
+          const Spacer(),
+          Text('${days.length}일 예보', style: T.tiny),
+        ]),
         const SizedBox(height: 4),
         for (var i = 0; i < days.length; i++) ...[
-          if (i > 0) Container(height: 1, color: kLine),
+          if (i > 0) Container(height: 1, color: const Color(0xFFF0F1F4)),
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10),
+            padding: const EdgeInsets.symmetric(vertical: 8),
             child: Row(children: [
               SizedBox(
-                width: 62,
+                width: 64,
                 child: Text.rich(TextSpan(children: [
-                  TextSpan(text: i == 0 ? '내일' : '모레', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-                  TextSpan(text: ' ${_wd[days[i].date.weekday - 1]}', style: const TextStyle(fontSize: 11, color: kSub)),
+                  TextSpan(
+                      text: i == 0 ? '오늘' : i == 1 ? '내일' : _wd[days[i].date.weekday - 1],
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                  TextSpan(text: ' ${days[i].date.month}.${days[i].date.day}', style: const TextStyle(fontSize: 10.5, color: kMute)),
                 ])),
               ),
-              _half(days[i].am, days[i].popAm),
-              const SizedBox(width: 4),
-              _half(days[i].pm, days[i].popPm),
-              const SizedBox(width: 12),
-              Text(_deg(days[i].min), style: const TextStyle(fontSize: 12, color: kSub)),
-              const SizedBox(width: 6),
+              SkyIcon(days[i].am, size: 24),
+              const SizedBox(width: 2),
+              SkyIcon(days[i].pm, size: 24),
+              SizedBox(
+                width: 34,
+                child: Text(days[i].pop >= 20 ? '${days[i].pop}%' : '',
+                    textAlign: TextAlign.right, style: TextStyle(fontSize: 10.5, color: days[i].pop >= 60 ? kInk : kSub, fontWeight: FontWeight.w600)),
+              ),
+              const SizedBox(width: 10),
+              SizedBox(width: 28, child: Text(_deg(days[i].min), textAlign: TextAlign.right, style: const TextStyle(fontSize: 12, color: kSub))),
+              const SizedBox(width: 8),
               Expanded(child: _range(days[i], lo, hi)),
-              const SizedBox(width: 6),
-              Text(_deg(days[i].max), style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700)),
+              const SizedBox(width: 8),
+              SizedBox(width: 28, child: Text(_deg(days[i].max), style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700))),
             ]),
           ),
         ],
       ]),
     );
   }
-
-  // 오전 · 오후 하늘 (강수확률 20% 이상만 숫자)
-  Widget _half(Sky s, int pop) => Row(mainAxisSize: MainAxisSize.min, children: [
-        SkyIcon(s, size: 24),
-        SizedBox(width: 26, child: Text(pop >= 20 ? '$pop%' : '', style: const TextStyle(fontSize: 10, color: kSub, fontWeight: FontWeight.w600))),
-      ]);
 
   Widget _range(Day d, double lo, double hi) {
     if (d.min == null || d.max == null || hi <= lo) return const SizedBox(height: 4);
@@ -716,3 +807,126 @@ class _DaysCard extends StatelessWidget {
     });
   }
 }
+
+// ---------------- 특보 띠 ----------------
+
+Color alertColor(Alert a) => a.kind == '황사'
+    ? const Color(0xFFB7791F)
+    : a.warning
+        ? const Color(0xFFD93A3A)
+        : const Color(0xFFE07A10);
+
+String _alertTip(Alert a) => switch (a.kind) {
+      '폭염' => '한낮(12~17시) 바깥 활동을 줄이고 물을 자주 드세요.',
+      '한파' => '수도·보일러 동파에 조심하고 따뜻하게 입으세요.',
+      '호우' => '저지대·하천 주변은 피하고 배수구를 살펴 주세요.',
+      '대설' => '눈길 미끄럼에 조심하고 차량 이동을 줄이세요.',
+      '황사' => '외출 땐 마스크, 창문은 닫아 두세요.',
+      '태풍' => '창문을 단단히 잠그고 바깥 물건을 치워 주세요.',
+      '강풍' => '간판·화분 등 날아갈 물건을 살펴 주세요.',
+      _ => '불씨 관리에 조심해 주세요.',
+    };
+
+class _AlertBar extends StatelessWidget {
+  final Alert a;
+  const _AlertBar({required this.a});
+  @override
+  Widget build(BuildContext context) {
+    final c = alertColor(a);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 11, 14, 11),
+      decoration: BoxDecoration(color: c.withValues(alpha: 0.07), borderRadius: BorderRadius.circular(kRadius), border: Border.all(color: c.withValues(alpha: 0.3))),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Padding(padding: const EdgeInsets.only(top: 1), child: Icon(Icons.campaign_outlined, size: 19, color: c)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('${a.name} 발효 중', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: c, letterSpacing: -0.3)),
+            const SizedBox(height: 2),
+            Text(_alertTip(a), style: const TextStyle(fontSize: 11.5, color: kSub, height: 1.4)),
+          ]),
+        ),
+      ]),
+    );
+  }
+}
+
+// ---------------- 아침 알림 설정 ----------------
+// 설정만 이 기능이 갖고, 실제 알림 보내기는 본부 공용 알림 기능이 맡는다 (requests/ 에 요청).
+//   weather.alarm = '1' | '0',  weather.alarmTime = '07:00'
+class _AlarmCard extends StatefulWidget {
+  const _AlarmCard();
+  @override
+  State<_AlarmCard> createState() => _AlarmCardState();
+}
+
+class _AlarmCardState extends State<_AlarmCard> {
+  bool on = false;
+  String time = '07:00';
+
+  @override
+  void initState() {
+    super.initState();
+    () async {
+      final a = await prefGet('weather.alarm'), t = await prefGet('weather.alarmTime');
+      if (!mounted) return;
+      setState(() {
+        on = a == '1';
+        time = t ?? time;
+      });
+    }();
+  }
+
+  Future<void> _pick() async {
+    final p = time.split(':');
+    final r = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: int.tryParse(p[0]) ?? 7, minute: int.tryParse(p.length > 1 ? p[1] : '0') ?? 0),
+      helpText: '알림 받을 시각',
+    );
+    if (r == null) return;
+    final v = '${_2(r.hour)}:${_2(r.minute)}';
+    await prefSet('weather.alarmTime', v);
+    setState(() => time = v);
+  }
+
+  String get _timeText {
+    final p = time.split(':');
+    final h = int.tryParse(p[0]) ?? 7;
+    final m = p.length > 1 ? p[1] : '00';
+    return '${h < 12 ? '오전' : '오후'} ${h == 0 ? 12 : h > 12 ? h - 12 : h}:$m';
+  }
+
+  @override
+  Widget build(BuildContext context) => Container(
+        decoration: cardBox(),
+        padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
+        child: Row(children: [
+          const LineIcon('bell', size: 24, fill: kSoftYellow),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const MixTitle('아침', '날씨 알림', size: 13.5),
+              const SizedBox(height: 2),
+              Text(on ? '$_timeText · 비·미세먼지·특보가 있는 날만 보내요' : '비·미세먼지·특보가 있는 날만 아침에 알려 드려요',
+                  style: const TextStyle(fontSize: 11, color: kSub, height: 1.3)),
+            ]),
+          ),
+          if (on)
+            TextButton(
+              onPressed: _pick,
+              style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 10), minimumSize: const Size(0, 34)),
+              child: Text(_timeText, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700)),
+            ),
+          Switch(
+            value: on,
+            onChanged: (v) async {
+              await prefSet('weather.alarm', v ? '1' : '0');
+              setState(() => on = v);
+              if (v && context.mounted) toast(context, '알림은 앱 다음 업데이트부터 받아 보실 수 있어요');
+            },
+          ),
+        ]),
+      );
+}
+

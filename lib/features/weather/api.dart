@@ -2,7 +2,7 @@
 //
 //  ─ 날씨: 기상청 단기예보 (초단기실황 = 지금, 단기예보 = 시간별·오늘~모레)
 //      단지 위경도 → 기상청 격자(nx, ny)로 바꿔 부른다. 같은 격자는 30분 안에 다시 부르지 않는다.
-//  ─ 미세먼지: 에어코리아 (가까운 측정소 실시간 + 내일 예보 등급)
+//  ─ 미세먼지: 에어코리아 (가까운 측정소 실시간) · 특보·10일 예보·생활지수·요일별 미세먼지는 extra.dart
 //      측정소 위치는 collector/features/weather.py 가 미리 모아 둔 web/data/weather/stations.json
 //      (없으면 시·도 전체 측정소 중 동네 이름이 맞는 곳)
 //  ─ 크롬 미리보기(웹)에서 공공데이터 서버가 막히면 미리보기용 대체 자료(Open-Meteo)로 보여 준다.
@@ -15,6 +15,8 @@ import 'package:latlong2/latlong.dart';
 
 import '../../core/data.dart';
 import '../../core/keys.dart';
+
+part 'extra.dart';
 
 // ---------------- 모양 ----------------
 
@@ -49,6 +51,7 @@ class Day {
   double? min, max;
   Sky am = Sky.clear, pm = Sky.clear;
   int popAm = 0, popPm = 0;
+  bool mid = false; // 중기예보로 채운 날
   Day(this.date);
   int get pop => math.max(popAm, popPm);
 }
@@ -85,11 +88,16 @@ class Weather {
   final double? wind;
   final double? rain1h; // 1시간 강수량 mm
   final List<Hour> hours; // 지금부터 시간별
-  final List<Day> days; // 오늘·내일·모레
-  final Dust? dust;
+  List<Day> days; // 오늘부터 최대 10일 (단기 + 중기)
+  Dust? dust;
   final DateTime at; // 받은 시각
   final String source; // '기상청' 또는 '미리보기용 대체 자료'
-  const Weather({
+  // 덧붙는 자료 (따로 받아 채움)
+  Alert? alert; // 특보
+  int? uv; // 오늘 자외선 지수 최고
+  int? freeze; // 동파 가능 지수 (25 낮음 ~ 100 매우높음)
+  List<DustDay> dustDays = []; // 요일별 미세먼지 예보
+  Weather({
     this.temp,
     this.sky = Sky.clear,
     this.hum,
@@ -389,28 +397,6 @@ Future<Dust?> _airkorea(LatLng p, Complex c) async {
   return pick == null ? null : _dustFrom(pick, '${pick['stationName']}');
 }
 
-// 내일 예보 등급 (「인천 : 보통,서울 : 좋음 …」 글에서 시·도 찾기)
-Future<(int, int)> _dustTomorrow(String sido) async {
-  if (sido.isEmpty || (kDataGoKrKey.isEmpty && kAirKoreaKey.isEmpty)) return (0, 0);
-  final now = _nowKst;
-  final tm = now.add(const Duration(days: 1));
-  final tmText = '${tm.year}-${_2(tm.month)}-${_2(tm.day)}';
-  Future<int> one(String code) async {
-    // 오늘 발표분에 내일 예보가 들어 있다 (새벽 5시 전이면 어제 발표분)
-    final sd = now.hour < 6 ? now.subtract(const Duration(days: 1)) : now;
-    final j = await _get('$_air/getMinuDustFrcstDspth?serviceKey=$_airKey&returnType=json&numOfRows=100&pageNo=1'
-        '&searchDate=${sd.year}-${_2(sd.month)}-${_2(sd.day)}&InformCode=$code');
-    final it = _items(j).whereType<Map>().where((x) => '${x['informData']}' == tmText).toList()
-      ..sort((a, b) => '${b['dataTime']}'.compareTo('${a['dataTime']}'));
-    if (it.isEmpty) return 0;
-    final m = RegExp('$sido\\s*:\\s*(좋음|보통|나쁨|매우나쁨)').firstMatch('${it.first['informGrade']}');
-    return m == null ? 0 : gradeText.indexOf(m.group(1)!);
-  }
-
-  final r = await Future.wait([one('PM10'), one('PM25')]);
-  return (r[0], r[1]);
-}
-
 // ---------------- 미리보기용 대체 자료 (웹에서 공공데이터가 막힐 때만) ----------------
 
 Sky _wmo(int? c) {
@@ -564,19 +550,23 @@ Future<Weather?> _fetch(Complex c) async {
   final p = c.pos;
   final kma = _safe(_kma(p), '기상청');
   final air = _safe(_airkorea(p, c), '에어코리아');
-  final fc = _safe(_dustTomorrow(c.area?.sido ?? ''), '미세먼지 예보');
   var w = await kma;
   var d = await air;
-  final tm = await fc ?? (0, 0);
-  if (d != null) d = d.withTomorrow(tm.$1, tm.$2);
   if (w == null && kIsWeb) {
     final o = await _openMeteo(p);
     if (o != null) {
-      return Weather(
-          temp: o.temp, sky: o.sky, hum: o.hum, wind: o.wind, rain1h: o.rain1h, hours: o.hours, days: o.days, dust: d ?? o.dust, at: o.at, source: o.source);
+      w = o;
+      d ??= o.dust;
     }
   }
   if (w == null) return null;
-  if (d == null && kIsWeb) d = (await _openMeteo(p))?.dust;
-  return Weather(temp: w.temp, sky: w.sky, hum: w.hum, wind: w.wind, rain1h: w.rain1h, hours: w.hours, days: w.days, dust: d, at: w.at, source: w.source);
+  if (d == null && kIsWeb && w.source == '기상청') d = (await _openMeteo(p))?.dust;
+  w.dust = d;
+  try {
+    await _attachExtras(w, c).timeout(const Duration(seconds: 25));
+  } catch (e) {
+    // ignore: avoid_print
+    print('[날씨] 덧붙는 자료: $e');
+  }
+  return w;
 }
