@@ -18,6 +18,7 @@ dependencies:
   flutter_svg: ^2.0.10
   firebase_core: any
   cloud_firestore: any
+  firebase_auth: any
 
 dev_dependencies:
   flutter_test:

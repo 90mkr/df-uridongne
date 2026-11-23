@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>우리동네 작업판</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #f5f6f8; font-family: Pretendard, sans-serif; color: #17181c; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 34px 20px 60px; }
+  h1 { margin: 0; font-size: 24px; letter-spacing: -0.7px; }
+  h1 b { font-weight: 800; } h1 span { font-weight: 300; }
+  .lead { margin: 6px 0 22px; font-size: 13px; color: #6b6f7a; line-height: 1.5; }
+  .card { background: #fff; border: 1px solid #e3e5ea; border-radius: 14px; box-shadow: 0 0 14px rgba(20,24,40,.05); overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 720px; }
+  th { text-align: left; font-weight: 600; color: #6b6f7a; font-size: 12px; padding: 11px 14px; background: #fafbfc; border-bottom: 1px solid #eceef2; }
+  td { padding: 10px 14px; border-bottom: 1px solid #f0f1f4; vertical-align: top; line-height: 1.4; }
+  tr:last-child td { border-bottom: 0; }
+  .name { font-weight: 700; white-space: nowrap; }
+  .folder { display: block; font-size: 11px; color: #9a9ea8; margin-top: 2px; font-weight: 400; }
+  .st { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+  .s-work { background: #eef3ff; color: #2563eb; }
+  .s-wait { background: #f1f3f6; color: #6b6f7a; }
+  .s-done { background: #e7f6ee; color: #1e8a50; }
+  .s-hold { background: #fff4d6; color: #a06a00; }
+  .ver { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .muted { color: #9a9ea8; font-size: 11.5px; white-space: nowrap; }
+  h2 { font-size: 16px; margin: 30px 0 10px; letter-spacing: -0.4px; } h2 b { font-weight: 800; } h2 span { font-weight: 300; }
+  .req { padding: 12px 16px; border-bottom: 1px solid #f0f1f4; font-size: 13px; }
+  .req:last-child { border-bottom: 0; }
+  .req a { color: #17181c; font-weight: 600; text-decoration: none; }
+  .empty { padding: 16px; color: #9a9ea8; font-size: 13px; }
+  .top { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
+  .top a { font-size: 12.5px; color: #6b6f7a; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h1><b>우리동네</b> <span>작업판</span></h1>
+    <a href="https://github.com/90mkr/df-uridongne" target="_blank" rel="noopener">저장소 열기</a>
+  </div>
+  <p class="lead">각 방은 시작할 때 이 표를 먼저 봅니다. 다른 방이 「작업 중」인 기능은 손대지 않습니다.<br>내용은 저장소의 <code>board/&lt;기능&gt;.json</code> 에서 바로 읽어 옵니다 (새로고침하면 최신).</p>
+  <div class="card"><table>
+    <thead><tr><th>기능</th><th>담당 방</th><th>상태</th><th>지금 하는 일</th><th>마지막 버전</th><th>고친 때</th></tr></thead>
+    <tbody id="rows"><tr><td colspan="6" class="empty">불러오는 중…</td></tr></tbody>
+  </table></div>
+  <h2><b>본부</b> <span>요청함</span></h2>
+  <div class="card" id="reqs"><div class="empty">불러오는 중…</div></div>
+</div>
+<script>
+  var IDS = ['core', 'trash', 'pharmacy', 'bus', 'phonebook', 'gas', 'deals', 'parking', 'charger', 'postcode', 'weather'];
+  var RAW = 'https://raw.githubusercontent.com/90mkr/df-uridongne/main/';
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function cls(st) { return st === '작업 중' ? 's-work' : st === '완료' ? 's-done' : st === '멈춤' ? 's-hold' : 's-wait'; }
+  var t = Date.now();
+  Promise.all(IDS.map(function (id) {
+    return fetch(RAW + 'board/' + id + '.json?t=' + t, { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+  })).then(function (list) {
+    var h = '';
+    list.forEach(function (b, i) {
+      if (!b) { h += '<tr><td class="name">' + esc(IDS[i]) + '</td><td colspan="5" class="muted">파일을 읽지 못했어요</td></tr>'; return; }
+      h += '<tr><td class="name">' + esc(b.name) + '<span class="folder">' + esc(b.folder) + '</span></td>' +
+        '<td>' + (b.room ? esc(b.room) : '<span class="muted">없음</span>') + '</td>' +
+        '<td><span class="st ' + cls(b.state) + '">' + esc(b.state) + '</span></td>' +
+        '<td>' + esc(b.doing) + '</td><td class="ver">' + esc(b.version) + '</td><td class="muted">' + esc(b.updated) + '</td></tr>';
+    });
+    document.getElementById('rows').innerHTML = h;
+  });
+  fetch('https://api.github.com/repos/90mkr/df-uridongne/contents/requests?ref=main&t=' + t).then(function (r) { return r.json(); }).then(function (l) {
+    var items = (Array.isArray(l) ? l : []).filter(function (f) { return f.type === 'file' && /\.md$/.test(f.name) && f.name !== 'README.md'; });
+    document.getElementById('reqs').innerHTML = items.length ? items.map(function (f) {
+      return '<div class="req"><a href="' + esc(f.html_url) + '" target="_blank" rel="noopener">' + esc(f.name.replace(/\.md$/, '')) + '</a></div>';
+    }).join('') : '<div class="empty">처리할 요청이 없어요</div>';
+  }).catch(function () { document.getElementById('reqs').innerHTML = '<div class="empty">요청함을 읽지 못했어요</div>'; });
+</script>
+</body>
+</html>

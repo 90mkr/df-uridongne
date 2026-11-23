@@ -1,0 +1,11 @@
+{
+ "id": "parking",
+ "name": "주차장",
+ "folder": "lib/features/parking",
+ "room": "",
+ "state": "대기",
+ "doing": "",
+ "version": "0.0.1",
+ "updated": "2026-11-23 19:50",
+ "order": 7
+}

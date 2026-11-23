@@ -1,6 +1,14 @@
 # 우리동네 (df-uridongne)
 
-디자인필 생활정보 앱 — 내 주변 세탁소·떡집·약국·어린이집 같은 동네 업체를 분야별로 찾고 전화·길안내까지.
+> 작업 규칙: [WORKRULES.md](WORKRULES.md) · 작업판: https://90mkr.github.io/df-uridongne/board.html
+
+디자인필 생활정보 앱 — 아파트 단지 하나를 고르면 쓰레기 배출일·버스·약국·동네 전화번호부·실거래가 같은 생활 정보가 한 화면에 모인다.
+
+```
+lib/core/          공통 (본부 방)
+lib/features/<기능>/ 기능별 (담당 방)
+lib/features/registry.dart 기능 등록부 (본부 방)
+```
 
 - 앱: 플러터 (안드로이드·아이폰 공용), 고유 이름 `kr.designfeel.dongne`
 - 자료: `collector/collect.py`가 카카오 장소 검색으로 동네별 업체를 모아 `web/data/<동네id>.json`에 저장 (매주 월요일 새벽 자동)

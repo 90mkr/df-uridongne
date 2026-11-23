@@ -37,12 +37,29 @@ jobs:
           AREAS: ${{ inputs.areas }}
         run: python3 -u collector/collect.py
 
+      - name: 기능별 자료 모으기 (collector/features/*.py)
+        if: ${{ !cancelled() }}
+        timeout-minutes: 120
+        continue-on-error: true
+        env:
+          KAKAO_REST_KEY: ${{ secrets.KAKAO_REST_KEY }}
+          DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
+          OPINET_KEY: ${{ secrets.OPINET_KEY }}
+          AIRKOREA_KEY: ${{ secrets.AIRKOREA_KEY }}
+          EV_KEY: ${{ secrets.EV_KEY }}
+        run: |
+          for f in collector/features/*.py; do
+            [ -f "$f" ] || continue
+            echo "== $f"
+            timeout 1800 python3 -u "$f" || echo "!! $f 실패 (다른 기능은 계속)"
+          done
+
       - name: 모은 자료 저장
         if: ${{ !cancelled() }}
         run: |
           git config user.name "df-uridongne"
           git config user.email "dfmail@naver.com"
-          git add -f web/data/*.json
+          git add -f web/data/
           git commit -m "업체 자료 갱신" || exit 0
           git pull --rebase origin main
           git push
@@ -63,7 +80,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: build/web
-          key: web-${{ hashFiles('lib/**', 'pubspec.yaml', 'assets/**', 'tool/**', 'web/*.js', 'web/*.html', '.github/workflows/build.yml') }}
+          key: web-${{ hashFiles('lib/**', 'pubspec.yaml', 'assets/**', 'tool/**', 'web/*.js', 'web/*.html', 'web/policy/**', '.github/workflows/build.yml') }}
 
       - name: 플러터 준비
         if: steps.webcache.outputs.cache-hit != 'true'
@@ -74,17 +91,25 @@ jobs:
 
       - name: 크롬 미리보기 만들기
         if: steps.webcache.outputs.cache-hit != 'true'
+        env:
+          DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
+          OPINET_KEY: ${{ secrets.OPINET_KEY }}
+          AIRKOREA_KEY: ${{ secrets.AIRKOREA_KEY }}
+          EV_KEY: ${{ secrets.EV_KEY }}
         run: |
           flutter create --org kr.designfeel --project-name dongne --platforms web .
           sed -i 's#<title>.*</title>#<title>우리동네 – 동네 생활정보</title>#' web/index.html
           flutter pub get
-          flutter build web --release --base-href /df-uridongne/
+          flutter build web --release --base-href /df-uridongne/ \
+            --dart-define=DATA_GO_KR_KEY="$DATA_GO_KR_KEY" --dart-define=OPINET_KEY="$OPINET_KEY" \
+            --dart-define=AIRKOREA_KEY="$AIRKOREA_KEY" --dart-define=EV_KEY="$EV_KEY"
 
       - name: 최신 업체 자료 넣기
         run: |
-          mkdir -p build/web/data
-          cp web/data/*.json build/web/data/
-          cp web/postcode.html build/web/postcode.html
+          mkdir -p build/web/data build/web/policy
+          cp -r web/data/. build/web/data/
+          cp web/postcode.html web/board.html build/web/
+          cp web/policy/*.html build/web/policy/
 
       - name: 새 화면이 바로 보이게 (판 번호 찍기)
         run: python3 tool/stamp_web.py ${{ github.run_id }}
@@ -171,9 +196,15 @@ jobs:
       - name: 안드로이드 설치 파일 만들기
         env:
           KEY_PASS: ${{ secrets.ANDROID_KEY_PASS }}
+          DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
+          OPINET_KEY: ${{ secrets.OPINET_KEY }}
+          AIRKOREA_KEY: ${{ secrets.AIRKOREA_KEY }}
+          EV_KEY: ${{ secrets.EV_KEY }}
         run: |
           flutter pub get
-          flutter build apk --release
+          flutter build apk --release \
+            --dart-define=DATA_GO_KR_KEY="$DATA_GO_KR_KEY" --dart-define=OPINET_KEY="$OPINET_KEY" \
+            --dart-define=AIRKOREA_KEY="$AIRKOREA_KEY" --dart-define=EV_KEY="$EV_KEY"
           cp build/app/outputs/flutter-apk/app-release.apk dongne.apk
           if [ -f android/app/upload.jks ]; then keytool -list -v -keystore android/app/upload.jks -storepass "$KEY_PASS" -alias dongne | grep -E "SHA1|SHA256" || true; fi
 

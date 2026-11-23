@@ -1,4 +1,7 @@
-part of 'main.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+
+import 'theme.dart';
 
 // ---------------- 아이콘: 가는 선 + 옅은 면 (원 안에 넣지 않음) ----------------
 // 48×48 칸에 그린다. 선 색(L)·면 색(F)은 그릴 때 바꿔 끼운다.
@@ -42,6 +45,20 @@ const Map<String, String> kIconBody = {
   'pet': '<ellipse cx="24" cy="32" rx="8" ry="6.5" fill="F"/><ellipse cx="24" cy="32" rx="8" ry="6.5"/><ellipse cx="13" cy="22" rx="3" ry="4"/><ellipse cx="20" cy="15" rx="3" ry="4"/><ellipse cx="28" cy="15" rx="3" ry="4"/><ellipse cx="35" cy="22" rx="3" ry="4"/>',
   // 주민센터·공공기관: 깃발 건물
   'public': '<rect x="10" y="22" width="28" height="18" rx="1.5" fill="F"/><rect x="10" y="22" width="28" height="18" rx="1.5"/><path d="M24 22V8"/><path d="M24 8h9l-2 3 2 3h-9" /><path d="M21 40v-8h6v8"/>',
+  // ---- 기능 ----
+  'trash': '<path d="M15 18l5-8.5a3 3 0 0 1 5.2 0l3 5" /><path d="M28 14.5l.8-4.6M28 14.5l-4.4-1.3"/><path d="M34 22l4.6 8a3 3 0 0 1-2.6 4.5H30"/><path d="M30 34.5l3.4 3.1M30 34.5l3.2-3.4"/><path d="M20 34.5h-8a3 3 0 0 1-2.6-4.5l3.2-5.5"/><path d="M12.6 24.5l-4.4 1.2M12.6 24.5l1 4.5"/><circle cx="24" cy="26" r="5" fill="F" stroke="none"/>',
+  'bus': '<rect x="10" y="7" width="28" height="28" rx="6" fill="F"/><rect x="10" y="7" width="28" height="28" rx="6"/><path d="M10 22h28"/><circle cx="17" cy="28.5" r="1.6"/><circle cx="31" cy="28.5" r="1.6"/><path d="M14 35v4M34 35v4"/>',
+  'weather': '<circle cx="24" cy="24" r="8" fill="F"/><circle cx="24" cy="24" r="8"/><path d="M24 7v4M24 37v4M7 24h4M37 24h4M12 12l3 3M33 33l3 3M12 36l3-3M33 15l3-3"/>',
+  'deals': '<path d="M7 36l9-8 7 5 9-11 9-6"/><circle cx="41" cy="16" r="2.4" fill="F"/><path d="M7 41h34"/>',
+  'gas': '<rect x="8" y="8" width="20" height="32" rx="3" fill="F"/><rect x="8" y="8" width="20" height="32" rx="3"/><path d="M13 16h10"/><path d="M28 18l6 4v12a3 3 0 0 0 6 0V18l-4-5"/>',
+  'charger': '<rect x="10" y="7" width="22" height="34" rx="3" fill="F"/><rect x="10" y="7" width="22" height="34" rx="3"/><path d="M23 14l-6 10h6l-3 9"/><path d="M32 20h4a3 3 0 0 1 3 3v8"/>',
+  'parking': '<rect x="8" y="8" width="32" height="32" rx="6" fill="F"/><rect x="8" y="8" width="32" height="32" rx="6"/><path d="M20 33V16h6.5a5.2 5.2 0 0 1 0 10.4H20"/>',
+  'book': '<rect x="10" y="7" width="28" height="34" rx="3" fill="F"/><rect x="10" y="7" width="28" height="34" rx="3"/><path d="M18 16h12M18 24h12M18 32h6"/>',
+  'home': '<path d="M8 21L24 8l16 13v19H30V30H18v10H8z" fill="F"/><path d="M8 21L24 8l16 13v19H30V30H18v10H8z"/>',
+  'grid': '<rect x="8" y="8" width="14" height="14" rx="3"/><rect x="26" y="8" width="14" height="14" rx="3" fill="F"/><rect x="26" y="8" width="14" height="14" rx="3"/><rect x="8" y="26" width="14" height="14" rx="3"/><rect x="26" y="26" width="14" height="14" rx="3"/>',
+  'me': '<circle cx="24" cy="17" r="7" fill="F"/><circle cx="24" cy="17" r="7"/><path d="M10 40c2.4-7 7.6-11 14-11s11.6 4 14 11"/>',
+  'bell': '<path d="M12 32V22a12 12 0 0 1 24 0v10l3 4H9z"/><path d="M20 40a4 4 0 0 0 8 0"/>',
+  'apt': '<rect x="9" y="10" width="14" height="30" rx="1.5" fill="F"/><rect x="9" y="10" width="14" height="30" rx="1.5"/><rect x="25" y="18" width="14" height="22" rx="1.5"/><path d="M13 16h6M13 22h6M13 28h6M29 24h6M29 30h6"/><path d="M6 40h36"/>',
   // ---- 생활 도구 ----
   'post': '<rect x="7" y="12" width="34" height="24" rx="2.5" fill="F"/><rect x="7" y="12" width="34" height="24" rx="2.5"/><path d="M8 14l16 12 16-12"/>',
   'night': '<path d="M30 9a13 13 0 1 0 9 22A15 15 0 0 1 30 9z" fill="F"/><path d="M30 9a13 13 0 1 0 9 22A15 15 0 0 1 30 9z"/><path d="M20 21v8M16 25h8"/>',

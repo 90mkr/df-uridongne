@@ -1,0 +1,11 @@
+{
+ "id": "gas",
+ "name": "주유소",
+ "folder": "lib/features/gas",
+ "room": "",
+ "state": "대기",
+ "doing": "",
+ "version": "0.0.1",
+ "updated": "2026-11-23 19:50",
+ "order": 5
+}

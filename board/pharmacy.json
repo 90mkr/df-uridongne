@@ -1,0 +1,11 @@
+{
+ "id": "pharmacy",
+ "name": "지금 문 연 약국",
+ "folder": "lib/features/pharmacy",
+ "room": "",
+ "state": "대기",
+ "doing": "",
+ "version": "0.0.1",
+ "updated": "2026-11-23 19:50",
+ "order": 2
+}

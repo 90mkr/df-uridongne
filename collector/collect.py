@@ -137,6 +137,29 @@ def collect_area(a):
     return list(shops.values())
 
 
+APT_SKIP = ("상가", "관리사무소", "부동산", "공인중개", "경로당", "어린이집", "주차", "놀이터", "독서실", "유치원", "헬스", "커뮤니티")
+
+
+def collect_apts(a):
+    """동네의 아파트 단지 목록 (단지 고르기 화면용)."""
+    out = {}
+    for d in sweep("k", "아파트", a["bbox"]):
+        cname = d.get("category_name", "")
+        name = d.get("place_name", "").strip()
+        if "아파트" not in cname or any(w in name for w in APT_SKIP):
+            continue
+        if not cname.endswith("아파트"):  # '…주거시설 > 아파트' 만 (아파트 안의 가게 제외)
+            continue
+        try:
+            lng, lat = float(d["x"]), float(d["y"])
+        except Exception:
+            continue
+        pid = str(d.get("id", ""))
+        if pid and pid not in out:
+            out[pid] = {"id": pid, "n": name, "a": d.get("road_address_name") or d.get("address_name", ""), "y": round(lat, 6), "x": round(lng, 6)}
+    return sorted(out.values(), key=lambda z: z["n"])
+
+
 def main():
     if not KEY:
         print("카카오 키(KAKAO_REST_KEY)가 없어 이번에는 건너뜁니다.")
@@ -155,6 +178,11 @@ def main():
                 continue
             print(f"[{s['name']} {a['name']}] 모으는 중")
             c0 = calls
+            apts = collect_apts(a)
+            if apts:
+                with open(os.path.join(DATA, f"apt_{a['id']}.json"), "w", encoding="utf-8") as f:
+                    json.dump({"area_id": a["id"], "updated": now, "apts": apts}, f, ensure_ascii=False, separators=(",", ":"))
+                print(f"  아파트 단지 {len(apts)}곳")
             shops = collect_area(a)
             if not shops:
                 print("  아무것도 못 찾아 저장하지 않음")

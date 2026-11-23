@@ -1,0 +1,11 @@
+{
+ "id": "deals",
+ "name": "실거래가",
+ "folder": "lib/features/deals",
+ "room": "",
+ "state": "대기",
+ "doing": "",
+ "version": "0.0.1",
+ "updated": "2026-11-23 19:50",
+ "order": 6
+}

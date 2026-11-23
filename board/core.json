@@ -1,0 +1,11 @@
+{
+ "id": "core",
+ "name": "본부 (공통 뼈대)",
+ "folder": "lib/core · lib/main.dart · lib/features/registry.dart · .github · collector/collect.py",
+ "room": "우리동네 본부 방",
+ "state": "작업 중",
+ "doing": "공통 뼈대 1차 마무리",
+ "version": "0.2.0",
+ "updated": "2026-11-23 19:50",
+ "order": 0
+}

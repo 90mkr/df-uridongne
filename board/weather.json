@@ -1,0 +1,11 @@
+{
+ "id": "weather",
+ "name": "날씨·미세먼지",
+ "folder": "lib/features/weather",
+ "room": "",
+ "state": "대기",
+ "doing": "",
+ "version": "0.0.1",
+ "updated": "2026-11-23 19:50",
+ "order": 10
+}

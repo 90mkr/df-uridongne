@@ -1,0 +1,11 @@
+{
+ "id": "phonebook",
+ "name": "동네 전화번호부",
+ "folder": "lib/features/phonebook",
+ "room": "",
+ "state": "대기",
+ "doing": "본부가 1차(업종 목록·지도·사장님 등록·수정 신고) 만들어 둠",
+ "version": "0.2.0",
+ "updated": "2026-11-23 19:50",
+ "order": 4
+}
