@@ -101,7 +101,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: build/web
-          key: web-${{ hashFiles('lib/**', 'pubspec.yaml', 'assets/**', 'tool/**', 'web/*.js', 'web/*.html', 'web/policy/**', '.github/workflows/build.yml') }}
+          key: web-${{ hashFiles('lib/**', 'pubspec.yaml', 'assets/**', 'tool/**', 'web/*.js', 'web/*.html', 'web/policy/**', '.github/workflows/build.yml') }}-k${{ secrets.DATA_GO_KR_KEY != '' && '1' || '0' }}${{ secrets.EV_KEY != '' && '1' || '0' }}${{ secrets.OPINET_KEY != '' && '1' || '0' }}${{ secrets.AIRKOREA_KEY != '' && '1' || '0' }}
 
       - name: 플러터 준비
         if: steps.webcache.outputs.cache-hit != 'true'
