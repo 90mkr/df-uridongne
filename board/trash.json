@@ -2,10 +2,10 @@
  "id": "trash",
  "name": "쓰레기·분리수거",
  "folder": "lib/features/trash",
- "room": "",
- "state": "대기",
- "doing": "",
+ "room": "쓰레기·분리수거 방",
+ "state": "작업 중",
+ "doing": "지자체 배출 정보 수집·오늘의 단지 소식 카드·상세 화면·단지별 요일 입력",
  "version": "0.0.1",
- "updated": "2026-11-23 19:50",
+ "updated": "2026-11-23 20:58",
  "order": 1
 }
