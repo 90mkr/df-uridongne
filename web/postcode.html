@@ -7,62 +7,184 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
 <style>
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; background: #fff; font-family: Pretendard, sans-serif; color: #1a1d23; }
-  .top { padding: 16px 20px 12px; border-bottom: 1px solid #eceef2; }
-  .top b { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
-  .top span { display: block; margin-top: 3px; font-size: 12.5px; color: #8a909a; }
-  #wrap { height: calc(100% - 64px); }
-  #res { display: none; padding: 22px 20px; }
-  .zip { font-size: 13px; color: #8a909a; }
-  .zip strong { display: block; margin-top: 4px; font-size: 34px; font-weight: 300; color: #1f5eff; letter-spacing: 1px; }
-  .addr { margin-top: 18px; padding: 14px 16px; border: 1px solid #e3e6eb; border-radius: 10px; box-shadow: 0 2px 10px rgba(20, 30, 50, .05); }
-  .addr div { font-size: 12px; color: #8a909a; }
-  .addr p { margin: 3px 0 0; font-size: 15px; line-height: 1.4; }
-  .btns { display: flex; gap: 10px; margin-top: 18px; }
-  .btns button { flex: 1; height: 46px; border-radius: 10px; font: 600 14.5px Pretendard, sans-serif; cursor: pointer; }
-  .b1 { background: #1f5eff; color: #fff; border: 0; }
-  .b2 { background: #fff; color: #1a1d23; border: 1px solid #d9dce2; }
-  .toast { position: fixed; left: 50%; bottom: 30px; transform: translateX(-50%); background: #1a1d23; color: #fff; padding: 10px 18px; border-radius: 20px; font-size: 13.5px; opacity: 0; transition: opacity .2s; }
+  html, body { margin: 0; height: 100%; background: #f5f6f8; font-family: Pretendard, sans-serif; color: #17181c; -webkit-text-size-adjust: 100%; }
+  .top { padding: 15px 20px 12px; background: #fff; border-bottom: 1px solid #e3e5ea; }
+  .top b { font-size: 16px; font-weight: 800; letter-spacing: -0.4px; }
+  .top b i { font-style: normal; font-weight: 300; }
+  .top span { display: block; margin-top: 3px; font-size: 11.5px; color: #6b6f7a; }
+  #wrap { height: calc(100% - 62px); background: #fff; }
+  #res { display: none; max-width: 720px; margin: 0 auto; padding: 18px 20px 40px; }
+  .card { background: #fff; border: 1px solid #e3e5ea; border-radius: 14px; box-shadow: 0 0 14px rgba(20, 24, 40, .05); padding: 15px 16px 16px; }
+  .card + .card { margin-top: 12px; }
+  .zip { display: flex; align-items: flex-end; gap: 10px; }
+  .zip strong { font-size: 34px; font-weight: 300; color: #2563eb; letter-spacing: 1.5px; line-height: 1; }
+  .zip small { font-size: 10.5px; color: #6b6f7a; padding-bottom: 3px; }
+  .zip .cp { margin-left: auto; }
+  .row { display: flex; align-items: flex-start; gap: 8px; padding: 4px 0; }
+  .row .k { width: 40px; flex: none; font-size: 11.5px; color: #9a9ea8; line-height: 1.5; }
+  .row .v { flex: 1; font-size: 13px; line-height: 1.4; word-break: keep-all; }
+  .cp { flex: none; background: none; border: 0; padding: 2px 2px 2px 8px; font: 600 12px Pretendard, sans-serif; color: #6b6f7a; cursor: pointer; }
+  .line { height: 1px; background: #e3e5ea; margin: 12px 0; }
+  .t { font-size: 12.5px; font-weight: 700; }
+  .t i { font-style: normal; font-weight: 300; }
+  .hint { font-size: 11.5px; color: #6b6f7a; margin: 3px 0 8px; }
+  .units { display: flex; gap: 8px; }
+  .units label { flex: 1; position: relative; }
+  .units input { width: 100%; height: 42px; border: 1px solid #e3e5ea; border-radius: 10px; padding: 0 34px 0 13px; font: 14px Pretendard, sans-serif; outline: none; }
+  .units input:focus { border-color: #2563eb; }
+  .units em { position: absolute; right: 12px; top: 12px; font-style: normal; font-size: 13px; color: #6b6f7a; }
+  .box { margin-top: 10px; background: #f5f6f8; border-radius: 10px; padding: 10px 12px; font-size: 13px; line-height: 1.4; word-break: keep-all; }
+  .box small { display: block; font-size: 10.5px; color: #9a9ea8; margin-bottom: 2px; }
+  .btns { display: flex; gap: 8px; margin-top: 10px; }
+  .btns button { flex: 1; height: 42px; border-radius: 10px; font: 600 14px Pretendard, sans-serif; cursor: pointer; }
+  .b1 { background: #2563eb; color: #fff; border: 0; }
+  .b2 { background: #fff; color: #17181c; border: 1px solid #d5d9e0; }
+  .recent { max-width: 720px; margin: 0 auto; padding: 0 20px; }
+  .recent ul { list-style: none; margin: 8px 0 0; padding: 0 16px; background: #fff; border: 1px solid #e3e5ea; border-radius: 14px; }
+  .recent li { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid #e3e5ea; font-size: 12.5px; cursor: pointer; }
+  .recent li:first-child { border-top: 0; }
+  .recent li b { flex: none; width: 46px; font-weight: 600; color: #6b6f7a; }
+  .recent li span { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .toast { position: fixed; left: 50%; bottom: 30px; transform: translateX(-50%); background: #17181c; color: #fff; padding: 10px 18px; border-radius: 20px; font-size: 13.5px; opacity: 0; transition: opacity .2s; pointer-events: none; white-space: nowrap; }
 </style>
 </head>
 <body>
-<div class="top"><b>우편번호 찾기</b><span>도로명·건물명·지번으로 찾아보세요</span></div>
+<div class="top"><b>우편번호 <i>찾기</i></b><span>도로명·건물명·동 이름으로 찾아보세요</span></div>
 <div id="wrap"></div>
+
 <div id="res">
-  <div class="zip">우편번호<strong id="zip"></strong></div>
-  <div class="addr"><div>도로명 주소</div><p id="road"></p></div>
-  <div class="addr"><div>지번 주소</div><p id="jibun"></p></div>
-  <div class="btns">
-    <button class="b1" onclick="copy(document.getElementById('zip').textContent)">우편번호 복사</button>
-    <button class="b2" onclick="copy(document.getElementById('zip').textContent + ' ' + document.getElementById('road').textContent)">주소까지 복사</button>
+  <div class="card">
+    <div class="zip"><strong id="zip"></strong><small>우편번호</small><button class="cp" onclick="copy(R.zip, '우편번호를')">복사</button></div>
+    <div class="line"></div>
+    <div class="row"><div class="k">도로명</div><div class="v" id="road"></div><button class="cp" onclick="copy(R.road, '도로명 주소를')">복사</button></div>
+    <div class="row"><div class="k">지번</div><div class="v" id="jibun"></div><button class="cp" onclick="copy(R.jibun, '지번 주소를')">복사</button></div>
+    <div class="row"><div class="k">영문</div><div class="v" id="eng"></div><button class="cp" onclick="copy(R.eng, '영문 주소를')">복사</button></div>
   </div>
-  <div class="btns"><button class="b2" onclick="again()">다시 찾기</button></div>
+
+  <div class="card">
+    <div class="t">택배·해외직구용 <i>전체 주소</i></div>
+    <div class="hint">동·호(또는 상세주소)를 넣으면 바로 만들어 드려요</div>
+    <div class="units">
+      <label><input id="dong" inputmode="numeric" maxlength="6" placeholder="예: 103" oninput="fill()"><em>동</em></label>
+      <label><input id="ho" inputmode="numeric" maxlength="6" placeholder="예: 1204" oninput="fill()"><em>호</em></label>
+    </div>
+    <div class="box"><small>한글</small><span id="fullKo"></span></div>
+    <div class="box"><small>영문 (해외직구)</small><span id="fullEn"></span></div>
+    <div class="btns">
+      <button class="b1" onclick="copy(fullKo(), '전체 주소를')">한글 주소 복사</button>
+      <button class="b2" onclick="copy(fullEn(), '영문 주소를')">영문 주소 복사</button>
+    </div>
+  </div>
+
+  <div class="btns"><button class="b2" onclick="again()">다른 주소 찾기</button></div>
 </div>
+
+<div class="recent" id="recentBox" style="display:none"></div>
 <div class="toast" id="toast">복사했어요</div>
+
 <script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
 <script>
-  function open_() {
-    document.getElementById('res').style.display = 'none';
-    var w = document.getElementById('wrap');
+  var R = {};
+  var $ = function (id) { return document.getElementById(id); };
+  var qs = new URLSearchParams(location.search);
+
+  function store(k, v) { try { if (v === undefined) return JSON.parse(localStorage.getItem(k) || 'null'); localStorage.setItem(k, JSON.stringify(v)); } catch (e) { return null; } }
+
+  function unitKo() {
+    var d = $('dong').value.trim(), h = $('ho').value.trim();
+    return [d ? d + '동' : '', h ? h + '호' : ''].filter(Boolean).join(' ');
+  }
+  function unitEn() {
+    var d = $('dong').value.trim(), h = $('ho').value.trim();
+    if (d && h) return d + '-' + h;
+    if (h) return '#' + h;
+    if (d) return 'Bldg ' + d;
+    return '';
+  }
+  function fullKo() {
+    var u = unitKo();
+    return '(' + R.zip + ') ' + R.road + (u ? ', ' + u : '') + (R.bname ? ' (' + R.bname + ')' : '');
+  }
+  function fullEn() {
+    var u = unitEn();
+    return (u ? u + ', ' : '') + R.eng + ', ' + R.zip;
+  }
+  function fill() {
+    $('fullKo').textContent = fullKo();
+    $('fullEn').textContent = fullEn();
+  }
+
+  function show(r) {
+    R = r;
+    $('zip').textContent = r.zip;
+    $('road').textContent = r.road + (r.bname ? ' (' + r.bname + ')' : '');
+    $('jibun').textContent = r.jibun || '-';
+    $('eng').textContent = r.eng || '-';
+    $('wrap').style.display = 'none';
+    $('recentBox').style.display = 'none';
+    $('res').style.display = 'block';
+    fill();
+    window.scrollTo(0, 0);
+  }
+
+  function remember(r) {
+    var list = (store('postcode.recent') || []).filter(function (x) { return x.road !== r.road; });
+    list.unshift(r);
+    store('postcode.recent', list.slice(0, 5));
+  }
+
+  function drawRecent() {
+    var list = store('postcode.recent') || [];
+    var box = $('recentBox');
+    if (!list.length) { box.style.display = 'none'; return; }
+    box.innerHTML = '<div class="t" style="margin-top:18px">최근 <i>찾은 주소</i></div><ul></ul>';
+    var ul = box.querySelector('ul');
+    list.forEach(function (r) {
+      var li = document.createElement('li');
+      li.innerHTML = '<b></b><span></span>';
+      li.querySelector('b').textContent = r.zip;
+      li.querySelector('span').textContent = r.road + (r.bname ? ' (' + r.bname + ')' : '');
+      li.onclick = function () { show(r); };
+      ul.appendChild(li);
+    });
+    box.style.display = 'block';
+  }
+
+  function open_(q) {
+    $('res').style.display = 'none';
+    var w = $('wrap');
     w.style.display = 'block';
+    w.style.height = '460px';
     w.innerHTML = '';
     new daum.Postcode({
       width: '100%', height: '100%',
       oncomplete: function (d) {
-        document.getElementById('zip').textContent = d.zonecode;
-        document.getElementById('road').textContent = d.roadAddress + (d.buildingName ? ' (' + d.buildingName + ')' : '');
-        document.getElementById('jibun').textContent = d.jibunAddress || d.autoJibunAddress || '-';
-        w.style.display = 'none';
-        document.getElementById('res').style.display = 'block';
+        var r = {
+          zip: d.zonecode,
+          road: d.roadAddress || d.autoRoadAddress || d.address,
+          jibun: d.jibunAddress || d.autoJibunAddress || '',
+          eng: d.roadAddressEnglish || d.addressEnglish || '',
+          bname: d.buildingName || ''
+        };
+        remember(r);
+        show(r);
       }
-    }).embed(w);
+    }).embed(w, q ? { q: q } : {});
+    drawRecent();
   }
-  function again() { open_(); }
-  function copy(t) {
-    var done = function () { var e = document.getElementById('toast'); e.style.opacity = 1; setTimeout(function () { e.style.opacity = 0; }, 1400); };
-    if (navigator.clipboard) navigator.clipboard.writeText(t).then(done, done); else done();
+  function again() { $('dong').value = ''; $('ho').value = ''; open_(''); }
+
+  function copy(t, what) {
+    var done = function () { var e = $('toast'); e.textContent = (what || '') + ' 복사했어요'; e.style.opacity = 1; setTimeout(function () { e.style.opacity = 0; }, 1400); };
+    if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(t).then(done, function () { fallback(t); done(); }); }
+    else { fallback(t); done(); }
   }
-  open_();
+  function fallback(t) {
+    var a = document.createElement('textarea'); a.value = t; a.style.position = 'fixed'; a.style.opacity = '0';
+    document.body.appendChild(a); a.select(); try { document.execCommand('copy'); } catch (e) {} document.body.removeChild(a);
+  }
+
+  open_(qs.get('q') || '');
 </script>
 </body>
 </html>
