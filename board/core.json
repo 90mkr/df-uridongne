@@ -3,9 +3,9 @@
  "name": "본부 (공통 뼈대)",
  "folder": "lib/core · lib/main.dart · lib/features/registry.dart · .github · collector/collect.py",
  "room": "우리동네 본부 방",
- "state": "작업 중",
- "doing": "단지 홈 디자인 보완 (대표님 시안 11-23): 색 아이콘·카드 그림·배출 카드 그라데이션",
+ "state": "대기",
+ "doing": "단지 홈 디자인 보완 올림 (색 아이콘 assets/icons, 카드 그림 assets/art, HomeCardBox 그림 자동, 쓰레기 배출 카드 그라데이션 — 쓰레기 방 파일도 본부가 손댐)",
  "version": "0.3.0",
- "updated": "2026-11-23 23:05",
+ "updated": "2026-11-23 23:20",
  "order": 0
 }
