@@ -3,9 +3,9 @@
  "name": "택배·우편",
  "folder": "lib/features/postcode",
  "room": "우편번호 방",
- "state": "작업 중",
- "doing": "택배·우편으로 확장: 택배 조회·우체국/우체통·영문 주소 칸별 복사·저장 주소",
- "version": "0.2.0",
- "updated": "2026-11-23 22:00",
+ "state": "완료",
+ "doing": "택배·우편 0.3.0 · 다음: 택배 조회 서비스 결정 뒤 단계 표시·알림 연결 (requests/postcode-1123 참고), 우체통 자료 찾기",
+ "version": "0.3.0",
+ "updated": "2026-11-23 22:45",
  "order": 9
 }
