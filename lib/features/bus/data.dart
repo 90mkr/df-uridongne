@@ -68,9 +68,10 @@ class RouteStop {
 }
 
 class BusOnRoute {
-  final String nodeId, vehicleNo;
+  final String nodeId, nodeName, vehicleNo;
   final int ord;
-  const BusOnRoute({required this.nodeId, required this.vehicleNo, required this.ord});
+  final LatLng? pos;
+  const BusOnRoute({required this.nodeId, this.nodeName = '', required this.vehicleNo, required this.ord, this.pos});
 }
 
 // ---------------- 부르기 ----------------
@@ -274,7 +275,16 @@ Future<List<RouteStop>> routeStops(int city, String routeId) async {
 Future<List<BusOnRoute>?> busesOn(int city, String routeId) async {
   final items = await _call('BusLcInfoInqireService/getRouteAcctoBusLcList', {'cityCode': '$city', 'routeId': routeId, 'numOfRows': '100', 'pageNo': '1'});
   if (items == null) return null;
-  return [for (final x in items) BusOnRoute(nodeId: _s(x['nodeid']), vehicleNo: _s(x['vehicleno']), ord: _i(x['nodeord']))];
+  return [
+    for (final x in items)
+      BusOnRoute(
+        nodeId: _s(x['nodeid']),
+        nodeName: _s(x['nodenm']),
+        vehicleNo: _s(x['vehicleno']),
+        ord: _i(x['nodeord']),
+        pos: _d(x['gpslati']) != null && _d(x['gpslong']) != null ? LatLng(_d(x['gpslati'])!, _d(x['gpslong'])!) : null,
+      ),
+  ];
 }
 
 // 이 정류장 다음 정류장 이름 (「○○ 방면」 표시용) — 정류장에 오는 노선 하나로 알아낸다
