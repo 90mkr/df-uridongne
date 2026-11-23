@@ -244,6 +244,69 @@ class _CarHomeCardState extends State<CarHomeCard> {
       );
 }
 
+// 단지 홈 본문 카드 「내 차 어디 댔지」
+class CarMainCard extends StatefulWidget {
+  final Complex c;
+  const CarMainCard({super.key, required this.c});
+  @override
+  State<CarMainCard> createState() => _CarMainCardState();
+}
+
+class _CarMainCardState extends State<CarMainCard> {
+  Timer? tick;
+  bool busy = false;
+  @override
+  void initState() {
+    super.initState();
+    loadCar().then((_) {
+      if (mounted) setState(() {});
+    });
+    tick = Timer.periodic(const Duration(seconds: 60), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    tick?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _park() async {
+    if (busy) return;
+    setState(() => busy = true);
+    final lots = await lotsNear(widget.c.pos, km: 2);
+    if (mounted) setState(() => busy = false);
+    if (!mounted) return;
+    await parkHere(context, lots);
+  }
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<MyCar?>(
+        valueListenable: myCar,
+        builder: (_, car, __) {
+          if (car != null) return CarCard(car: car);
+          return Container(
+            decoration: cardBox(),
+            padding: const EdgeInsets.fromLTRB(14, 13, 12, 13),
+            child: Row(children: [
+              const LineIcon('car', size: 34),
+              const SizedBox(width: 11),
+              const Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                  MixTitle('내 차', '어디 댔지', size: 15),
+                  SizedBox(height: 3),
+                  Text('세운 곳을 남겨 두면 찾아가기와 예상 요금을 알려 드려요', style: T.tiny, maxLines: 2),
+                ]),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(width: 104, child: Btn(busy ? '확인 중' : '여기 세웠어요', primary: true, h: 40, onTap: _park)),
+            ]),
+          );
+        },
+      );
+}
+
 // 「여기 세웠어요」: 지금 위치 + 가장 가까운 주차장 자동 고르기 + 층·구역 메모 + 받은 무료 시간
 Future<void> parkHere(BuildContext context, List<Lot> lots) async {
   toast(context, '지금 위치를 확인하고 있어요');

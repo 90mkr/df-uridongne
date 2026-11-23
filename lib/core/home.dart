@@ -5,6 +5,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../features/registry.dart';
+import 'complex_info.dart';
 import 'complex_pick.dart';
 import 'data.dart';
 import 'feature.dart';
@@ -95,6 +96,9 @@ class _HomeTabState extends State<HomeTab> {
             ],
             for (final f in at(Slot.section)) ...[card(f), const SizedBox(height: 12)],
             for (final f in at(Slot.wide)) ...[card(f), const SizedBox(height: 12)],
+            // 본문 큰 카드 (예: 주차장 「내 차 어디 댔지」)
+            for (final f in features)
+              if (f.mainCard(context, c) case final w?) ...[KeyedSubtree(key: ValueKey('m${f.id}$gen'), child: w), const SizedBox(height: 12)],
             if (tools.isNotEmpty) ...[
               const Padding(padding: EdgeInsets.fromLTRB(2, 8, 0, 10), child: Text('생활 도구', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: -0.3))),
               // 옆으로 넘기는 줄 (4개 반쯤 보여 더 있다는 걸 알게)
@@ -123,7 +127,7 @@ class _Header extends StatelessWidget {
       child: Row(children: [
         Expanded(
           child: InkWell(
-            onTap: () => pickComplex(context),
+            onTap: () => openComplexInfo(context),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
               const Text('우리 단지', style: T.tiny),
               const SizedBox(height: 1),
@@ -141,7 +145,7 @@ class _Header extends StatelessWidget {
                           style: const TextStyle(fontSize: 19, letterSpacing: -0.6, height: 1.25),
                         ),
                 ),
-                const Icon(Icons.keyboard_arrow_down_rounded, size: 18),
+                const Icon(Icons.chevron_right_rounded, size: 20),
               ]),
             ]),
           ),

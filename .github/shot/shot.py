@@ -70,24 +70,17 @@ def session(b, tag, W, H, steps):
 
 def phone(shot, tap, drag, sem, W, H):
     shot("홈")
-    tap("전화번호부")
-    shot("전화번호부")
-    tap(r"^세탁소\s*\d", wait=7)
-    shot("세탁소_지도")
-    tap("목록")
-    shot("목록")
-    tap_xy(200, 200)
-    shot("카드_누름_지도")
+    drag(200, 600, 200, 250)
+    shot("홈_아래")
+    drag(200, 250, 200, 700)
+    tap_xy(90, 40, wait=6)
+    shot("단지정보")
 
 
 def tablet(shot, tap, drag, sem, W, H):
-    tap("전화번호부")
-    tap(r"^세탁소\s*\d", wait=7)
-    shot("세탁소_지도")
-    tap("목록")
-    shot("목록_나눔")
-    tap_xy(150, 220)
-    shot("카드_누름")
+    shot("홈")
+    tap_xy(90, 40, wait=6)
+    shot("단지정보")
 
 
 with sync_playwright() as p:

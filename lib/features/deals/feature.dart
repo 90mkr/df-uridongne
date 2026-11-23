@@ -17,7 +17,7 @@ class DealsFeature extends Feature {
   @override
   String get icon => 'deals';
   @override
-  Slot get slot => Slot.wide;
+  Slot get slot => Slot.info; // 홈이 아니라 「단지 정보」 화면에 (대표님 요청 11-24)
   @override
   int get order => 10;
   @override

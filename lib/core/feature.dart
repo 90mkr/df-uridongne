@@ -21,7 +21,7 @@ import 'package:latlong2/latlong.dart';
 import 'data.dart';
 import 'theme.dart';
 
-enum Slot { header, hero, half, section, wide, tool }
+enum Slot { header, hero, half, section, wide, tool, info }  // info: 홈이 아니라 「단지 정보」 화면(단지 이름 누르면)에 나오는 카드
 
 class MapPoint {
   final String id, name, sub;
@@ -65,6 +65,9 @@ abstract class Feature {
 
   // 단지 홈 카드 (null 이면 홈에 안 보임)
   Widget? homeCard(BuildContext context, Complex c) => null;
+
+  // 단지 홈 본문 큰 카드 (slot 과 별개, 「생활 도구」 위) — 예: 주차장의 「내 차 어디 댔지」. null 이면 없음
+  Widget? mainCard(BuildContext context, Complex c) => null;
 
   // 상세 화면
   Widget page(BuildContext context, Complex c);
