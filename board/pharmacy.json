@@ -2,10 +2,10 @@
  "id": "pharmacy",
  "name": "지금 문 연 약국",
  "folder": "lib/features/pharmacy",
- "room": "",
- "state": "대기",
- "doing": "",
+ "room": "문연약국 방",
+ "state": "작업 중",
+ "doing": "약국·야간 소아과·응급실 자료 모으기 + 홈 반쪽 카드·상세 화면",
  "version": "0.0.1",
- "updated": "2026-11-23 19:50",
+ "updated": "2026-11-23 20:53",
  "order": 2
 }
