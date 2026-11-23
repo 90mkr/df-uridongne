@@ -43,8 +43,9 @@ def call(page):
                     last = "XML 응답: " + txt[:200].replace("\n", " ")
                     break  # 열쇠 문제 → 다른 열쇠 모양으로
                 j = json.loads(txt)
-                body = j.get("response", {}).get("body", {})
-                head = j.get("response", {}).get("header", {})
+                root = j.get("response", j)  # 이 자료는 response 없이 header·body 가 바로 옴
+                body = root.get("body", {}) or {}
+                head = root.get("header", {}) or {}
                 if str(head.get("resultCode", "00")) not in ("00", "0", "03"):
                     last = f"결과 코드 {head.get('resultCode')} {head.get('resultMsg')}"
                     break
@@ -165,7 +166,7 @@ def main():
         tiles.setdefault(t, []).append(o)
 
     count = sum(len(v) for v in tiles.values())
-    if count < max(1000, total * 0.5):  # 너무 적게 받았으면 지난 자료를 지킴
+    if count < max(1000, total * 0.5):  # (전국 약 1만 9천 곳)  # 너무 적게 받았으면 지난 자료를 지킴
         print(f"주차장: {count}곳만 받아져 저장하지 않음")
         return
 

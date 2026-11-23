@@ -20,7 +20,7 @@ class ParkingFeature extends Feature {
   @override
   int get order => 30;
   @override
-  String get version => '0.1.0';
+  String get version => '0.1.1';
   @override
   bool get ready => true;
   @override
