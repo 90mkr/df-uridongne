@@ -45,6 +45,7 @@ jobs:
       - name: 웹 만들기
         run: |
           flutter create --org kr.designfeel --project-name dongne --platforms web . > /dev/null
+          python3 tool/brand.py web
           flutter pub get > /dev/null
           flutter build web --release --base-href /df-uridongne/
           mkdir -p /tmp/site && cp -r build/web /tmp/site/df-uridongne

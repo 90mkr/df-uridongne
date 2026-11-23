@@ -122,6 +122,7 @@ jobs:
           EV_KEY: ${{ secrets.EV_KEY }}
         run: |
           flutter create --org kr.designfeel --project-name dongne --platforms web .
+          python3 tool/brand.py web
           sed -i 's#<title>.*</title>#<title>우리동네 – 동네 생활정보</title>#' web/index.html
           flutter pub get
           flutter build web --release --base-href /df-uridongne/ \
@@ -215,6 +216,7 @@ jobs:
         run: |
           flutter create --org kr.designfeel --project-name dongne --platforms android,ios,web .
           python3 tool/patch_android.py "우리동네"
+          python3 tool/brand.py android web
 
       - name: 앱 서명 키 넣기
         run: |
