@@ -159,7 +159,7 @@ class _RecLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final r = rec;
     if (r == null || r.n == 0) {
-      return const Text('아직 이웃 추천이 없어요', style: TextStyle(fontSize: 11.5, color: kMute));
+      return const Text('이웃 추천 0', style: TextStyle(fontSize: 12, color: kMute));
     }
     return Row(children: [
       Text('이웃 추천 ${r.n}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),

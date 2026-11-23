@@ -214,8 +214,12 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
           LineIcon(widget.cat!.id, size: 26),
           const SizedBox(width: 7),
           Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: -0.4)),
-          const SizedBox(width: 8),
-          Flexible(child: Text(c.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, color: kMute))),
+          const SizedBox(width: 6),
+          Text('${items.length}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w300, color: kSub)),
+          if (wide) ...[
+            const SizedBox(width: 10),
+            Flexible(child: Text('${c.name} 기준', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, color: kMute))),
+          ],
           const Spacer(),
         ],
         if (!wide) ...[const SizedBox(width: 10), _toggle()],
@@ -361,24 +365,12 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
             },
           ),
         ),
-      if (pins.isNotEmpty)
-        Positioned(
-          left: 16,
-          top: 12,
-          child: _countTag('${list.length}곳${list.length > pins.length ? ' 중 가까운 ${pins.length}곳' : ''}'),
-        ),
     ]);
   }
 
   Widget _floatBox(Widget child) => Container(
         decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(kRadius), border: Border.all(color: kLine), boxShadow: kShadow),
         child: child,
-      );
-
-  Widget _countTag(String t) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: kLine), boxShadow: kShadow),
-        child: Text(t, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: kInk)),
       );
 
   // ---------- 휴대폰: 목록 (명함 카드) ----------
@@ -501,8 +493,19 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
               ),
             Marker(point: from, width: 150, height: 44, alignment: Alignment.topCenter, child: _AptPin(c.name)),
           ]),
-          const RichAttributionWidget(attributions: [TextSourceAttribution('OpenStreetMap')]),
         ],
+      ),
+      Positioned(
+        left: 8,
+        top: 8,
+        child: GestureDetector(
+          onTap: () => openUrl('https://www.openstreetmap.org/copyright'),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.8), borderRadius: BorderRadius.circular(4)),
+            child: const Text('© OpenStreetMap', style: TextStyle(fontSize: 9.5, color: kMute)),
+          ),
+        ),
       ),
       Positioned(
         right: 14,
@@ -549,7 +552,8 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
     placed.add(Rect.fromLTWH(apt.dx - 75, apt.dy - 34, 150, 30));
     final sp = pins.where((s) => s.id == sel).firstOrNull;
     if (sp != null) placed.add(rectOf(sp).inflate(4));
-    final view = Rect.fromLTWH(0, 0, size.width, size.height - padBottom);
+    final view = Rect.fromLTWH(0, 24, size.width, size.height - padBottom - 24);
+    placed.add(Rect.fromLTWH(size.width - 64, 0, 64, 160)); // 지도 단추 자리
     for (final s in pins) {
       if (s.id == sel) continue;
       if (out.length >= 45) break;
