@@ -37,3 +37,23 @@
         && request.resource.data.name is string && request.resource.data.name.size() <= 40;
       allow delete: if isAdmin();
     }
+
+    // 동네 전화번호부 이웃 추천: 누구나 보기 · 로그인 회원이 가게마다 한 표(문서 이름 = 가게id_내uid) · 지우기는 본인·관리자
+    match /dn_recs/{id} {
+      allow read: if true;
+      allow create, update: if request.auth != null
+        && id == request.resource.data.sid + '_' + request.auth.uid
+        && request.resource.data.keys().hasOnly(['sid', 'area', 'uid', 'st', 'at'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.at == request.time
+        && request.resource.data.sid is string && request.resource.data.sid.size() <= 40
+        && request.resource.data.area is string && request.resource.data.area.size() <= 40
+        && request.resource.data.st is list && request.resource.data.st.size() <= 3;
+      allow delete: if (request.auth != null && resource.data.uid == request.auth.uid) || isAdmin();
+    }
+
+    // 사장님 직접 관리 가게 (관리자가 사장님 확인 후 켬): 누구나 보기 · 쓰기는 관리자
+    match /dn_owned/{sid} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }

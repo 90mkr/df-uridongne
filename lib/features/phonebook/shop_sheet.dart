@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../../core/data.dart';
 import '../../core/fb.dart';
 import '../../core/icons.dart';
+import '../../core/me.dart' show openLogin;
 import '../../core/nav.dart';
 import '../../core/theme.dart';
 import '../../core/ui.dart';
@@ -38,6 +39,8 @@ class ShopSheet extends StatelessWidget {
           LineIcon(s.cats.isEmpty ? 'pin' : s.cats.first, size: 40),
         ]),
         if (s.kok != null) ...[const SizedBox(height: 14), _kok(s.kok!)],
+        const SizedBox(height: 14),
+        RecBox(shop: s, complex: complex),
         const SizedBox(height: 14),
         _row(context, '주소', s.addr.isEmpty ? '-' : s.addr, copy: s.addr),
         _row(context, '전화', s.tel.isEmpty ? '등록된 번호가 없어요' : s.tel, copy: s.tel),
@@ -113,6 +116,136 @@ class ShopSheet extends StatelessWidget {
           child: Text(t, style: const TextStyle(fontSize: 12.5, color: kSub, decoration: TextDecoration.underline, decorationColor: kLine)),
         ),
       );
+}
+
+// ---------------- 이웃 추천 (한 사람 한 표 + 스티커 3개까지) ----------------
+class RecBox extends StatefulWidget {
+  final Shop shop;
+  final Complex complex;
+  const RecBox({super.key, required this.shop, required this.complex});
+  @override
+  State<RecBox> createState() => _RecBoxState();
+}
+
+class _RecBoxState extends State<RecBox> {
+  bool editing = false, busy = false;
+  final picked = <String>{};
+
+  @override
+  void initState() {
+    super.initState();
+    recTick.addListener(_re);
+    authTick.addListener(_re);
+  }
+
+  @override
+  void dispose() {
+    recTick.removeListener(_re);
+    authTick.removeListener(_re);
+    super.dispose();
+  }
+
+  void _re() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _start() async {
+    if (me == null) {
+      await openLogin(context);
+      if (me == null) return;
+      await loadRecs(widget.complex.areaId);
+    }
+    final r = recsOf(widget.complex.areaId)[widget.shop.id];
+    setState(() {
+      picked
+        ..clear()
+        ..addAll(r?.myStickers ?? const []);
+      editing = true;
+    });
+  }
+
+  Future<void> _save() async {
+    setState(() => busy = true);
+    final e = await saveRec(widget.shop, widget.complex.areaId, picked.toList());
+    if (!mounted) return;
+    setState(() {
+      busy = false;
+      if (e == null) editing = false;
+    });
+    toast(context, e ?? '추천했어요. 고마워요!');
+  }
+
+  Future<void> _remove() async {
+    setState(() => busy = true);
+    final e = await removeRec(widget.shop, widget.complex.areaId);
+    if (!mounted) return;
+    setState(() {
+      busy = false;
+      if (e == null) editing = false;
+    });
+    toast(context, e ?? '추천을 거뒀어요');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final r = recsOf(widget.complex.areaId)[widget.shop.id];
+    final n = r?.n ?? 0;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: kLine)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Text.rich(TextSpan(children: [
+            const TextSpan(text: '이웃 추천 ', style: TextStyle(fontWeight: FontWeight.w400)),
+            TextSpan(text: '$n', style: const TextStyle(fontWeight: FontWeight.w800, color: kBlue)),
+          ]), style: const TextStyle(fontSize: 14.5)),
+          const Spacer(),
+          if (!editing)
+            InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: _start,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
+                decoration: BoxDecoration(color: r?.mine == true ? Colors.white : kBlue, borderRadius: BorderRadius.circular(16), border: Border.all(color: r?.mine == true ? kLine : kBlue)),
+                child: Text(r?.mine == true ? '내 추천 고치기' : '추천하기', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: r?.mine == true ? kSub : Colors.white)),
+              ),
+            ),
+        ]),
+        if (!editing && r != null && r.st.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Wrap(spacing: 6, runSpacing: 6, children: [
+            for (final id in r.topStickers) Pill('${stickerText(id)} ${r.st[id]}'),
+          ]),
+        ],
+        if (!editing && n == 0)
+          const Padding(padding: EdgeInsets.only(top: 4), child: Text('단골이라면 이웃들에게 알려 주세요', style: TextStyle(fontSize: 12, color: kMute))),
+        if (editing) ...[
+          const SizedBox(height: 10),
+          const Text('어떤 점이 좋았나요? (3개까지)', style: TextStyle(fontSize: 12, color: kSub)),
+          const SizedBox(height: 8),
+          Wrap(spacing: 6, runSpacing: 6, children: [
+            for (final st in kStickers)
+              ChoiceChipBox(st.text, on: picked.contains(st.id), onTap: () {
+                setState(() {
+                  if (picked.contains(st.id)) {
+                    picked.remove(st.id);
+                  } else if (picked.length < 3) {
+                    picked.add(st.id);
+                  } else {
+                    toast(context, '3개까지 고를 수 있어요');
+                  }
+                });
+              }),
+          ]),
+          const SizedBox(height: 12),
+          Row(children: [
+            if (r?.mine == true) ...[Expanded(child: Btn('추천 거두기', h: 40, onTap: busy ? null : _remove)), const SizedBox(width: 8)],
+            Expanded(child: Btn(busy ? '저장하는 중' : '추천 남기기', primary: true, h: 40, onTap: busy ? null : _save)),
+          ]),
+        ],
+      ]),
+    );
+  }
 }
 
 // ---------------- 정보 수정 신고 ----------------
