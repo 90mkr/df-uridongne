@@ -46,6 +46,8 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
   LatLng? _center;
   Timer? _deb;
   AnimationController? _glide;
+  List<Shop> _lastPins = const []; // 지도 보기에 올린 가게들
+  bool _userMoved = false;
   Shop? _pending; // 목록에서 눌러 지도로 넘어올 때 맞춰 볼 가게
   bool _wide = false;
   final Map<String, GlobalKey> _keys = {};
@@ -158,6 +160,23 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
       final ctx = k?.currentContext;
       if (ctx != null) Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 380), curve: Curves.easeOutCubic, alignment: 0.05);
     }
+  }
+
+  // 지도 가운데(아래 상세 카드에 가리지 않는 곳)에 가장 가까운 가게 (화면 너비의 1/3 안)
+  Shop? _nearestToFocus(MapCamera cam) {
+    final mpp = 156543.03 * math.cos(cam.center.latitude * math.pi / 180) / math.pow(2, cam.zoom);
+    final focus = LatLng(cam.center.latitude + _panelDy * mpp / 111320, cam.center.longitude);
+    final limit = mpp * (cam.nonRotatedSize.width / 3);
+    Shop? best;
+    var bd = double.infinity;
+    for (final s in _lastPins) {
+      final d = meters(focus, s.pos);
+      if (d < bd) {
+        bd = d;
+        best = s;
+      }
+    }
+    return bd <= limit ? best : null;
   }
 
   // 카드를 누름: 「이 가게가 우리 단지에서 어디쯤인지」 — 단지와 가게가 함께 보이게 알맞게 확대
@@ -357,6 +376,7 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
   // ---------- 지도 보기 (휴대폰·태블릿 같음): 지도만 넓게, 가게를 누르면 아래에 상세 카드 ----------
   Widget _fullMap(List<Shop> list, bool wide) {
     final pins = list.take(_maxPins).toList();
+    _lastPins = pins;
     final selShop = list.where((s) => s.id == sel).firstOrNull;
     final bottom = 12 + MediaQuery.of(context).padding.bottom;
     return Stack(children: [
@@ -483,13 +503,21 @@ class _ShopListPageState extends State<ShopListPage> with TickerProviderStateMix
             if (wide) setState(() => bounds = mapCtl.camera.visibleBounds);
           },
           onPositionChanged: (cam, gesture) {
+            if (gesture) _userMoved = true;
             _deb?.cancel();
             _deb = Timer(const Duration(milliseconds: 140), () {
               if (!mounted) return;
+              final moved = _userMoved;
+              _userMoved = false;
               setState(() {
                 zoom = cam.zoom;
                 _center = cam.center;
                 if (wide) bounds = cam.visibleBounds;
+                // 야놀자처럼: 상세 카드가 열린 채 지도를 끌면, 가운데(카드 위쪽)에 가장 가까운 가게로 상세가 바뀐다
+                if (moved && mapView && sel != null) {
+                  final near = _nearestToFocus(cam);
+                  if (near != null) sel = near.id;
+                }
               });
             });
           },
