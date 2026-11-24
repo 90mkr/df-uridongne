@@ -34,6 +34,25 @@ class AnnivFeature extends Feature {
 
   @override
   Widget page(BuildContext context, Complex c) => const AnnivPage();
+
+  // 「지금 우리 단지」 맨 위 카드: 일주일 안 기념일 (가까울수록 위로)
+  @override
+  Future<Brief?> brief(Complex c, DateTime now) async {
+    await loadAnnivs();
+    final up = upcoming(now);
+    if (up.isEmpty) return null;
+    final (a, d) = up.first;
+    final n = dday(d, now);
+    if (n > 7) return null;
+    return Brief(
+      icon: 'anniv',
+      kicker: '다가오는 기념일',
+      bold: n == 0 ? '오늘은 ' : (n == 1 ? '내일은 ' : '$n일 뒤 '),
+      hot: a.title,
+      sub: '${d.month}월 ${d.day}일${a.lunar ? ' · 음력 ${a.month}월 ${a.day}일' : ''}',
+      score: n <= 1 ? 85 : (n <= 3 ? 65 : 40),
+    );
+  }
 }
 
 class _Upcoming extends StatefulWidget {

@@ -12,6 +12,7 @@ import 'parking/feature.dart';
 import 'pharmacy/feature.dart';
 import 'phonebook/feature.dart';
 import 'postcode/feature.dart';
+import 'school/feature.dart';
 import 'subway/feature.dart';
 import 'trash/feature.dart';
 import 'weather/feature.dart';
@@ -31,6 +32,7 @@ final List<Feature> features = [
   LottoFeature(),
   AnnivFeature(), // 생활 도구 + 홈 한 줄: 다가오는 기념일
   AlarmFeature(), // 생활 도구: 시계 앱 알람 넣기
+  SchoolFeature(), // 생활 도구 + 홈 한 줄(등록한 집만): 우리 아이 학교 급식·쉬는 날
 ];
 
 Feature? featureById(String id) => features.where((f) => f.id == id).firstOrNull;

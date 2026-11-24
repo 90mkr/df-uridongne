@@ -41,7 +41,16 @@ Future<void> _save() async {
 
 // 한 줄 카드(r:)는 처음엔 꺼 둔다 — 홈이 너무 길어지지 않게. 꾸미기에서 켜면 보인다
 const _defaultOn = {'r:alarm'}; // 한 줄 카드 중 처음부터 켜 둘 것 (11-24: 알람을 못 찾으셔서)
-bool isHidden(String id) => _hide.contains(id) || (id.startsWith('r:') && !_on.contains(id) && !_defaultOn.contains(id));
+const _defaultOff = {'m:school'}; // 큰 카드 중 처음엔 꺼 둘 것 (학교: 아이 학교를 등록하면 저절로 켜짐)
+bool isHidden(String id) =>
+    _hide.contains(id) || ((id.startsWith('r:') && !_defaultOn.contains(id) || _defaultOff.contains(id)) && !_on.contains(id));
+
+/// 기능 화면에서 「홈에 보이게」 (예: 학교 등록하면 학교 카드 켜기)
+Future<void> setHomeCardOn(String id) async {
+  if (!isHidden(id)) return;
+  _setOn(id, true);
+  await _save();
+}
 
 void _setOn(String id, bool v) {
   if (v) {
@@ -89,7 +98,7 @@ class _RowCard extends StatelessWidget {
 }
 
 // 본문 큰 카드 이름 (mainCard 는 기능 이름과 다르게 부름)
-const _mainNames = {'parking': '내 차 어디 댔지', 'charger': '충전소 찾기', 'gas': '제일 싼 주유소', 'anniv': '다가오는 기념일'};
+const _mainNames = {'parking': '내 차 어디 댔지', 'charger': '충전소 찾기', 'gas': '제일 싼 주유소', 'anniv': '다가오는 기념일', 'school': '우리 아이 학교 급식'};
 
 /// 홈 한 칸
 class HomeBlock {
