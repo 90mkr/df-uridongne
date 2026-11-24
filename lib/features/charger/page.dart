@@ -409,7 +409,7 @@ class _Bubble extends StatelessWidget {
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(color: col, borderRadius: BorderRadius.circular(20), boxShadow: kShadow),
-        child: Text('빈 $free/${list.length} · ${fast ? '급속' : '완속'}',
+        child: Text('빈곳 $free/${list.length} · ${fast ? '급속' : '완속'}',
             maxLines: 1, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, height: 1.1, color: Colors.white)),
       ),
       CustomPaint(size: const Size(8, 5), painter: _Tail(col)),

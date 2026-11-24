@@ -48,7 +48,7 @@ class ChargerFeature extends Feature {
           id: 'ev_${s.id}',
           name: s.name,
           sub: s.hasFast ? '급속' : '완속',
-          badge: '빈 ${s.freeOf(null)}/${s.chargers.length}',
+          badge: '빈곳 ${s.freeOf(null)}/${s.chargers.length}',
           pos: s.pos,
           onTap: (ctx) => showStation(ctx, s, c),
         ),
@@ -86,7 +86,7 @@ class _NearCard extends StatelessWidget {
             thin: '찾기',
             sub: '${s.hasFast ? '급속 · ' : ''}${s.name}',
             subLines: 1,
-            trailing: MainValue(free > 0 ? '빈 $free' : '꽉 참', distText(meters(c.pos, s.pos))),
+            trailing: MainValue(free > 0 ? '빈곳 $free' : '꽉 참', distText(meters(c.pos, s.pos))),
             onTap: () => openFeature(context, f),
           );
         },
