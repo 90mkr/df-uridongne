@@ -93,28 +93,40 @@ class _ShellState extends State<Shell> {
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: () => setState(() => tab = i),
-                  // 고른 칸: 파랑 둥근 덩어리 안에 흰 아이콘·흰 글자 (대표님 시안 11-24)
-                  child: Center(
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      curve: Curves.easeOut,
-                      padding: EdgeInsets.symmetric(horizontal: tab == i ? 12 : 4, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: tab == i ? kBlue : Colors.transparent,
-                        borderRadius: BorderRadius.circular(22),
-                        boxShadow: tab == i ? [BoxShadow(color: kBlue.withValues(alpha: 0.35), blurRadius: 10)] : const [],
+                  // 고른 칸 (대표님 11-24 「이전 방식이 더 좋음」): 원래 색 아이콘 + 옅은 파랑 바탕 + 파랑 글자 + 위 파랑 줄
+                  child: Stack(children: [
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          width: tab == i ? 36 : 0,
+                          height: 3,
+                          decoration: const BoxDecoration(color: kBlue, borderRadius: BorderRadius.vertical(bottom: Radius.circular(2))),
+                        ),
                       ),
+                    ),
+                    Center(
                       child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        tab == i
-                            ? ColorFiltered(colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn), child: Image.asset('assets/nav/${items[i].$1}.png', width: 24, height: 24))
-                            : Image.asset('assets/nav/${items[i].$1}.png', width: 26, height: 26),
-                        const SizedBox(height: 3),
+                        AnimatedScale(
+                          scale: tab == i ? 1.06 : 0.94,
+                          duration: const Duration(milliseconds: 160),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+                            decoration: BoxDecoration(color: tab == i ? const Color(0xFFE3EDFF) : Colors.transparent, borderRadius: BorderRadius.circular(14)),
+                            child: Image.asset('assets/nav/${items[i].$1}.png', width: 27, height: 27),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
                         Text(items[i].$2,
                             maxLines: 1,
-                            style: TextStyle(fontSize: 11, fontWeight: tab == i ? FontWeight.w800 : FontWeight.w500, color: tab == i ? Colors.white : const Color(0xFF4A5468), letterSpacing: -0.3)),
+                            style: TextStyle(fontSize: 11, fontWeight: tab == i ? FontWeight.w800 : FontWeight.w500, color: tab == i ? kBlue : const Color(0xFF5B6475), letterSpacing: -0.3)),
                       ]),
                     ),
-                  ),
+                  ]),
                 ),
               ),
           ]),
