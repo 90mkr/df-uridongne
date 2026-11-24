@@ -251,11 +251,12 @@ class _SheetState extends State<_Sheet> with SingleTickerProviderStateMixin {
 
   List<pb.Shop> _shopsFor(Food f) {
     final l = shops.where((s) => _isFood(s, f)).toList();
-    // 콕플 맛집 정보가 있는 곳 먼저, 그다음 가까운 순
+    // 1km 안 콕플 맛집 먼저, 그다음 가까운 순
+    double d(pb.Shop s) => meters(widget.c.pos, s.pos);
     l.sort((a, b) {
-      final ka = a.kok != null ? 0 : 1, kb = b.kok != null ? 0 : 1;
+      final ka = a.kok != null && d(a) <= 1000 ? 0 : 1, kb = b.kok != null && d(b) <= 1000 ? 0 : 1;
       if (ka != kb) return ka.compareTo(kb);
-      return meters(widget.c.pos, a.pos).compareTo(meters(widget.c.pos, b.pos));
+      return d(a).compareTo(d(b));
     });
     return l;
   }
