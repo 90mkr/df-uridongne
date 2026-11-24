@@ -97,6 +97,7 @@ class _MapTabState extends State<MapTab> {
     final pb = features.where((x) => x.id == 'phonebook' && x.ready).firstOrNull;
     if (pb != null) {
       for (final m in pb.mapFilters()) {
+        if (m.id == 'pharm') continue; // 약국은 앞 칸(문 연 약국)과 겹침
         out.add(_Chip(pb, m.id, m.name, m.icon));
       }
     }
@@ -154,7 +155,11 @@ class _MapTabState extends State<MapTab> {
                     if (!folded || _front.contains(ch.f.id) || (on == ch.f && filter == ch.filter))
                       KeyedSubtree(
                         key: _keys.putIfAbsent('${ch.f.id}|${ch.filter}', () => GlobalKey()),
-                        child: _chipView(ch, on == ch.f && filter == ch.filter, () => _show(ch.f, c, filter: ch.filter)),
+                        child: _chipView(ch, on == ch.f && filter == ch.filter, () {
+                          // 고르고 나면 업종 칸은 접어 지도를 넓게 (고른 칸은 남음)
+                          setState(() => folded = true);
+                          _show(ch.f, c, filter: ch.filter);
+                        }),
                       ),
                   GestureDetector(
                     onTap: () => setState(() => folded = !folded),
