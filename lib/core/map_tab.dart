@@ -146,7 +146,7 @@ class _MapTabState extends State<MapTab> {
         }
         return Scaffold(
           body: Stack(children: [
-            DongneMap(key: ValueKey(c.id), center: c.pos, points: pts, controller: ctl, pinFill: on?.tint ?? kSoft, icon: on?.icon ?? '', focus: focus),
+            DongneMap(key: ValueKey(c.id), center: c.pos, points: pts, controller: ctl, pinFill: on?.tint ?? kSoft, icon: on?.icon ?? '', focus: focus, names: on?.id != 'charger'),
             // 고르기: 줄바꿈으로 모두 보이게 (대표님 11-24) — 「접기」로 앞 칸만 남길 수 있음
             SafeArea(
               child: Padding(

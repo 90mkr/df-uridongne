@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 import 'icons.dart';
 import 'keys.dart';
 import 'nmap_common.dart';
+import 'pin_box.dart';
 import 'theme.dart';
 export 'nmap_common.dart';
 
@@ -86,6 +87,18 @@ class _NMapState extends State<_NMap> {
     _sync();
   }
 
+  // 콕플식 상자: 아이콘 + 상호
+  Future<NOverlayImage> _box(String icon, String name, bool sel) async {
+    final k = 'x|$icon|$name|$sel';
+    final have = _img[k];
+    if (have != null) return have;
+    if (kColorPng.contains(icon)) await precacheImage(AssetImage('assets/icons/$icon.png'), context);
+    if (!mounted) return NOverlayImage.fromAssetImage('assets/icons/apt.png');
+    final img = await NOverlayImage.fromWidget(widget: PinBox(icon: icon, name: name, on: sel), size: pinBoxSize(name), context: context);
+    _img[k] = img;
+    return img;
+  }
+
   // 가격 말풍선 (주유소 등): 색 아이콘 + 글자 + 꼭지
   Size _badgeSize(String t) => Size(34 + t.length * 7.6, 30);
   Future<NOverlayImage> _badge(String icon, String t, bool sel) async {
@@ -121,6 +134,7 @@ class _NMapState extends State<_NMap> {
     final have = _img[k];
     if (have != null) return have;
     if (apt) await precacheImage(const AssetImage('assets/icons/apt.png'), context); // 그림으로 찍기 전에 미리 읽어 둠
+    if (!apt && kColorPng.contains(icon) && mounted) await precacheImage(AssetImage('assets/icons/$icon.png'), context);
     if (!mounted) return NOverlayImage.fromAssetImage('assets/icons/apt.png');
     final w = apt
         ? Image.asset('assets/icons/apt.png', width: 46, height: 46) // 우리 단지: 웃는 집 (대표님 11-24)
@@ -153,8 +167,12 @@ class _NMapState extends State<_NMap> {
       final m = NMarker(
         id: p.id,
         position: _n(p.pos),
-        icon: p.badge.isNotEmpty ? await _badge(p.icon, p.badge, p.selected) : await _icon(p.icon, p.selected, p.apt),
-        caption: p.name.isEmpty
+        icon: p.badge.isNotEmpty
+            ? await _badge(p.icon, p.badge, p.selected)
+            : (p.box && p.name.isNotEmpty && !p.apt)
+                ? await _box(p.icon, p.name, p.selected)
+                : await _icon(p.icon, p.selected, p.apt),
+        caption: p.name.isEmpty || (p.box && !p.apt && p.badge.isEmpty) || (!p.box && !p.apt && !p.selected)
             ? null
             : NOverlayCaption(
                 text: p.name,

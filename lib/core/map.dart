@@ -9,6 +9,7 @@ import 'data.dart';
 import 'feature.dart';
 import 'icons.dart';
 import 'nmap.dart';
+import 'pin_box.dart';
 import 'theme.dart';
 
 class DongneMap extends StatefulWidget {
@@ -19,7 +20,8 @@ class DongneMap extends StatefulWidget {
   final MapController? controller;
   final String icon; // 점 안에 넣을 기능 아이콘 (색 아이콘)
   final String focus; // 처음부터 고르고 그쪽으로 옮길 점 id
-  const DongneMap({super.key, required this.center, this.points = const [], this.zoom = 15, this.pinFill = kSoft, this.controller, this.icon = '', this.focus = ''});
+  final bool names; // 점마다 상호 상자 (false: 아이콘만 — 충전소)
+  const DongneMap({super.key, required this.center, this.points = const [], this.zoom = 15, this.pinFill = kSoft, this.controller, this.icon = '', this.focus = '', this.names = true});
   @override
   State<DongneMap> createState() => _DongneMapState();
 }
@@ -68,7 +70,7 @@ class _DongneMapState extends State<DongneMap> {
         pins: [
           if (c != null) DnPin(id: '_apt', pos: c.pos, name: c.name, apt: true),
           for (final p in pts)
-            DnPin(id: p.id, pos: p.pos, name: p.name, badge: p.badge, sub: p.sub, icon: p.icon.isNotEmpty ? p.icon : (widget.icon.isEmpty ? 'pin' : widget.icon), selected: sel == p.id),
+            DnPin(id: p.id, pos: p.pos, name: p.name, badge: widget.names ? p.badge : '', box: widget.names, sub: p.sub, icon: p.icon.isNotEmpty ? p.icon : (widget.icon.isEmpty ? 'pin' : widget.icon), selected: sel == p.id),
         ],
         onMapTap: () => setState(() => sel = null),
         onIdle: (center, z, b, gesture) {
@@ -172,7 +174,7 @@ class _DongneMapState extends State<DongneMap> {
     final on = sel == p.id;
     return Marker(
       point: p.pos,
-      width: p.badge.isEmpty ? 44 : 44.0 + p.badge.length * 8.5,
+      width: p.badge.isNotEmpty && widget.names ? 44.0 + p.badge.length * 8.5 : (widget.names && p.name.isNotEmpty ? pinBoxSize(p.name).width : 44),
       height: 52,
       alignment: Alignment.topCenter,
       child: GestureDetector(
@@ -180,7 +182,12 @@ class _DongneMapState extends State<DongneMap> {
         child: Align(
           alignment: Alignment.bottomCenter,
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            if (p.badge.isEmpty) _IconPin(p.icon.isNotEmpty ? p.icon : (widget.icon.isEmpty ? 'pin' : widget.icon), on: on) else _Badge(p.badge, on: on, icon: widget.icon),
+            if (p.badge.isNotEmpty && widget.names)
+              _Badge(p.badge, on: on, icon: widget.icon)
+            else if (widget.names && p.name.isNotEmpty)
+              PinBox(icon: p.icon.isNotEmpty ? p.icon : (widget.icon.isEmpty ? 'pin' : widget.icon), name: p.name, on: on)
+            else
+              _IconPin(p.icon.isNotEmpty ? p.icon : (widget.icon.isEmpty ? 'pin' : widget.icon), on: on),
           ]),
         ),
       ),
