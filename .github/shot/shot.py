@@ -90,6 +90,8 @@ def phone(shot, tap, drag, sem, W, H):
     shot("전화번호부_탭")
     pg_wheel(800)
     shot("전화번호부_탭_아래")
+    tap("생활 도구", wait=5)
+    shot("생활도구")
 
 
 def tablet(shot, tap, drag, sem, W, H):
