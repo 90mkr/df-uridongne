@@ -9,7 +9,6 @@ import '../../core/data.dart';
 import '../../core/feature.dart';
 import '../../core/icons.dart';
 import '../../core/theme.dart';
-import '../../core/ui.dart';
 import 'data.dart';
 import 'page.dart';
 
@@ -163,11 +162,6 @@ class _HomeCardState extends State<_HomeCard> {
                 height: 64,
                 decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFF2F6BFF), Color(0xFF5B8CFF)])),
                 child: Stack(children: [
-                  Positioned(
-                    right: -6,
-                    bottom: -14,
-                    child: Opacity(opacity: 0.28, child: Image.asset('assets/art/bus.png', height: 78, fit: BoxFit.contain)),
-                  ),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(14, 0, 14, 0),
                     child: Row(children: [
@@ -233,11 +227,10 @@ class _Row extends StatelessWidget {
       height: 46,
       child: Row(children: [
         Container(
-          constraints: const BoxConstraints(minWidth: 58),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(color: col.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-          child: Text(a.routeNo, maxLines: 1, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: col, letterSpacing: -0.3)),
+          constraints: const BoxConstraints(minWidth: 56),
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+          decoration: BoxDecoration(color: col.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(7)),
+          child: Text(a.routeNo, maxLines: 1, textAlign: TextAlign.center, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: col, letterSpacing: -0.3, height: 1.2)),
         ),
         const SizedBox(width: 10),
         Expanded(
