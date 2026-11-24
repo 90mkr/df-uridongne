@@ -20,28 +20,29 @@ class BusHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final top = MediaQuery.paddingOf(context).top;
     return Container(
-      height: top + (art ? 112 : 64),
+      height: top + (art ? 120 : 64),
       decoration: const BoxDecoration(
         gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.white, Color(0xFFEAF2FD)]),
       ),
       child: Stack(children: [
+        // 홈 카드와 같은 사진 머리띠 (대표님 사진 11-24) — 글자 쪽만 파랑 필터
+        if (art) Positioned.fill(child: IgnorePointer(child: Image.asset('assets/art/bus_bg.jpg', fit: BoxFit.cover, alignment: const Alignment(0.7, 0.1)))),
         if (art)
-          Positioned(
-            right: 0,
-            bottom: 0,
-            height: 104,
-            child: IgnorePointer(child: Image.asset('assets/art/bus_banner.png', fit: BoxFit.fitHeight, alignment: Alignment.bottomRight)),
+          const Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(colors: [Color(0xF20A5FE0), Color(0xCC1570EA), Color(0x2E1570EA)], stops: [0, 0.45, 0.8]))),
+            ),
           ),
         Positioned(
           left: 0,
           right: 0,
           top: top + 6,
           child: Row(children: [
-            IconButton(onPressed: () => Navigator.of(context).maybePop(), icon: const Icon(Icons.arrow_back_rounded, size: 24, color: kInk)),
+            IconButton(onPressed: () => Navigator.of(context).maybePop(), icon: Icon(Icons.arrow_back_rounded, size: 24, color: art ? Colors.white : kInk)),
             const LineIcon('bus', size: 30),
             const SizedBox(width: 8),
             Flexible(
-              child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: -0.6, color: kInk)),
+              child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: -0.6, color: art ? Colors.white : kInk)),
             ),
             const Spacer(),
             ...actions,
