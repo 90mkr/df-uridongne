@@ -75,7 +75,7 @@ def phone(shot, tap, drag, sem, W, H):
     drag(200, 700, 200, 150)
     drag(200, 700, 200, 150)
     shot("홈_맨아래")
-    tap("오늘 뭐 먹지 룰렛 열기", wait=4)
+    tap_xy(120, 625, wait=4)
     shot("룰렛")
     tap("돌리기", wait=6)
     shot("룰렛_결과")
