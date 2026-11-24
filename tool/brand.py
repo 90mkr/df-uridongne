@@ -1,12 +1,12 @@
 """자동 제작 때 앱 아이콘·첫 화면 색을 넣는다 (flutter create 다음에 실행). 사용: brand.py [web] [android]
-그림 원본: brand/ (대표님 시안 11-23 「우동콕」 아이콘)"""
+그림 원본: brand/ (대표님 11-24 웃는 집 + 위치 핀 아이콘)"""
 import os
 import re
 import shutil
 import sys
 
 what = set(sys.argv[1:]) or {"web", "android"}
-BLUE = "#013DCD"
+BLUE = "#015DFD"  # 새 아이콘 바탕 (대표님 11-24 웃는 집 아이콘)
 
 if "web" in what and os.path.isdir("web"):
     os.makedirs("web/icons", exist_ok=True)
