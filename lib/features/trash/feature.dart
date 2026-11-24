@@ -123,18 +123,12 @@ class TrashHero extends StatelessWidget {
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: Stack(children: [
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    width: 236,
-                    bottom: info != null && !info.empty ? 58 : 0,
-                    child: ShaderMask(
-                      blendMode: BlendMode.dstIn,
-                      shaderCallback: (r) => const LinearGradient(colors: [Color(0x00000000), Color(0x8C000000), Color(0xE6000000)], stops: [0, 0.5, 1]).createShader(r),
-                      child: ShaderMask(
-                        blendMode: BlendMode.dstIn,
-                        shaderCallback: (r) => const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF000000), Color(0x00000000)], stops: [0.6, 1]).createShader(r),
-                        child: Image.asset('assets/art/hero.png', fit: BoxFit.cover, alignment: Alignment.centerRight, filterQuality: FilterQuality.medium),
+                  // 사진은 카드 전체, 파랑 필터는 글자 쪽 왼편만 좁게 (대표님 11-24)
+                  Positioned.fill(child: Image.asset('assets/art/hero.jpg', fit: BoxFit.cover, alignment: const Alignment(0.6, 0), filterQuality: FilterQuality.medium)),
+                  const Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(colors: [Color(0xF20B4DBA), Color(0xB81570EA), Color(0x001570EA)], stops: [0, 0.38, 0.62]),
                       ),
                     ),
                   ),
