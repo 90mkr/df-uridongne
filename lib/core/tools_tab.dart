@@ -38,7 +38,7 @@ class ToolsTab extends StatelessWidget {
                             decoration: cardBox(),
                             padding: const EdgeInsets.fromLTRB(8, 16, 8, 13),
                             child: Column(children: [
-                              LineIcon(f.icon, size: 34, fill: f.tint),
+                              LineIcon(f.icon, size: 40), // 색 아이콘 (대표님 11-24: 모두 같은 그림체)
                               const SizedBox(height: 7),
                               Text(f.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
                               const SizedBox(height: 2),
