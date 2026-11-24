@@ -86,14 +86,14 @@ def session(b, tag, W, H, steps):
 
 def phone(shot, tap, drag, sem, W, H):
     shot("홈")
-    tap("세탁소", wait=6)
-    shot("전화번호부_목록")
-    tap("지도로 보기", wait=8)
-    shot("지도_세탁소")
-    drag(W // 2, H // 2 + 60, W // 2 - 40, H // 2 - 120, wait=4)
-    shot("지도_움직임_카드")
-    drag(W // 2, H // 2 - 60, W // 2 + 60, H // 2 + 140, wait=4)
-    shot("지도_움직임_카드2")
+    pg_wheel(900)
+    shot("홈_아래")
+    pg_wheel(1200)
+    shot("홈_맨아래")
+    tap("생활 도구", wait=5)
+    shot("생활도구")
+    tap("지도", wait=8)
+    shot("지도")
 
 
 def tablet(shot, tap, drag, sem, W, H):

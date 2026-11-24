@@ -98,20 +98,7 @@ class LineIcon extends StatelessWidget {
         );
       }
       final c = kColorSvg[name];
-      if (c != null) {
-        final f = _svgFit[name];
-        final pic = SvgPicture.string(c, width: size, height: size);
-        if (f == null) return pic;
-        return SizedBox(
-          width: size,
-          height: size,
-          child: OverflowBox(
-            maxWidth: size * 2,
-            maxHeight: size * 2,
-            child: Transform.scale(scale: f.$1, child: Transform.translate(offset: Offset(-f.$2 * size, -f.$3 * size), child: pic)),
-          ),
-        );
-      }
+      if (c != null) return SvgPicture.string(c, width: size, height: size);
     }
     final body = kIconBody[name] ?? kIconBody['pin']!;
     // 반투명 면은 fill-opacity 로 (예: 파랑 카드 위 흰 면)
@@ -128,16 +115,6 @@ String _hex(Color c) {
 }
 
 
-// 색 SVG 아이콘마다 그림이 칸을 채우는 정도가 달라, 그림 파일 아이콘과 같은 크기로 보이게 맞춤 (대표님 11-24: 아이콘 크기 동일하게)
-// (배율, 그림 가운데의 어긋남 x, y — 칸 크기 비율) — tool 로 잰 값
-const Map<String, (double, double, double)> _svgFit = {
-  'alarm': (1.223, 0.000, 0.030),
-  'anniv': (1.200, 0.000, -0.031),
-  'event': (1.246, 0.021, 0.015),
-  'school': (1.140, 0.000, -0.039),
-  'subway': (1.137, 0.000, 0.001),
-};
-
 // ---------------- 색 아이콘 (단지 홈 시안 11-23) ----------------
 // 업종 18개: 그림 파일 assets/icons/<이름>.png (시안 그림에서 오려 냄)
 const kColorPng = {
@@ -145,6 +122,8 @@ const kColorPng = {
   'cafe', 'mart', 'pharm', 'flower', 'hardware', 'bank', 'car', 'pet', 'public',
   // 기능·생활 도구 (시안 11-23 둘째 그림)
   'weather', 'trash', 'bus', 'book', 'deals', 'gas', 'charger', 'parking', 'post', 'lotto',
+  // 대표님 그림 11-24: 행사·기념일·알람·학교·지하철도 그림 파일로
+  'event', 'anniv', 'alarm', 'school', 'subway',
 };
 
 // 기능·도구: 남색 선 + 색 면 (시안 느낌으로 직접 그림)
