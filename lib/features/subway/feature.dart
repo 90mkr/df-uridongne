@@ -94,7 +94,7 @@ class _HomeCardState extends State<_HomeCard> {
           decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: const Color(0xFF6A5AE0).withValues(alpha: 0.16), blurRadius: 16)]),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(20),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            child: Stack(children: [
               Container(
                 height: 84,
                 decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFF7E6BE7), Color(0xFF8571EE)])),
@@ -141,8 +141,8 @@ class _HomeCardState extends State<_HomeCard> {
                   ),
                 ]),
               ),
-              Transform.translate(
-                offset: const Offset(0, -12),
+              Padding(
+                padding: const EdgeInsets.only(top: 72),
                 child: Container(
                   decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(18))),
                   padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
