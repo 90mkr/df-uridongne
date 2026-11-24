@@ -127,15 +127,34 @@ class _HomeTabState extends State<HomeTab> {
               padding: const EdgeInsets.fromLTRB(kPad, 14, kPad, 28),
               children: [
                 ...kids,
-                const SizedBox(height: 2),
+                const SizedBox(height: 12),
                 Center(
-                  child: TextButton.icon(
-                    onPressed: () => setState(() => editing = true),
-                    icon: const Icon(Icons.tune_rounded, size: 17, color: kSub),
-                    label: const Text('홈 편집', style: TextStyle(color: kSub, fontSize: 13, fontWeight: FontWeight.w600)),
+                  // 홈 편집: 또렷한 흰 단추 (대표님 11-24 — 글자만 있으니 약함)
+                  child: Material(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(24),
+                      onTap: () => setState(() => editing = true),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: const Color(0xFFCAD7EE)),
+                          boxShadow: kShadow,
+                        ),
+                        child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(Icons.dashboard_customize_outlined, size: 19, color: kBlue),
+                          SizedBox(width: 7),
+                          Text('홈 편집', style: TextStyle(color: kInk, fontSize: 14, fontWeight: FontWeight.w800)),
+                          SizedBox(width: 6),
+                          Text('카드 순서·켜고 끄기', style: TextStyle(color: kSub, fontSize: 12)),
+                        ]),
+                      ),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 14),
                 const Text('정보는 공공데이터·카카오 장소 정보를 바탕으로 해요. 방문 전 전화로 한 번 확인해 주세요.', style: T.tiny),
               ],
             ),
