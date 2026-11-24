@@ -154,7 +154,7 @@ class _HomeCardState extends State<_HomeCard> {
         borderRadius: BorderRadius.circular(20),
         onTap: () => openFeature(context, f),
         child: Ink(
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: const Color(0xFF0A74F4).withValues(alpha: 0.16), blurRadius: 16)]),
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: const Color(0xFF0A74F4).withValues(alpha: 0.16), blurRadius: 16)]),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(20),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -162,7 +162,7 @@ class _HomeCardState extends State<_HomeCard> {
                 height: 84,
                 decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFF0A6CF0), Color(0xFF2A8CFB)])),
                 child: Stack(children: [
-                  Positioned(right: 86, bottom: 0, top: 6, child: Image.asset('assets/art/bus_head.png', fit: BoxFit.fitHeight)),
+                  Positioned(right: 88, bottom: 6, height: 62, child: Opacity(opacity: 0.9, child: Image.asset('assets/art/bus_head.png', fit: BoxFit.fitHeight))),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(14, 0, 12, 10),
                     child: Row(children: [
