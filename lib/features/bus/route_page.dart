@@ -236,7 +236,7 @@ class _BusRoutePageState extends State<BusRoutePage> with SingleTickerProviderSt
                   final wide = box.maxWidth >= 640;
                   return Column(children: [
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(kPad, 8, kPad, 0),
+                      padding: const EdgeInsets.fromLTRB(kPad, 18, kPad, 0), // 머리띠와 지도 사이 띄움 (대표님 11-25)
                       child: SizedBox(height: (box.maxHeight * (wide ? 0.42 : 0.38)).clamp(230.0, 440.0), child: _mapView()),
                     ),
                     Expanded(
@@ -599,8 +599,9 @@ class _BusRoutePageState extends State<BusRoutePage> with SingleTickerProviderSt
       child: Row(children: [
         SizedBox(
           width: 36,
+          height: 56, // 칸 높이를 꽉 잡아야 정류장 사이 세로선이 이어짐 (대표님 11-25)
           child: Stack(alignment: Alignment.center, children: [
-            Positioned(top: first ? 28 : 0, bottom: last ? 28 : 0, child: Container(width: 1, color: const Color(0xFFB9C3D3))),
+            Positioned(top: first ? 28 : 0, bottom: last ? 28 : 0, child: Container(width: 1.5, color: const Color(0xFFC3CDDC))),
             if (busHere.isNotEmpty)
               Container(
                 width: 22,
