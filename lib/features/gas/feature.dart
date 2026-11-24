@@ -49,8 +49,9 @@ class GasFeature extends Feature {
       for (final s in list)
         MapPoint(
           id: 'gas_${s.id}',
-          name: '${s.name} ${won(s.price(f)!)}원',
-          sub: fuelName(f),
+          name: s.name,
+          sub: '${fuelName(f)} ${won(s.price(f)!)}원',
+          badge: '${won(s.price(f)!)}원', // 지도에 가격이 바로 보이게 (대표님 11-24)
           pos: s.pos,
           onTap: (ctx) => showStation(ctx, s, f, d),
         ),

@@ -94,6 +94,8 @@ def phone(shot, tap, drag, sem, W, H):
     shot("생활도구")
     tap("지도", wait=8)
     shot("지도")
+    tap("주유소", wait=8)
+    shot("지도_주유소")
 
 
 def tablet(shot, tap, drag, sem, W, H):
