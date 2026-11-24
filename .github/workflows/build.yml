@@ -63,6 +63,7 @@ jobs:
           OPINET_KEY: ${{ secrets.OPINET_KEY }}
           AIRKOREA_KEY: ${{ secrets.AIRKOREA_KEY }}
           EV_KEY: ${{ secrets.EV_KEY }}
+          NEIS_KEY: ${{ secrets.NEIS_KEY }}
           FEATURES: ${{ github.event.schedule == '40 22,3,9 * * *' && 'gas' || ((github.event.schedule == '20 12 * * 6' || github.event.schedule == '7 0 * * 0') && 'lotto' || inputs.features) }}
         run: |
           for f in collector/features/*.py; do
