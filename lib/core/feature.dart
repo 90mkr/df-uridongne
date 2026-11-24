@@ -29,7 +29,9 @@ class MapPoint {
   final LatLng pos;
   final void Function(BuildContext context)? onTap;
   final String icon; // 점마다 다른 아이콘 (비우면 기능 아이콘) — 예: 전화번호부 업종
-  const MapPoint({required this.id, required this.name, this.sub = '', this.badge = '', required this.pos, this.onTap, this.icon = ''});
+  // 지도 아래 작은 카드 (야놀자식: 점을 누르거나 지도를 움직이면 가운데 가까운 곳으로 바뀜). 비우면 이름·설명 + 「자세히」(onTap)
+  final Widget Function(BuildContext context, VoidCallback close)? card;
+  const MapPoint({required this.id, required this.name, this.sub = '', this.badge = '', required this.pos, this.onTap, this.icon = '', this.card});
 }
 
 // 지도 탭 거르기 단추 하나 (예: 전화번호부의 「세탁소」)

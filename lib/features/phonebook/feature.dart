@@ -8,6 +8,7 @@ import '../../core/feature.dart';
 import '../../core/icons.dart';
 import '../../core/theme.dart';
 import '../../core/ui.dart';
+import 'card.dart';
 import 'data.dart';
 import 'list_page.dart';
 import 'shop_sheet.dart';
@@ -39,7 +40,7 @@ class PhonebookFeature extends Feature {
     final all = await shopsOf(c.areaId);
     final near = [...all]..sort((a, b) => meters(c.pos, a.pos).compareTo(meters(c.pos, b.pos)));
     return [
-      for (final s in near.take(300)) MapPoint(id: s.id, name: s.name, sub: s.sub, pos: s.pos, icon: s.cats.isEmpty ? '' : s.cats.first, onTap: (ctx) => showShop(ctx, s, c)),
+      for (final s in near.take(300)) MapPoint(id: s.id, name: s.name, sub: s.sub, pos: s.pos, icon: s.cats.isEmpty ? '' : s.cats.first, onTap: (ctx) => showShop(ctx, s, c), card: (ctx, close) => ShopCard(shop: s, complex: c, onClose: close)),
     ];
   }
 
@@ -53,7 +54,7 @@ class PhonebookFeature extends Feature {
     final list = shopsInCat(all, filter)..sort((a, b) => meters(c.pos, a.pos).compareTo(meters(c.pos, b.pos)));
     return [
       for (final s in list.take(300))
-        MapPoint(id: s.id, name: s.name, sub: '${s.sub.isEmpty ? catOf(filter).name : s.sub} · ${distText(meters(c.pos, s.pos))}', pos: s.pos, icon: filter, onTap: (ctx) => showShop(ctx, s, c)),
+        MapPoint(id: s.id, name: s.name, sub: '${s.sub.isEmpty ? catOf(filter).name : s.sub} · ${distText(meters(c.pos, s.pos))}', pos: s.pos, icon: filter, onTap: (ctx) => showShop(ctx, s, c), card: (ctx, close) => ShopCard(shop: s, complex: c, onClose: close)),
     ];
   }
 }

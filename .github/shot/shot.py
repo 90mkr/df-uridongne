@@ -90,8 +90,10 @@ def phone(shot, tap, drag, sem, W, H):
     shot("전화번호부_목록")
     tap("지도로 보기", wait=8)
     shot("지도_세탁소")
-    tap("^약국$", wait=8)
-    shot("지도_약국")
+    drag(W // 2, H // 2 + 60, W // 2 - 40, H // 2 - 120, wait=4)
+    shot("지도_움직임_카드")
+    drag(W // 2, H // 2 - 60, W // 2 + 60, H // 2 + 140, wait=4)
+    shot("지도_움직임_카드2")
 
 
 def tablet(shot, tap, drag, sem, W, H):

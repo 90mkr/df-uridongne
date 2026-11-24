@@ -57,7 +57,7 @@ class _DongneMapState extends State<DongneMap> {
     _applyFocus();
     // 휴대폰 앱: 네이버 지도 (첫 번 누르면 이름·설명, 두 번 누르면 그 곳 열기)
     if (naverMapOn) {
-      return naverMap(
+      return _withCard(naverMap(
         center: widget.center,
         zoom: widget.zoom,
         ctl: nctl,
@@ -71,25 +71,27 @@ class _DongneMapState extends State<DongneMap> {
             DnPin(id: p.id, pos: p.pos, name: p.badge.isNotEmpty ? '${p.badge}  ${p.name}' : p.name, sub: p.sub, icon: p.icon.isNotEmpty ? p.icon : (widget.icon.isEmpty ? 'pin' : widget.icon), selected: sel == p.id),
         ],
         onMapTap: () => setState(() => sel = null),
+        onIdle: (center, z, b, gesture) {
+          if (gesture) _nearest(center, pts);
+        },
         onPinTap: (id) {
           if (id == '_apt') return;
-          final p = pts.where((x) => x.id == id).firstOrNull;
-          if (p == null) return;
-          if (sel == id) {
-            p.onTap?.call(context);
-          } else {
-            setState(() => sel = id);
-          }
+          if (pts.any((x) => x.id == id)) setState(() => sel = id);
         },
-      );
+      ), pts);
     }
-    return FlutterMap(
+    return _withCard(FlutterMap(
       mapController: widget.controller,
       options: MapOptions(
         initialCenter: widget.center,
         initialZoom: widget.zoom,
         interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
         onTap: (_, __) => setState(() => sel = null),
+        onMapEvent: (e) {
+          if ((e is MapEventMoveEnd || e is MapEventFlingAnimationEnd) && e.source != MapEventSource.mapController && e.source != MapEventSource.fitCamera) {
+            _nearest(e.camera.center, pts);
+          }
+        },
       ),
       children: [
         TileLayer(urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', userAgentPackageName: 'kr.designfeel.dongne'),
@@ -122,7 +124,47 @@ class _DongneMapState extends State<DongneMap> {
         ]),
         const RichAttributionWidget(attributions: [TextSourceAttribution('OpenStreetMap')]),
       ],
-    );
+    ), pts);
+  }
+
+  // 지도를 움직여 멈추면 가운데에 가장 가까운 곳으로 카드가 바뀜 (야놀자식, 대표님)
+  void _nearest(LatLng center, List<MapPoint> pts) {
+    if (pts.isEmpty) return;
+    MapPoint? best;
+    var bd = double.infinity;
+    for (final p in pts) {
+      final d = meters(center, p.pos);
+      if (d < bd) {
+        bd = d;
+        best = p;
+      }
+    }
+    if (best != null && best.id != sel) setState(() => sel = best!.id);
+  }
+
+  // 아래 작은 카드 (지도는 그대로 움직일 수 있음)
+  Widget _withCard(Widget map, List<MapPoint> pts) {
+    final p = sel == null ? null : pts.where((x) => x.id == sel).firstOrNull;
+    void close() => setState(() => sel = null);
+    return Stack(children: [
+      Positioned.fill(child: map),
+      if (p != null)
+        Positioned(
+          left: 12,
+          right: 12,
+          bottom: 12,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 180),
+            child: KeyedSubtree(
+              key: ValueKey(p.id),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.42),
+                child: p.card != null ? SingleChildScrollView(child: p.card!(context, close)) : _PlainCard(p, close),
+              ),
+            ),
+          ),
+        ),
+    ]);
   }
 
   // 점 하나: 흰 둥근 칸 안에 기능 색 아이콘 + 꼭지 (고르면 파랑 + 위에 이름 카드)
@@ -130,41 +172,51 @@ class _DongneMapState extends State<DongneMap> {
     final on = sel == p.id;
     return Marker(
       point: p.pos,
-      width: on ? 190 : (p.badge.isEmpty ? 40 : 40.0 + p.badge.length * 8.5),
-      height: on ? 92 : 48,
+      width: p.badge.isEmpty ? 44 : 44.0 + p.badge.length * 8.5,
+      height: 52,
       alignment: Alignment.topCenter,
       child: GestureDetector(
-        onTap: () {
-          if (on) {
-            p.onTap?.call(context);
-          } else {
-            setState(() => sel = p.id);
-          }
-        },
+        onTap: () => setState(() => sel = p.id),
         child: Align(
           alignment: Alignment.bottomCenter,
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            if (on)
-              Container(
-                margin: const EdgeInsets.only(bottom: 4),
-                padding: const EdgeInsets.fromLTRB(10, 6, 8, 6),
-                decoration: cardBox(r: 10),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  Flexible(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                      Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, letterSpacing: -0.3)),
-                      if (p.sub.isNotEmpty) Text(p.sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, color: kSub)),
-                    ]),
-                  ),
-                  const Icon(Icons.chevron_right_rounded, size: 16, color: kMute),
-                ]),
-              ),
             if (p.badge.isEmpty) _IconPin(p.icon.isNotEmpty ? p.icon : (widget.icon.isEmpty ? 'pin' : widget.icon), on: on) else _Badge(p.badge, on: on, icon: widget.icon),
           ]),
         ),
       ),
     );
   }
+}
+
+// 지도 아래 기본 카드: 이름·설명 + 자세히
+class _PlainCard extends StatelessWidget {
+  final MapPoint p;
+  final VoidCallback close;
+  const _PlainCard(this.p, this.close);
+  @override
+  Widget build(BuildContext context) => Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(kRadius),
+          onTap: p.onTap == null ? null : () => p.onTap!(context),
+          child: Ink(
+            decoration: cardBox(),
+            padding: const EdgeInsets.fromLTRB(14, 12, 6, 12),
+            child: Row(children: [
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                  Text(p.badge.isNotEmpty && !p.name.contains(p.badge) ? '${p.name}  ${p.badge}' : p.name,
+                      maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: -0.4, height: 1.3)),
+                  if (p.sub.isNotEmpty) ...[const SizedBox(height: 3), Text(p.sub, maxLines: 2, overflow: TextOverflow.ellipsis, style: T.small)],
+                ]),
+              ),
+              if (p.onTap != null) const Text('자세히', style: TextStyle(fontSize: 12.5, color: kBlue, fontWeight: FontWeight.w700)),
+              if (p.onTap != null) const Icon(Icons.chevron_right_rounded, color: kBlue, size: 20),
+              IconButton(onPressed: close, icon: const Icon(Icons.close_rounded, size: 20, color: kMute)),
+            ]),
+          ),
+        ),
+      );
 }
 
 // 기능 아이콘 점 (아기자기하게: 흰 둥근 칸 + 색 아이콘 + 꼭지)
