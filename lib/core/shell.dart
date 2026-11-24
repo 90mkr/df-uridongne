@@ -1,6 +1,5 @@
 // 화면 틀 (본부 방만 고침): 하단 메뉴 다섯 칸 — 단지 홈 · 전화번호부 · 지도 · 생활 도구 · 내 정보
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 import '../features/registry.dart';
 import 'complex_pick.dart';
@@ -75,41 +74,60 @@ class _ShellState extends State<Shell> {
   }
 
   // 하단 메뉴: 떠 있는 흰 둥근 띠 + 색 아이콘, 고른 칸은 파란 알약 (시안 11-23)
+  // 하단 메뉴 (대표님 11-24): 둥근 띄움 없이 화면 끝까지 평평하게 · 새 아이콘 · 고른 칸만 색, 나머지는 흐린 회색
   Widget _nav() {
     const items = [('home', '단지 홈'), ('list', '전화번호부'), ('map', '지도'), ('grid', '생활 도구'), ('me', '내 정보')];
+    const gray = ColorFilter.matrix([
+      0.2126, 0.7152, 0.0722, 0, 0, //
+      0.2126, 0.7152, 0.0722, 0, 0,
+      0.2126, 0.7152, 0.0722, 0, 0,
+      0, 0, 0, 0.45, 0,
+    ]);
     return Container(
-      color: kBg,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Color(0xFFE3E8F0))),
+        boxShadow: [BoxShadow(color: Color(0x0F1C3A6E), blurRadius: 10)],
+      ),
       child: SafeArea(
         top: false,
-        child: Container(
-          margin: const EdgeInsets.fromLTRB(10, 4, 10, 8),
-          height: 68,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(26),
-            border: Border.all(color: const Color(0xFFE6EBF3)),
-            boxShadow: [BoxShadow(color: const Color(0xFF1C3A6E).withValues(alpha: 0.10), blurRadius: 18)],
-          ),
+        child: SizedBox(
+          height: 64,
           child: Row(children: [
             for (var i = 0; i < items.length; i++)
               Expanded(
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: () => setState(() => tab = i),
-                  child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    AnimatedScale(
-                      scale: tab == i ? 1.12 : 1,
-                      duration: const Duration(milliseconds: 160),
-                      child: SvgPicture.string(_navSvg[items[i].$1]!, width: 27, height: 27),
+                  child: Stack(children: [
+                    // 고른 칸: 위에 파랑 줄
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          width: tab == i ? 36 : 0,
+                          height: 3,
+                          decoration: const BoxDecoration(color: kBlue, borderRadius: BorderRadius.vertical(bottom: Radius.circular(2))),
+                        ),
+                      ),
                     ),
-                    const SizedBox(height: 3),
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 160),
-                      padding: EdgeInsets.symmetric(horizontal: tab == i ? 10 : 2, vertical: 2),
-                      decoration: BoxDecoration(color: tab == i ? kBlue : Colors.transparent, borderRadius: BorderRadius.circular(12)),
-                      child: Text(items[i].$2,
-                          maxLines: 1,
-                          style: TextStyle(fontSize: 11, fontWeight: tab == i ? FontWeight.w800 : FontWeight.w600, color: tab == i ? Colors.white : const Color(0xFF24539F), letterSpacing: -0.3)),
+                    Center(
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        AnimatedScale(
+                          scale: tab == i ? 1.1 : 0.92,
+                          duration: const Duration(milliseconds: 160),
+                          child: tab == i
+                              ? Image.asset('assets/nav/${items[i].$1}.png', width: 28, height: 28)
+                              : ColorFiltered(colorFilter: gray, child: Image.asset('assets/nav/${items[i].$1}.png', width: 28, height: 28)),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(items[i].$2,
+                            maxLines: 1,
+                            style: TextStyle(fontSize: 11, fontWeight: tab == i ? FontWeight.w800 : FontWeight.w500, color: tab == i ? kBlue : const Color(0xFF9AA3B2), letterSpacing: -0.3)),
+                      ]),
                     ),
                   ]),
                 ),
@@ -121,15 +139,6 @@ class _ShellState extends State<Shell> {
   }
 }
 
-// 하단 메뉴 아이콘: 남색 선 + 색 면 (아기자기하게)
-const _nv = '#24539F';
-const _navSvg = {
-  'home': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path d="M10 22v19h28V22" fill="#DCEBFF" stroke="$_nv" stroke-width="2.6" stroke-linejoin="round"/><path d="M5 24L24 7l19 17" fill="none" stroke="#FF8A3D" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 24L24 7l19 17" fill="none" stroke="$_nv" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" opacity=".35"/><rect x="19" y="28" width="10" height="13" rx="2" fill="#4C8DF6" stroke="$_nv" stroke-width="2"/></svg>',
-  'list': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect x="9" y="6" width="30" height="36" rx="6" fill="#DCEBFF" stroke="$_nv" stroke-width="2.6"/><circle cx="17" cy="17" r="2.2" fill="#4C8DF6"/><circle cx="17" cy="25" r="2.2" fill="#4C8DF6"/><circle cx="17" cy="33" r="2.2" fill="#4C8DF6"/><path d="M23 17h9M23 25h9M23 33h9" stroke="$_nv" stroke-width="2.6" stroke-linecap="round"/></svg>',
-  'map': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path d="M5 11l12-4 14 4 12-4v30l-12 4-14-4-12 4z" fill="#8EE0CF" stroke="$_nv" stroke-width="2.6" stroke-linejoin="round"/><path d="M17 7v30" stroke="$_nv" stroke-width="2.2"/><path d="M31 11v30" stroke="$_nv" stroke-width="2.2"/><path d="M17 7l14 4v30l-14-4z" fill="#C9F1E8"/></svg>',
-  'grid': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect x="7" y="7" width="15" height="15" rx="4.5" fill="#DCEBFF" stroke="$_nv" stroke-width="2.6"/><rect x="26" y="7" width="15" height="15" rx="4.5" fill="#4C8DF6" stroke="$_nv" stroke-width="2.6"/><rect x="7" y="26" width="15" height="15" rx="4.5" fill="#4C8DF6" stroke="$_nv" stroke-width="2.6"/><rect x="26" y="26" width="15" height="15" rx="4.5" fill="#DCEBFF" stroke="$_nv" stroke-width="2.6"/></svg>',
-  'me': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><circle cx="24" cy="16" r="8" fill="#DCEBFF" stroke="$_nv" stroke-width="2.6"/><path d="M9 41c1.5-8 7.5-13 15-13s13.5 5 15 13z" fill="#4C8DF6" stroke="$_nv" stroke-width="2.6" stroke-linejoin="round"/></svg>',
-};
 
 // 첫 화면 (대표님 11-24 요기콕): 아이콘과 같은 파랑 바탕 + 웃는 집 그림, 위에 앱 이름
 class _Splash extends StatelessWidget {
