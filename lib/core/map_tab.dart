@@ -19,24 +19,24 @@ Widget _chipView(_Chip ch, bool sel, VoidCallback onTap) => GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 160),
-        height: 38,
-        padding: const EdgeInsets.fromLTRB(6, 0, 13, 0),
+        height: 32,
+        padding: const EdgeInsets.fromLTRB(4, 0, 10, 0),
         decoration: BoxDecoration(
           color: sel ? kBlue : Colors.white,
           borderRadius: BorderRadius.circular(19),
           border: Border.all(color: sel ? kBlue : const Color(0xFFDCE3EE)),
-          boxShadow: [BoxShadow(color: (sel ? kBlue : const Color(0xFF1C3A6E)).withValues(alpha: sel ? 0.3 : 0.1), blurRadius: 8)],
+          boxShadow: [BoxShadow(color: (sel ? kBlue : const Color(0xFF1C3A6E)).withValues(alpha: sel ? 0.3 : 0.1), blurRadius: 6)],
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           Container(
-            width: 28,
-            height: 28,
+            width: 24,
+            height: 24,
             alignment: Alignment.center,
             decoration: BoxDecoration(color: sel ? Colors.white : const Color(0xFFF1F5FB), shape: BoxShape.circle),
-            child: LineIcon(ch.icon, size: 21),
+            child: LineIcon(ch.icon, size: 18),
           ),
-          const SizedBox(width: 6),
-          Text(ch.name, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: -0.3, color: sel ? Colors.white : kInk)),
+          const SizedBox(width: 4),
+          Text(ch.name, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: -0.3, color: sel ? Colors.white : kInk)),
         ]),
       ),
     );
@@ -53,6 +53,7 @@ class _MapTabState extends State<MapTab> {
   String filter = ''; // 고른 기능 안의 거르기 (예: 전화번호부 업종)
   String focus = ''; // 처음 고를 점 (다른 화면의 「지도로 보기」)
   List<MapPoint> pts = [];
+  bool folded = false; // 업종 칩 접기
   final _keys = <String, GlobalKey>{}; // 칩 자리 (다른 화면에서 넘어오면 그 칩이 보이게)
   bool loading = false;
   String? forComplex;
@@ -79,10 +80,6 @@ class _MapTabState extends State<MapTab> {
     if (f == null) return;
     forComplex = c.id;
     _show(f, c, filter: a.filter, focus: a.focus);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final ctx = _keys['${f.id}|${a.filter}']?.currentContext;
-      if (ctx != null) Scrollable.ensureVisible(ctx, alignment: 0.4, duration: const Duration(milliseconds: 300));
-    });
   }
 
   // 지도 칩 (대표님 11-24): 「전화번호부」라는 묶음 없이 모두 한 줄로 — 행사·주유소·약국… 다음에 업종(세탁소·수선·열쇠…)
@@ -148,21 +145,30 @@ class _MapTabState extends State<MapTab> {
         return Scaffold(
           body: Stack(children: [
             DongneMap(key: ValueKey(c.id), center: c.pos, points: pts, controller: ctl, pinFill: on?.tint ?? kSoft, icon: on?.icon ?? '', focus: focus),
-            // 고르기: 한 줄로 옆으로 넘김 (행사·주유소·약국… 다음에 업종)
+            // 고르기: 줄바꿈으로 모두 보이게 (대표님 11-24) — 「접기」로 앞 칸만 남길 수 있음
             SafeArea(
               child: Padding(
-                padding: const EdgeInsets.only(top: 10),
-                child: SizedBox(
-                  height: 46,
-                  child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), children: [
-                    for (final ch in cs)
-                      Padding(
+                padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+                child: Wrap(spacing: 5, runSpacing: 5, children: [
+                  for (final ch in cs)
+                    if (!folded || _front.contains(ch.f.id) || (on == ch.f && filter == ch.filter))
+                      KeyedSubtree(
                         key: _keys.putIfAbsent('${ch.f.id}|${ch.filter}', () => GlobalKey()),
-                        padding: const EdgeInsets.only(right: 6),
                         child: _chipView(ch, on == ch.f && filter == ch.filter, () => _show(ch.f, c, filter: ch.filter)),
                       ),
-                  ]),
-                ),
+                  GestureDetector(
+                    onTap: () => setState(() => folded = !folded),
+                    child: Container(
+                      height: 32,
+                      padding: const EdgeInsets.symmetric(horizontal: 11),
+                      decoration: BoxDecoration(color: kInk.withValues(alpha: 0.82), borderRadius: BorderRadius.circular(16)),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Text(folded ? '업종 펼치기' : '접기', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
+                        Icon(folded ? Icons.expand_more_rounded : Icons.expand_less_rounded, size: 17, color: Colors.white),
+                      ]),
+                    ),
+                  ),
+                ]),
               ),
             ),
             if (loading) const Positioned(right: 16, bottom: 16, child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 1.6, color: kBlue))),
