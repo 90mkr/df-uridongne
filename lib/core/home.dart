@@ -85,7 +85,8 @@ class _HomeTabState extends State<HomeTab> {
             // 맨 위 자리: 「지금 우리 단지」 — 시간대·날씨·배출일에 맞춰 기능들이 낸 카드가 넘어간다
             if (at(Slot.hero).isEmpty) ...[TodayHero(key: ValueKey('today${c.id}$gen'), c: c), const SizedBox(height: 12)],
             for (var i = 0; i < halves.length; i += 2) ...[
-              IntrinsicHeight(
+              // 반쪽 카드가 하나만 남으면 가로 한 줄 전체로
+              if (i + 1 >= halves.length) card(halves[i]) else IntrinsicHeight(
                 child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                   Expanded(child: card(halves[i])),
                   const SizedBox(width: 10),
@@ -99,6 +100,8 @@ class _HomeTabState extends State<HomeTab> {
             // 본문 큰 카드 (예: 주차장 「내 차 어디 댔지」)
             for (final f in [...features]..sort((a, b) => a.mainOrder.compareTo(b.mainOrder)))
               if (f.mainCard(context, c) case final w?) ...[KeyedSubtree(key: ValueKey('m${f.id}$gen'), child: w), const SizedBox(height: 12)],
+            // 맨 아래 큰 카드 (늦게 뜨는 실시간 자료 — 위 카드들이 밀리지 않게)
+            for (final f in at(Slot.tail)) ...[card(f), const SizedBox(height: 12)],
             if (tools.isNotEmpty) ...[
               const Padding(padding: EdgeInsets.fromLTRB(2, 8, 0, 10), child: Text('생활 도구', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: -0.3))),
               // 옆으로 넘기는 줄 (4개 반쯤 보여 더 있다는 걸 알게)

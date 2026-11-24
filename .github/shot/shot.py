@@ -72,7 +72,10 @@ def phone(shot, tap, drag, sem, W, H):
     shot("홈")
     drag(200, 600, 200, 250)
     shot("홈_아래")
-    drag(200, 250, 200, 700)
+    drag(200, 700, 200, 150)
+    shot("홈_맨아래")
+    drag(200, 150, 200, 750)
+    drag(200, 150, 200, 750)
     tap_xy(90, 40, wait=6)
     shot("단지정보")
 

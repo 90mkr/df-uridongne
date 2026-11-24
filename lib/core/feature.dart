@@ -21,7 +21,7 @@ import 'package:latlong2/latlong.dart';
 import 'data.dart';
 import 'theme.dart';
 
-enum Slot { header, hero, half, section, wide, tool, info }  // info: 홈이 아니라 「단지 정보」 화면(단지 이름 누르면)에 나오는 카드
+enum Slot { header, hero, half, section, wide, tool, info, tail }  // tail: 본문 맨 아래(생활 도구 위) 큰 카드 — 늦게 뜨는 실시간 자료(예: 버스)  // info: 홈이 아니라 「단지 정보」 화면(단지 이름 누르면)에 나오는 카드
 
 class MapPoint {
   final String id, name, sub;

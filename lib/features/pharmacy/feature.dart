@@ -98,9 +98,10 @@ class _HomeCardState extends State<_HomeCard> {
             if (open.isNotEmpty) {
               final p = open.first, s = p.stateAt(now);
               callTo = p;
-              foot = run.isNotEmpty ? '연휴에 문 여는 약국 보기 ›' : (open.length > 1 ? '외 ${open.length - 1}곳 영업 중 · 5km 안' : '5km 안 1곳 영업 중');
+              foot = run.isNotEmpty ? '연휴에 문 여는 약국 보기 ›' : (open.length > 1 ? '5km 안 ${open.length}곳 영업 중 ›' : '5km 안 1곳 영업 중');
+              final more = open.skip(1).take(2).toList();
               body = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: -0.4, height: 1.25)),
+                Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, letterSpacing: -0.5, height: 1.25)),
                 const SizedBox(height: 3),
                 Text.rich(
                   TextSpan(children: [
@@ -113,6 +114,18 @@ class _HomeCardState extends State<_HomeCard> {
                   overflow: TextOverflow.ellipsis,
                   style: T.small,
                 ),
+                // 가로 한 줄 전체일 때: 다음으로 가까운 영업 중 약국 두 곳
+                if (more.isNotEmpty) ...[
+                  const SizedBox(height: 9),
+                  Wrap(spacing: 6, runSpacing: 6, children: [
+                    for (final m in more)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.85), borderRadius: BorderRadius.circular(20), border: Border.all(color: kLine)),
+                        child: Text('${m.name} · ${distText(meters(c.pos, m.pos))}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, letterSpacing: -0.3)),
+                      ),
+                  ]),
+                ],
               ]);
             } else {
               final p = pharm.first, s = p.stateAt(now);
@@ -130,11 +143,11 @@ class _HomeCardState extends State<_HomeCard> {
           title: '문 연 약국',
           foot: foot,
           onTap: () => openFeature(context, f),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
             Expanded(child: body),
             if (callTo != null && callTo.tel.isNotEmpty) ...[
               const SizedBox(width: 6),
-              _CallMini(tel: callTo.tel, label: '${callTo.name} 전화'),
+              _CallMini(tel: callTo.tel, label: '${callTo.name} 전화', big: true),
             ],
           ]),
         );
@@ -145,7 +158,8 @@ class _HomeCardState extends State<_HomeCard> {
 
 class _CallMini extends StatelessWidget {
   final String tel, label;
-  const _CallMini({required this.tel, required this.label});
+  final bool big;
+  const _CallMini({required this.tel, required this.label, this.big = false});
   @override
   Widget build(BuildContext context) => Semantics(
         button: true,
@@ -154,11 +168,11 @@ class _CallMini extends StatelessWidget {
           borderRadius: BorderRadius.circular(9),
           onTap: () => callTel(tel),
           child: Container(
-            width: 34,
-            height: 34,
+            width: big ? 46 : 34,
+            height: big ? 46 : 34,
             alignment: Alignment.center,
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(9), border: Border.all(color: kLine)),
-            child: const LineIcon('phone', size: 20, fill: kSoft),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(big ? 12 : 9), border: Border.all(color: kLine)),
+            child: LineIcon('phone', size: big ? 24 : 20, fill: kSoft),
           ),
         ),
       );

@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/data.dart';
 import '../../core/feature.dart';
+import '../../core/icons.dart';
 import '../../core/theme.dart';
 import '../../core/ui.dart';
 import 'data.dart';
@@ -20,7 +21,7 @@ class BusFeature extends Feature {
   @override
   String get icon => 'bus';
   @override
-  Slot get slot => Slot.half;
+  Slot get slot => Slot.tail; // 대표님 11-24: 실시간이라 늦게 떠서 홈 맨 아래 가로 한 줄 크게
   @override
   int get order => 10;
   @override
@@ -128,44 +129,141 @@ class _HomeCardState extends State<_HomeCard> {
   @override
   Widget build(BuildContext context) {
     final f = widget.feature, c = widget.complex, s = stop;
+    // 가로 한 줄 큰 카드: 파란 머리띠(정류장) + 노선별 줄 (최대 4개). 불러오는 동안도 높이를 잡아 둬 화면이 안 튐
     Widget body;
-    String? foot;
     if (loading) {
-      body = const ComingSoon('정류장을 찾고 있어요…');
+      body = Column(children: [for (var i = 0; i < 3; i++) const _Ghost()]);
     } else if (s == null) {
-      body = ComingSoon(lastErr == BusErr.none ? '가까운 정류장이 없어요' : '정류장 자료를 모으고 있어요');
+      body = _msg(lastErr == BusErr.none ? '가까운 정류장이 없어요' : '정류장 자료를 모으고 있어요');
+    } else if (arr == null) {
+      body = _msg(errText(lastErr));
+    } else if (arr!.isEmpty) {
+      body = _msg('지금 오는 버스가 없어요');
     } else {
-      foot = '${s.name} · ${distText(meters(c.pos, s.pos))}';
-      final a = arr;
-      if (a == null) {
-        body = ComingSoon(errText(lastErr));
-      } else if (a.isEmpty) {
-        body = const ComingSoon('지금 오는 버스가 없어요');
-      } else {
-        final rows = byRoute(a).take(2).toList();
-        body = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          for (var i = 0; i < rows.length; i++) ...[
-            if (i > 0) const SizedBox(height: 5),
-            _Line(a: rows[i].first, hot: i == 0),
-          ],
-        ]);
-      }
+      final rows = byRoute(arr!).take(4).toList();
+      body = Column(children: [
+        for (var i = 0; i < rows.length; i++) ...[
+          if (i > 0) const Divider(height: 1, thickness: 1, color: kLine),
+          _Row(r: rows[i], hot: i == 0),
+        ],
+      ]);
     }
-    return HomeCardBox(icon: f.icon, title: f.name, foot: foot, onTap: () => openFeature(context, f), child: body);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(kRadius),
+        onTap: () => openFeature(context, f),
+        child: Ink(
+          decoration: cardBox(),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(kRadius),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              // 머리띠
+              Container(
+                height: 64,
+                decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFF2F6BFF), Color(0xFF5B8CFF)])),
+                child: Stack(children: [
+                  Positioned(
+                    right: -6,
+                    bottom: -14,
+                    child: Opacity(opacity: 0.28, child: Image.asset('assets/art/bus.png', height: 78, fit: BoxFit.contain)),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 0),
+                    child: Row(children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(11)),
+                        child: const LineIcon('bus', size: 26),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
+                          const Text.rich(
+                            TextSpan(children: [
+                              TextSpan(text: '단지 앞 ', style: TextStyle(fontWeight: FontWeight.w400)),
+                              TextSpan(text: '버스', style: TextStyle(fontWeight: FontWeight.w800)),
+                            ]),
+                            style: TextStyle(fontSize: 15.5, color: Colors.white, letterSpacing: -0.4, height: 1.2),
+                          ),
+                          Text(
+                            s == null ? '정류장을 찾고 있어요' : '${s.name} · ${distText(meters(c.pos, s.pos))}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 12, color: Color(0xE6FFFFFF), height: 1.3),
+                          ),
+                        ]),
+                      ),
+                      const Text('실시간', style: TextStyle(fontSize: 11.5, color: Colors.white, fontWeight: FontWeight.w700)),
+                      const SizedBox(width: 2),
+                      const Icon(Icons.chevron_right_rounded, color: Colors.white, size: 20),
+                    ]),
+                  ),
+                ]),
+              ),
+              Padding(padding: const EdgeInsets.fromLTRB(14, 4, 14, 6), child: body),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _msg(String t) => SizedBox(height: 120, child: Center(child: Text(t, style: T.small)));
+}
+
+// 노선 종류 색 (광역 빨강 · 간선 파랑 · 지선 초록 · 그 밖 파랑)
+Color _typeColor(String t) {
+  if (t.contains('광역') || t.contains('급행') || t.contains('좌석')) return const Color(0xFFE5484D);
+  if (t.contains('지선') || t.contains('마을')) return const Color(0xFF2EA36B);
+  return kBlue;
+}
+
+class _Row extends StatelessWidget {
+  final RouteArrivals r;
+  final bool hot;
+  const _Row({required this.r, required this.hot});
+  @override
+  Widget build(BuildContext context) {
+    final a = r.first, n = r.next;
+    final col = _typeColor(a.type);
+    return SizedBox(
+      height: 46,
+      child: Row(children: [
+        Container(
+          constraints: const BoxConstraints(minWidth: 58),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(color: col.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+          child: Text(a.routeNo, maxLines: 1, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: col, letterSpacing: -0.3)),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            n == null ? a.leftText : '${a.leftText} · 다음 ${n.minsText}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: T.tiny,
+          ),
+        ),
+        Text(a.minsText, style: TextStyle(fontSize: hot ? 18 : 16, fontWeight: FontWeight.w800, letterSpacing: -0.4, color: hot ? kBlue : kInk)),
+      ]),
+    );
   }
 }
 
-class _Line extends StatelessWidget {
-  final Arrival a;
-  final bool hot;
-  const _Line({required this.a, required this.hot});
+class _Ghost extends StatelessWidget {
+  const _Ghost();
   @override
-  Widget build(BuildContext context) => Row(crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [
-        Expanded(
-          child: Text(a.routeNo, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: -0.4, height: 1.2)),
-        ),
-        Text(a.minsText, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, letterSpacing: -0.3, color: hot ? kBlue : kInk)),
-        const SizedBox(width: 4),
-        Text(a.left <= 0 ? '도착' : '${a.left}정거장', style: T.tiny),
-      ]);
+  Widget build(BuildContext context) => SizedBox(
+        height: 46,
+        child: Row(children: [
+          Container(width: 58, height: 26, decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(8))),
+          const SizedBox(width: 10),
+          Expanded(child: Container(height: 10, margin: const EdgeInsets.only(right: 60), decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(5)))),
+          Container(width: 40, height: 16, decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(5))),
+        ]),
+      );
 }
