@@ -70,11 +70,12 @@ def kakao_sw8(rect, depth=0):
 
 def tago(op, params):
     q = urllib.parse.urlencode({**params, "_type": "json", "numOfRows": params.get("numOfRows", 500), "pageNo": 1})
-    t = get(f"{TAGO}{op}?serviceKey={DKEY}&{q}")
+    key = DKEY if "%" in DKEY else urllib.parse.quote(DKEY, safe="")
+    t = get(f"{TAGO}{op}?serviceKey={key}&{q}")
     try:
         j = json.loads(t)
     except Exception:  # noqa: BLE001
-        print("  TAGO 응답이 JSON 이 아님:", t[:160].replace("\n", " "))
+        print("  TAGO 응답이 JSON 이 아님:", t[:200].replace("\n", " "))
         return None
     body = (j.get("response") or {}).get("body") or {}
     items = (body.get("items") or {})
