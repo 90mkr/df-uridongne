@@ -91,14 +91,22 @@ def phone(shot, tap, drag, sem, W, H):
     pg_wheel(-1200)
     shot("홈_버스지하철")
     tap_xy(W // 2, 360, wait=1)
-    tap("^실시간", wait=8)
-    shot("버스_화면")
+    tap("^실시간", wait=10)
+    shot("버스_지도_아래창")
+    pg_wheel(500, W // 2, int(H * 0.75))
+    shot("버스_아래창_내림")
+    tap("목록으로 보기", wait=6)
+    shot("버스_목록")
 
 
 def tablet(shot, tap, drag, sem, W, H):
     shot("홈")
-    tap("전화번호부", wait=6)
-    shot("전화번호부_탭")
+    for i in range(4):
+        pg_wheel(1500)
+    pg_wheel(-1200)
+    shot("홈_버스")
+    tap("^실시간", wait=10)
+    shot("버스_지도_창")
 
 
 with sync_playwright() as p:

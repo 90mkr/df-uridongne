@@ -21,7 +21,11 @@ class DongneMap extends StatefulWidget {
   final String icon; // 점 안에 넣을 기능 아이콘 (색 아이콘)
   final String focus; // 처음부터 고르고 그쪽으로 옮길 점 id
   final bool names; // 점마다 상호 상자 (false: 아이콘만 — 충전소)
-  const DongneMap({super.key, required this.center, this.points = const [], this.zoom = 15, this.pinFill = kSoft, this.controller, this.icon = '', this.focus = '', this.names = true});
+  // 고르기를 화면 쪽이 맡을 때 (버스 정류장: 아래 창을 기능이 직접 그림). 주면 지도 아래 작은 카드와
+  // 「움직이면 가운데 가까운 곳 고르기」를 끄고, 누를 때마다 onPick(점 id, 빈 곳 누르면 null)
+  final String? pick;
+  final ValueChanged<String?>? onPick;
+  const DongneMap({super.key, required this.center, this.points = const [], this.zoom = 15, this.pinFill = kSoft, this.controller, this.icon = '', this.focus = '', this.names = true, this.pick, this.onPick});
   @override
   State<DongneMap> createState() => _DongneMapState();
 }
@@ -69,10 +73,19 @@ class _DongneMapState extends State<DongneMap> {
       if (mounted) setState(() {});
     });
   }
+  void _tap(String? id) {
+    if (widget.onPick != null) {
+      widget.onPick!(id);
+    } else {
+      setState(() => sel = id);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = complex.value;
     final pts = widget.points.take(500).toList();
+    if (widget.onPick != null) sel = widget.pick;
     _applyFocus();
     final lv = _level(pts);
     // 휴대폰 앱: 네이버 지도 (첫 번 누르면 이름·설명, 두 번 누르면 그 곳 열기)
@@ -90,14 +103,14 @@ class _DongneMapState extends State<DongneMap> {
           for (final p in pts)
             DnPin(id: p.id, pos: p.pos, name: p.name, badge: widget.names ? p.badge : '', box: widget.names && lv == 2, dot: lv == 0 && sel != p.id && p.badge.isEmpty, sub: p.sub, icon: p.icon.isNotEmpty ? p.icon : (widget.icon.isEmpty ? 'pin' : widget.icon), selected: sel == p.id),
         ],
-        onMapTap: () => setState(() => sel = null),
+        onMapTap: () => _tap(null),
         onIdle: (center, z, b, gesture) {
           _zoomTo(z);
-          if (gesture) _nearest(center, pts);
+          if (gesture && widget.onPick == null) _nearest(center, pts);
         },
         onPinTap: (id) {
           if (id == '_apt') return;
-          if (pts.any((x) => x.id == id)) setState(() => sel = id);
+          if (pts.any((x) => x.id == id)) _tap(id);
         },
       ), pts);
     }
@@ -107,10 +120,10 @@ class _DongneMapState extends State<DongneMap> {
         initialCenter: widget.center,
         initialZoom: widget.zoom,
         interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
-        onTap: (_, __) => setState(() => sel = null),
+        onTap: (_, __) => _tap(null),
         onMapEvent: (e) {
           if (e is MapEventMoveEnd || e is MapEventScrollWheelZoom || e is MapEventDoubleTapZoomEnd || e is MapEventFlingAnimationEnd) _zoomTo(e.camera.zoom);
-          if ((e is MapEventMoveEnd || e is MapEventFlingAnimationEnd) && e.source != MapEventSource.mapController && e.source != MapEventSource.fitCamera) {
+          if (widget.onPick == null && (e is MapEventMoveEnd || e is MapEventFlingAnimationEnd) && e.source != MapEventSource.mapController && e.source != MapEventSource.fitCamera) {
             _nearest(e.camera.center, pts);
           }
         },
@@ -166,6 +179,7 @@ class _DongneMapState extends State<DongneMap> {
 
   // 아래 작은 카드 (지도는 그대로 움직일 수 있음)
   Widget _withCard(Widget map, List<MapPoint> pts) {
+    if (widget.onPick != null) return map;
     final p = sel == null ? null : pts.where((x) => x.id == sel).firstOrNull;
     void close() => setState(() => sel = null);
     return Stack(children: [
@@ -198,7 +212,7 @@ class _DongneMapState extends State<DongneMap> {
         point: p.pos,
         width: 14,
         height: 14,
-        child: GestureDetector(onTap: () => setState(() => sel = p.id), child: const _Dot()),
+        child: GestureDetector(onTap: () => _tap(p.id), child: const _Dot()),
       );
     }
     final box = widget.names && lv == 2 && p.name.isNotEmpty;
@@ -208,7 +222,7 @@ class _DongneMapState extends State<DongneMap> {
       height: 52,
       alignment: Alignment.topCenter,
       child: GestureDetector(
-        onTap: () => setState(() => sel = p.id),
+        onTap: () => _tap(p.id),
         child: Align(
           alignment: Alignment.bottomCenter,
           child: Column(mainAxisSize: MainAxisSize.min, children: [

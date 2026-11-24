@@ -286,23 +286,42 @@ Future<List<BusOnRoute>?> busesOn(int city, String routeId) async {
   ];
 }
 
-// 이 정류장 다음 정류장 이름 (「○○ 방면」 표시용) — 정류장에 오는 노선 하나로 알아낸다
+// 이 정류장 다음 정류장 이름 (「○○ 방면」 표시용) — 정류장을 지나는 노선 하나로 알아낸다
+// 도착 버스가 없어도(밤·첫차 전) 「정류장 경유 노선」 목록으로 찾는다. 노선·정류장 목록은 12시간 묶어 둠
 final Map<String, String> _toward = {};
 
-Future<String> towardOf(Stop s, List<Arrival> arr) async {
+Future<List<String>> _routeIdsAt(Stop s) async {
+  final items = await _call('BusSttnInfoInqireService/getSttnThrghRouteList', {'cityCode': '${s.city}', 'nodeid': s.id, 'numOfRows': '50', 'pageNo': '1'},
+      keep: const Duration(hours: 12));
+  return [for (final x in items ?? const <Map>[]) _s(x['routeid'])].where((e) => e.isNotEmpty).toList();
+}
+
+Future<String> towardOf(Stop s, [List<Arrival> arr = const []]) async {
   final have = _toward[s.id];
   if (have != null) return have;
-  for (final a in arr.take(2)) {
-    if (a.routeId.isEmpty) continue;
-    final list = await routeStops(s.city, a.routeId);
-    final i = list.indexWhere((r) => r.id == s.id);
-    if (i >= 0 && i + 1 < list.length) {
+  final ids = <String>{for (final a in arr.take(2)) if (a.routeId.isNotEmpty) a.routeId};
+  if (ids.isEmpty) ids.addAll((await _routeIdsAt(s)).take(3));
+  for (final r in ids) {
+    final list = await routeStops(s.city, r);
+    final i = list.indexWhere((x) => x.id == s.id);
+    if (i >= 0 && i + 1 < list.length && list[i + 1].name.isNotEmpty) {
       final n = list[i + 1].name;
       _toward[s.id] = n;
       return n;
     }
   }
   return '';
+}
+
+String? towardCached(Stop s) => _toward[s.id];
+
+// 처음 열 때 보여 줄 가까운 정류장 2곳 — 가장 가까운 곳 + 길 건너 같은 이름 정류장(없으면 그다음 가까운 곳)
+List<Stop> nearPair(List<Stop> all, LatLng p) {
+  final l = [...all]..sort((a, b) => meters(p, a.pos).compareTo(meters(p, b.pos)));
+  if (l.isEmpty) return const [];
+  final a = l.first;
+  final b = l.skip(1).where((s) => s.name == a.name && meters(a.pos, s.pos) < 400).firstOrNull ?? (l.length > 1 ? l[1] : null);
+  return [a, if (b != null) b];
 }
 
 // ---------------- 자주 타는 정류장 ----------------
@@ -357,13 +376,14 @@ Future<List<Map>> favRoutes() async {
 
 Future<bool> isFavRoute(int city, String routeId) async => (await favRoutes()).any((m) => m['r'] == routeId && m['c'] == city);
 
-Future<bool> toggleFavRoute(int city, String routeId, String no) async {
+// 즐겨찾기 버스 (출근 버스 등): 노선 + 타는 정류장(방향) — 고정하면 단지 홈 버스 카드엔 이 버스만 (대표님 11-25)
+Future<bool> toggleFavRoute(int city, String routeId, String no, {Stop? stop, String type = ''}) async {
   final l = await favRoutes();
   final i = l.indexWhere((m) => m['r'] == routeId && m['c'] == city);
   if (i >= 0) {
     l.removeAt(i);
   } else {
-    l.insert(0, {'c': city, 'r': routeId, 'no': no});
+    l.insert(0, {'c': city, 'r': routeId, 'no': no, 't': type, if (stop != null) 's': stop.toJson()});
   }
   await prefSet('bus.favRoutes', jsonEncode(l.take(20).toList()));
   return i < 0;

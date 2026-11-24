@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/data.dart';
 import '../../core/feature.dart' show MapPoint;
+import '../../core/icons.dart';
 import '../../core/map.dart';
 import '../../core/theme.dart';
 import '../../core/ui.dart';
@@ -28,7 +29,15 @@ class _BusPageState extends State<BusPage> {
   Set<String> pins = {};
   var sel = 0;
   var loading = true;
-  var mapView = false;
+  var mapView = true; // 대표님 11-25: 지도 + 아래 창이 첫 화면 (목록은 단추로)
+  // 지도 화면: 아래 창에 보일 정류장들의 도착 정보 (정류장마다 따로 30초 새로 고침)
+  List<Stop> pair = []; // 가까운 정류장 2곳 (양방향)
+  Stop? picked; // 지도에서 누른 정류장
+  final Map<String, List<Arrival>?> arrOf = {};
+  final Map<String, DateTime> atOf = {};
+  final Set<String> busy = {};
+  final Map<String, String> towardMap = {};
+  Set<String> favs = {}; // 'city/routeId'
   List<Arrival>? arr;
   var fetching = false;
   DateTime? at;
@@ -46,6 +55,14 @@ class _BusPageState extends State<BusPage> {
     _load();
     _tick = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
+      if (mapView) {
+        for (final s in _shown) {
+          final t = atOf[s.id];
+          if (t != null && DateTime.now().difference(t).inSeconds >= _refreshSec && !busy.contains(s.id)) _fetchOne(s);
+        }
+        setState(() {});
+        return;
+      }
       if (at != null && _ago >= _refreshSec && !fetching) {
         _fetch();
       } else {
@@ -68,8 +85,55 @@ class _BusPageState extends State<BusPage> {
     pins = {for (final s in p) s.id};
     final i = widget.startStop == null ? -1 : list.indexWhere((s) => s.id == widget.startStop);
     sel = i >= 0 ? i : 0;
+    pair = nearPair(list, c.pos);
+    if (i >= 0) picked = list[i];
+    favs = {for (final m in await favRoutes()) '${m['c']}/${m['r']}'};
     loading = false;
+    if (mounted) setState(() {});
+    for (final s in _shown) {
+      _fetchOne(s);
+    }
+    _towards(list);
     await _fetch();
+  }
+
+  // 지도 화면 아래 창에 보이는 정류장
+  List<Stop> get _shown => picked != null ? [picked!] : pair;
+
+  Future<void> _fetchOne(Stop s) async {
+    busy.add(s.id);
+    if (mounted) setState(() {});
+    final a = await arrivals(s);
+    busy.remove(s.id);
+    if (!mounted) return;
+    setState(() {
+      arrOf[s.id] = a;
+      atOf[s.id] = DateTime.now();
+    });
+  }
+
+  // 정류장마다 「○○ 방면」 (같은 이름 정류장 구분) — 하나씩 천천히 (노선 목록은 12시간 묶음이라 부담 적음)
+  Future<void> _towards(List<Stop> list) async {
+    final order = [...pair, ...list.where((s) => !pair.any((p) => p.id == s.id))];
+    for (final s in order) {
+      final t = await towardOf(s, arrOf[s.id] ?? const []);
+      if (!mounted) return;
+      if (t.isNotEmpty) setState(() => towardMap[s.id] = t);
+    }
+  }
+
+  void _pickOnMap(String? id) {
+    final s = id == null ? null : stops.where((x) => x.id == id).firstOrNull;
+    if (s?.id == picked?.id) return;
+    setState(() => picked = s);
+    if (s != null && (atOf[s.id] == null || DateTime.now().difference(atOf[s.id]!).inSeconds >= _refreshSec)) _fetchOne(s);
+  }
+
+  Future<void> _fav(Stop s, Arrival a) async {
+    final on = await toggleFavRoute(s.city, a.routeId, a.routeNo, stop: s, type: a.type);
+    if (!mounted) return;
+    setState(() => on ? favs.add('${s.city}/${a.routeId}') : favs.remove('${s.city}/${a.routeId}'));
+    toast(context, on ? '${a.routeNo}번을 즐겨찾기 버스로 고정했어요 · 단지 홈에도 보여요' : '즐겨찾기를 풀었어요');
   }
 
   Future<void> _fetch() async {
@@ -127,21 +191,25 @@ class _BusPageState extends State<BusPage> {
             title: '단지 앞 버스',
             trailing: stops.isEmpty
                 ? null
-                : BusPillBtn(mapView ? '목록으로 보기' : '지도로 보기', mapView ? Icons.view_list_outlined : Icons.map_outlined, () => setState(() => mapView = !mapView), glass: true),
+                : BusPillBtn(mapView ? '목록으로 보기' : '지도로 보기', mapView ? Icons.view_list_outlined : Icons.map_outlined, () {
+                    setState(() => mapView = !mapView);
+                    if (mapView) {
+                      for (final s in _shown) {
+                        _fetchOne(s);
+                      }
+                    } else {
+                      _fetch();
+                    }
+                  }, glass: true),
           ),
           Expanded(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 720),
-                child: loading
-                    ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
-                    : stops.isEmpty
-                        ? _empty()
-                        : mapView
-                            ? _map()
-                            : _list(),
-              ),
-            ),
+            child: loading
+                ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+                : stops.isEmpty
+                    ? _empty()
+                    : mapView
+                        ? _mapPanel()
+                        : Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 720), child: _list())),
           ),
         ]),
       );
@@ -416,19 +484,226 @@ class _BusPageState extends State<BusPage> {
     );
   }
 
-  Widget _map() => DongneMap(
-        center: c.pos,
-        zoom: 16,
-        points: [
-          for (var i = 0; i < stops.length; i++)
-            MapPoint(
-              id: stops[i].id,
-              name: '${stops[i].name} · ${distText(meters(c.pos, stops[i].pos))}',
-              pos: stops[i].pos,
-              onTap: (_) => _pick(i),
+  // ---------------- 지도 + 아래 창 (대표님 11-25) ----------------
+  // 열자마자 가까운 정류장 2곳(양방향) 도착 정보가 아래 창에. 지도 정류장은 작은 버스 아이콘만, 누르면 이름·방면
+  Widget _mapPanel() => LayoutBuilder(builder: (context, box) {
+        final wide = box.maxWidth >= 760;
+        final map = DongneMap(
+          center: c.pos,
+          zoom: 16.6,
+          icon: 'bus',
+          names: false,
+          pick: picked?.id,
+          onPick: _pickOnMap,
+          points: [
+            for (final s in stops)
+              MapPoint(
+                id: s.id,
+                name: s.name,
+                sub: [if ((towardMap[s.id] ?? '').isNotEmpty) '${towardMap[s.id]} 방면', distText(meters(c.pos, s.pos))].join(' · '),
+                pos: s.pos,
+              ),
+          ],
+        );
+        if (wide) {
+          // 태블릿: 왼쪽 창 · 오른쪽 지도
+          return Row(children: [
+            SizedBox(width: (box.maxWidth * 0.42).clamp(360.0, 460.0), child: Container(color: kBg, child: _panel(top: 14))),
+            Container(width: 1, color: kLine),
+            Expanded(child: map),
+          ]);
+        }
+        final mh = (box.maxHeight * 0.4).clamp(200.0, 360.0);
+        return Stack(children: [
+          Positioned(left: 0, right: 0, top: 0, height: mh + 20, child: map),
+          Positioned.fill(
+            top: mh,
+            child: Container(
+              decoration: const BoxDecoration(
+                color: kBg,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                boxShadow: [BoxShadow(color: Color(0x1A0B2A5B), blurRadius: 14)],
+              ),
+              child: Column(children: [
+                const SizedBox(height: 8),
+                Container(width: 36, height: 4, decoration: BoxDecoration(color: const Color(0xFFD3DAE5), borderRadius: BorderRadius.circular(2))),
+                Expanded(child: _panel(top: 10)),
+              ]),
             ),
+          ),
+        ]);
+      });
+
+  Widget _panel({double top = 10}) {
+    final shown = _shown;
+    final t = shown.map((s) => atOf[s.id]).whereType<DateTime>().fold<DateTime?>(null, (m, x) => m == null || x.isBefore(m) ? x : m);
+    final left = t == null ? _refreshSec : (_refreshSec - DateTime.now().difference(t).inSeconds).clamp(0, _refreshSec);
+    final anyBusy = shown.any((s) => busy.contains(s.id));
+    return RefreshIndicator(
+      onRefresh: () async {
+        await Future.wait([for (final s in shown) _fetchOne(s)]);
+      },
+      child: ListView(padding: EdgeInsets.fromLTRB(kPad, top, kPad, 28), children: [
+        Row(children: [
+          if (picked != null)
+            InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () => _pickOnMap(null),
+              child: const Padding(
+                padding: EdgeInsets.fromLTRB(2, 6, 8, 6),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.chevron_left_rounded, size: 20, color: kBlue),
+                  Text('가까운 정류장', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: kBlue)),
+                ]),
+              ),
+            )
+          else
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 6),
+              child: Text('단지 앞 가까운 정류장', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: kInk, letterSpacing: -0.3)),
+            ),
+          const Spacer(),
+          if (anyBusy)
+            const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 1.5))
+          else
+            Text('$left초 뒤 새로 고침', style: const TextStyle(fontSize: 11.5, color: kSub)),
+        ]),
+        const SizedBox(height: 8),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 260),
+          switchInCurve: Curves.easeOutCubic,
+          transitionBuilder: (w, a) => FadeTransition(
+            opacity: a,
+            child: SlideTransition(position: Tween(begin: const Offset(0, 0.08), end: Offset.zero).animate(a), child: w),
+          ),
+          child: Column(
+            key: ValueKey(shown.map((s) => s.id).join(',')),
+            children: [
+              for (var i = 0; i < shown.length; i++) ...[
+                if (i > 0) const SizedBox(height: 10),
+                _stopBlock(shown[i]),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        const Text('지도의 버스 아이콘을 누르면 그 정류장 도착 정보가 보여요  ·  국토교통부 TAGO', textAlign: TextAlign.center, style: T.tiny),
+      ]),
+    );
+  }
+
+  // 정류장 한 곳: 이름 · 방면 · 거리 / 버스별 한 줄 「103 · 3분 후 · 2정거장 전」
+  Widget _stopBlock(Stop s) {
+    final a = arrOf[s.id];
+    final gone = atOf[s.id] == null ? 0 : DateTime.now().difference(atOf[s.id]!).inSeconds;
+    final tw = towardMap[s.id] ?? '';
+    Widget body;
+    if (a == null) {
+      body = busy.contains(s.id) || atOf[s.id] == null
+          ? const Padding(padding: EdgeInsets.symmetric(vertical: 18), child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))))
+          : _quiet(errText(lastErr));
+    } else if (a.isEmpty) {
+      body = _quiet('지금 오는 버스 정보가 없어요');
+    } else {
+      final rows = byRoute(a);
+      body = Column(children: [
+        for (var i = 0; i < rows.length; i++) ...[
+          if (i > 0) const Divider(height: 1, thickness: 1, color: Color(0xFFEFF2F6)),
+          _busLine(s, rows[i].first, gone),
         ],
+      ]);
+    }
+    return Container(
+      decoration: cardBox(r: 16),
+      padding: const EdgeInsets.fromLTRB(16, 13, 6, 6),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Padding(padding: EdgeInsets.only(top: 1), child: LineIconBus()),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(s.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: -0.5, height: 1.25)),
+              const SizedBox(height: 2),
+              Text.rich(
+                TextSpan(children: [
+                  if (tw.isNotEmpty) TextSpan(text: '$tw 방면', style: const TextStyle(color: kInk, fontWeight: FontWeight.w700)),
+                  if (tw.isNotEmpty) const TextSpan(text: '  ·  '),
+                  TextSpan(text: '단지에서 ${distText(meters(c.pos, s.pos))}'),
+                  if (s.no.isNotEmpty) TextSpan(text: '  ·  ${s.no}'),
+                ]),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12, color: kSub, height: 1.3),
+              ),
+            ]),
+          ),
+          IconButton(
+            tooltip: pins.contains(s.id) ? '고정 풀기' : '자주 타는 정류장으로 고정',
+            visualDensity: VisualDensity.compact,
+            onPressed: () => _pin(s),
+            icon: Icon(pins.contains(s.id) ? Icons.push_pin_rounded : Icons.push_pin_outlined, size: 19, color: pins.contains(s.id) ? kBlue : kMute),
+          ),
+        ]),
+        const SizedBox(height: 6),
+        Padding(padding: const EdgeInsets.only(right: 10), child: body),
+      ]),
+    );
+  }
+
+  Widget _quiet(String t) => Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(color: const Color(0xFFF5F7FA), borderRadius: BorderRadius.circular(12)),
+        child: Text(t, style: const TextStyle(fontSize: 12.5, color: kSub, fontWeight: FontWeight.w600)),
       );
+
+  Widget _busLine(Stop s, Arrival a, int gone) {
+    final secs = (a.secs - gone).clamp(0, 99999);
+    final soon = secs <= 120 || a.left <= 1;
+    final col = busTypeColor(a.type);
+    final fav = favs.contains('${s.city}/${a.routeId}');
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: () => openRoute(context, s, a),
+      child: SizedBox(
+        height: 48,
+        child: Row(children: [
+          Container(
+            constraints: const BoxConstraints(minWidth: 58),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(color: col, borderRadius: BorderRadius.circular(12)),
+            child: Text(a.routeNo, maxLines: 1, textAlign: TextAlign.center, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.3, height: 1.2)),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text.rich(
+              TextSpan(children: [
+                TextSpan(text: soon ? '곧 도착' : '${(secs / 60).ceil()}분 후', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: soon ? const Color(0xFFE5484D) : kBlue, letterSpacing: -0.4)),
+                TextSpan(text: '  ·  ${a.leftText}', style: const TextStyle(fontSize: 12.5, color: Color(0xFF5A6475))),
+                if (a.lowFloor) const TextSpan(text: '  ·  저상', style: TextStyle(fontSize: 11.5, color: kSub)),
+              ]),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          IconButton(
+            tooltip: fav ? '즐겨찾기 풀기' : '즐겨찾기 버스로 고정 (단지 홈에 이 버스만)',
+            visualDensity: VisualDensity.compact,
+            onPressed: () => _fav(s, a),
+            icon: Icon(fav ? Icons.star_rounded : Icons.star_outline_rounded, size: 22, color: fav ? const Color(0xFFFFB020) : const Color(0xFFB4BCC9)),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+// 정류장 머리 작은 버스 아이콘
+class LineIconBus extends StatelessWidget {
+  const LineIconBus({super.key});
+  @override
+  Widget build(BuildContext context) => const LineIcon('bus', size: 26);
 }
 
 // 노선 하나 도착 카드: 파란 번호 칸 | 도착 예정 큰 분 · 남은 정거장 막대

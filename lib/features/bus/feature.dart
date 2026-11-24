@@ -1,6 +1,8 @@
 // 단지 앞 버스 (이 폴더는 단지 앞 버스 담당 방만 고침)
 // 단지 홈 반쪽 카드: 단지에서 가장 가까운(또는 고정한) 정류장에 먼저 오는 버스 2대 — 몇 분 · 몇 정거장
-// 상세 화면: 둘레 정류장 고르기 · 실시간 도착(30초마다) · 자주 타는 정류장 고정 · 노선 보기(정류장 순서·지금 버스 위치·첫차 막차) · 지도
+// 즐겨찾기 버스를 고정하면 홈 카드엔 그 버스만 (11-25)
+// 상세 화면(11-25): 지도 + 아래 창(가까운 정류장 2곳 양방향) · 정류장 누르면 그 정류장 · 목록 보기는 단추로
+// (예전) 상세 화면: 둘레 정류장 고르기 · 실시간 도착(30초마다) · 자주 타는 정류장 고정 · 노선 보기(정류장 순서·지금 버스 위치·첫차 막차) · 지도
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -24,7 +26,7 @@ class BusFeature extends Feature {
   @override
   int get order => 10;
   @override
-  String get version => '0.3.0';
+  String get version => '0.4.0';
   @override
   bool get ready => true;
   @override
@@ -85,6 +87,8 @@ class _HomeCardState extends State<_HomeCard> {
   Stop? stop;
   List<Arrival>? arr;
   var loading = true;
+  // 즐겨찾기 버스 (대표님 11-25): 고정한 버스가 있으면 홈 카드엔 그 버스만 — (노선, 타는 정류장, 지금 도착)
+  List<(Map, Stop, Arrival?)> favRows = [];
   Timer? _t;
 
   @override
@@ -120,7 +124,26 @@ class _HomeCardState extends State<_HomeCard> {
 
   Future<void> _refresh() async {
     final s = stop;
-    if (s != null) arr = await arrivals(s);
+    final c = widget.complex;
+    final favs = <(Map, Stop)>[];
+    for (final m in await favRoutes()) {
+      final fs = Stop.fromJson(m['s']) ?? s;
+      if (fs == null || meters(c.pos, fs.pos) > 1500) continue;
+      favs.add((m, fs));
+    }
+    if (favs.isNotEmpty) {
+      final byStop = <String, List<Arrival>?>{};
+      for (final f in favs) {
+        if (!byStop.containsKey(f.$2.id)) byStop[f.$2.id] = await arrivals(f.$2);
+      }
+      favRows = [
+        for (final f in favs.take(4))
+          (f.$1, f.$2, (byStop[f.$2.id] ?? const <Arrival>[]).where((a) => a.routeId == f.$1['r']).firstOrNull),
+      ];
+    } else {
+      favRows = [];
+      if (s != null) arr = await arrivals(s);
+    }
     if (!mounted) return;
     setState(() => loading = false);
   }
@@ -132,6 +155,13 @@ class _HomeCardState extends State<_HomeCard> {
     Widget body;
     if (loading) {
       body = Column(children: [for (var i = 0; i < 3; i++) const _Ghost()]);
+    } else if (favRows.isNotEmpty) {
+      body = Column(children: [
+        for (var i = 0; i < favRows.length; i++) ...[
+          if (i > 0) const Divider(height: 1, thickness: 1, color: Color(0xFFEEF1F5), indent: 76),
+          _FavRow(m: favRows[i].$1, stop: favRows[i].$2, a: favRows[i].$3, hot: i == 0),
+        ],
+      ]);
     } else if (s == null) {
       body = _msg(lastErr == BusErr.none ? '가까운 정류장이 없어요' : '정류장 자료를 모으고 있어요');
     } else if (arr == null) {
@@ -181,11 +211,15 @@ class _HomeCardState extends State<_HomeCard> {
                           const Text('단지 앞 버스', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.w800, letterSpacing: -0.5, height: 1.2)),
                           const SizedBox(height: 2),
                           Row(children: [
-                            const Icon(Icons.place_rounded, size: 13, color: Colors.white),
+                            Icon(favRows.isNotEmpty ? Icons.star_rounded : Icons.place_rounded, size: 13, color: Colors.white),
                             const SizedBox(width: 2),
                             Flexible(
                               child: Text(
-                                s == null ? '정류장을 찾고 있어요' : '${s.name} · ${distText(meters(c.pos, s.pos))}',
+                                favRows.isNotEmpty
+                                    ? '즐겨찾기 버스 ${favRows.length}개'
+                                    : s == null
+                                        ? '정류장을 찾고 있어요'
+                                        : '${s.name} · ${distText(meters(c.pos, s.pos))}',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(fontSize: 12, color: Color(0xF2FFFFFF), height: 1.3),
@@ -261,6 +295,46 @@ class _Row extends StatelessWidget {
             const Icon(Icons.directions_bus_rounded, size: 15, color: Color(0xFF5B78B0)),
             const SizedBox(width: 6),
             Text(a.minsText, style: TextStyle(fontSize: hot ? 17 : 15.5, fontWeight: FontWeight.w800, letterSpacing: -0.4, color: hot ? kBlue : kInk)),
+          ]),
+        ),
+      ]),
+    );
+  }
+}
+
+// 즐겨찾기 버스 한 줄: 노선 알약 · 타는 정류장 · 도착 (없으면 「정보 없음」)
+class _FavRow extends StatelessWidget {
+  final Map m;
+  final Stop stop;
+  final Arrival? a;
+  final bool hot;
+  const _FavRow({required this.m, required this.stop, required this.a, required this.hot});
+  @override
+  Widget build(BuildContext context) {
+    final col = _typeColor('${a?.type ?? m['t'] ?? ''}');
+    final no = a?.routeNo ?? '${m['no'] ?? ''}';
+    return SizedBox(
+      height: 52,
+      child: Row(children: [
+        Container(
+          constraints: const BoxConstraints(minWidth: 64),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+          decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [col.withValues(alpha: 0.85), col]), borderRadius: BorderRadius.circular(14)),
+          child: Text(no, maxLines: 1, textAlign: TextAlign.center, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.3, height: 1.2)),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(a == null ? '${stop.name} · 지금 오는 버스 정보가 없어요' : '${stop.name} · ${a!.leftText}',
+              maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, color: Color(0xFF4A5468))),
+        ),
+        const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.fromLTRB(10, 5, 12, 5),
+          decoration: BoxDecoration(color: const Color(0xFFEEF4FF), borderRadius: BorderRadius.circular(14)),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Icons.directions_bus_rounded, size: 15, color: Color(0xFF5B78B0)),
+            const SizedBox(width: 6),
+            Text(a == null ? '–' : a!.minsText, style: TextStyle(fontSize: hot ? 17 : 15.5, fontWeight: FontWeight.w800, letterSpacing: -0.4, color: hot && a != null ? kBlue : kInk)),
           ]),
         ),
       ]),

@@ -192,10 +192,10 @@ class _BusRoutePageState extends State<BusRoutePage> with SingleTickerProviderSt
   }
 
   Future<void> _toggleFav() async {
-    final on = await toggleFavRoute(s.city, a.routeId, a.routeNo);
+    final on = await toggleFavRoute(s.city, a.routeId, a.routeNo, stop: s, type: a.type);
     if (!mounted) return;
     setState(() => fav = on);
-    toast(context, on ? '즐겨찾는 노선에 넣었어요' : '즐겨찾기를 풀었어요');
+    toast(context, on ? '즐겨찾기 버스로 고정했어요 · 단지 홈에도 이 버스가 보여요' : '즐겨찾기를 풀었어요');
   }
 
   void _share() {
