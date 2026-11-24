@@ -5,7 +5,9 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 import 'package:flutter/services.dart';
 import 'package:latlong2/latlong.dart';
@@ -39,6 +41,7 @@ class _EventsPageState extends State<EventsPage> {
   double km = 30;
   double zoom = 11;
   int pending = 0;
+  final Map<String, ui.Image> pics = {}; // 지도 상자용 작은 사진 (미리 풀어 둠 — 네이버 지도는 상자를 그림으로 한 번 찍기 때문)
 
   @override
   void initState() {
@@ -56,8 +59,29 @@ class _EventsPageState extends State<EventsPage> {
       pending = p;
       loading = false;
     });
+    _loadPics();
     final pts = [widget.c.pos, for (final e in all) e.pos];
     if (pts.length > 1) Future.delayed(const Duration(milliseconds: 700), () => ctl.fit(pts, const EdgeInsets.fromLTRB(50, 60, 50, 110), maxZoom: 15));
+  }
+
+  Future<void> _loadPics() async {
+    for (final e in all.take(60)) {
+      if (!mounted) return;
+      if (pics.containsKey(e.id)) continue;
+      try {
+        Uint8List? b;
+        if (e.thumbs.isNotEmpty) {
+          b = base64Decode(e.thumbs.first);
+        } else if (e.img.isNotEmpty && !kIsWeb) {
+          final r = await http.get(Uri.parse(e.img)).timeout(const Duration(seconds: 12));
+          if (r.statusCode == 200) b = r.bodyBytes;
+        }
+        if (b == null) continue;
+        final codec = await ui.instantiateImageCodec(b, targetWidth: 120);
+        final f = await codec.getNextFrame();
+        if (mounted) setState(() => pics[e.id] = f.image);
+      } catch (_) {}
+    }
   }
 
   List<Ev> get shown {
@@ -185,7 +209,7 @@ class _EventsPageState extends State<EventsPage> {
 
   // ---- 지도: 가까운 것끼리 숫자 묶음 ----
   Widget _map(List<Ev> l) {
-    final cell = 0.0009 * math.pow(2, 16 - zoom); // 화면에서 약 60px
+    final cell = 0.0024 * math.pow(2, 16 - zoom); // 화면에서 약 160px (상자 크기)
     final groups = <String, List<Ev>>{};
     for (final e in l) {
       groups.putIfAbsent('${(e.pos.latitude / cell).floor()}_${(e.pos.longitude / cell).floor()}', () => []).add(e);
@@ -195,16 +219,23 @@ class _EventsPageState extends State<EventsPage> {
       final es = g.value;
       if (es.length == 1) {
         final e = es.first;
-        marks.add(DnMark(id: e.id, pos: e.pos, key: 'e|${e.id}|${e.kind}', size: const Size(36, 44), child: _Pin(e), onTap: () => showEvent(context, e, widget.c)));
+        marks.add(DnMark(
+          id: e.id,
+          pos: e.pos,
+          key: 'e|${e.id}|${pics[e.id] != null}',
+          size: const Size(_Mark.w, _Mark.h + 7),
+          child: _Mark(e, pics[e.id]),
+          onTap: () => showEvent(context, e, widget.c),
+        ));
       } else {
         final lat = es.map((e) => e.pos.latitude).reduce((a, b) => a + b) / es.length;
         final lng = es.map((e) => e.pos.longitude).reduce((a, b) => a + b) / es.length;
         marks.add(DnMark(
           id: 'g${g.key}',
           pos: LatLng(lat, lng),
-          key: 'g|${es.length}',
-          size: const Size(44, 44),
-          child: _Bunch(es.length),
+          key: 'g|${es.first.id}|${es.length}|${pics[es.first.id] != null}',
+          size: const Size(74, 74),
+          child: _Bunch(es.first, es.length, pics[es.first.id]),
           onTap: () => ctl.fit([for (final e in es) e.pos], const EdgeInsets.all(70), maxZoom: 16),
         ));
       }
@@ -229,33 +260,106 @@ class _EventsPageState extends State<EventsPage> {
       );
 }
 
-class _Pin extends StatelessWidget {
+// 지도 표시: 사진 + 이름이 든 작은 상자 (누르기 전부터 무슨 행사인지 보이게)
+class _Mark extends StatelessWidget {
   final Ev e;
-  const _Pin(this.e);
+  final ui.Image? pic;
+  const _Mark(this.e, this.pic);
+  static const w = 150.0, h = 58.0;
   @override
   Widget build(BuildContext context) {
     final col = kEvColor[e.kind] ?? kBlue;
     return Column(mainAxisSize: MainAxisSize.min, children: [
       Container(
-        width: 32,
-        height: 32,
-        decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, border: Border.all(color: col, width: 2.2), boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 4)]),
-        child: Center(child: Container(width: 12, height: 12, decoration: BoxDecoration(color: col, shape: BoxShape.circle))),
+        width: w,
+        height: h,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFFDDE1E8)),
+          boxShadow: const [BoxShadow(color: Color(0x22000000), blurRadius: 6)],
+        ),
+        child: Row(children: [
+          Padding(
+            padding: const EdgeInsets.all(4),
+            child: ClipRRect(borderRadius: BorderRadius.circular(7), child: SizedBox(width: 48, height: 48, child: _markPic(e, pic))),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(3, 0, 7, 0),
+              child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(e.liveAt(DateTime.now()) ? '${e.kind} · 진행 중' : '${e.kind} · ${e.start.month}.${e.start.day}~',
+                    maxLines: 1, style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w800, color: col, height: 1.2)),
+                const SizedBox(height: 1),
+                Text(e.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: kInk, height: 1.2, letterSpacing: -0.3)),
+              ]),
+            ),
+          ),
+        ]),
       ),
-      Container(width: 2, height: 10, color: col),
+      CustomPaint(size: const Size(12, 7), painter: _Tail()),
     ]);
   }
 }
 
-class _Bunch extends StatelessWidget {
-  final int n;
-  const _Bunch(this.n);
+Widget _markPic(Ev e, ui.Image? pic) {
+  if (pic != null) return RawImage(image: pic, fit: BoxFit.cover);
+  if (kIsWeb && e.img.isNotEmpty) return Image.network(e.img, fit: BoxFit.cover, webHtmlElementStrategy: WebHtmlElementStrategy.prefer);
+  final col = kEvColor[e.kind] ?? kBlue;
+  return ColoredBox(color: col.withValues(alpha: 0.14), child: const Center(child: LineIcon('event', size: 28)));
+}
+
+class _Tail extends CustomPainter {
   @override
-  Widget build(BuildContext context) => Container(
-        width: 42,
-        height: 42,
-        decoration: BoxDecoration(color: const Color(0xEEFF7A59), shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2.5), boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 5)]),
-        child: Center(child: Text('$n', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 15))),
+  void paint(Canvas c, Size s) {
+    final p = ui.Path()
+      ..moveTo(0, 0)
+      ..lineTo(s.width, 0)
+      ..lineTo(s.width / 2, s.height)
+      ..close();
+    c.drawPath(p, Paint()..color = Colors.white);
+    c.drawPath(ui.Path()..moveTo(0, 0)..lineTo(s.width / 2, s.height)..lineTo(s.width, 0), Paint()..color = const Color(0xFFDDE1E8)..style = PaintingStyle.stroke..strokeWidth = 1);
+  }
+
+  @override
+  bool shouldRepaint(_) => false;
+}
+
+// 겹친 행사 묶음: 첫 행사 사진 + 개수
+class _Bunch extends StatelessWidget {
+  final Ev first;
+  final int n;
+  final ui.Image? pic;
+  const _Bunch(this.first, this.n, this.pic);
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        width: 74,
+        height: 74,
+        child: Stack(children: [
+          Positioned(
+            left: 8,
+            top: 8,
+            child: Container(
+              width: 58,
+              height: 58,
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: const [BoxShadow(color: Color(0x22000000), blurRadius: 6)]),
+              padding: const EdgeInsets.all(3),
+              child: ClipRRect(borderRadius: BorderRadius.circular(9), child: _markPic(first, pic)),
+            ),
+          ),
+          Positioned(
+            right: 0,
+            top: 0,
+            child: Container(
+              constraints: const BoxConstraints(minWidth: 26),
+              height: 26,
+              padding: const EdgeInsets.symmetric(horizontal: 7),
+              decoration: BoxDecoration(color: const Color(0xFFFF7A59), borderRadius: BorderRadius.circular(13), border: Border.all(color: Colors.white, width: 2)),
+              alignment: Alignment.center,
+              child: Text('$n', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12.5, height: 1)),
+            ),
+          ),
+        ]),
       );
 }
 
