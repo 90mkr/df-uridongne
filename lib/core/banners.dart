@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'data.dart';
+import 'home.dart' show homeRefresh;
 import 'ui.dart';
 
 class HomeBanners extends StatefulWidget {
@@ -22,7 +23,14 @@ class _HomeBannersState extends State<HomeBanners> {
   @override
   void initState() {
     super.initState();
-    getJson('${dataBase}banners.json').then((j) {
+    homeRefresh.addListener(_load); // 홈을 아래로 당겨 새로고침하면 배너도 다시 받음
+    _load();
+  }
+
+  void _load() {
+    t?.cancel();
+    // 배너는 바뀌면 바로 보이게: 1분 단위로 새로 받음
+    getJson('${dataBase}banners.json?m=${DateTime.now().millisecondsSinceEpoch ~/ 60000}').then((j) {
       if (!mounted || j is! Map) return;
       final l = <(String, String, String)>[
         for (final b in (j['b'] as List? ?? const []))
@@ -40,6 +48,7 @@ class _HomeBannersState extends State<HomeBanners> {
 
   @override
   void dispose() {
+    homeRefresh.removeListener(_load);
     t?.cancel();
     pc.dispose();
     super.dispose();
