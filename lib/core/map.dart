@@ -173,7 +173,8 @@ class _DongneMapState extends State<DongneMap> {
       if (p != null)
         Positioned(
           left: 12,
-          right: 12,
+          // 태블릿·펼친 폰: 화면 반만 (꽉 채우면 답답함, 대표님 11-24)
+          right: MediaQuery.of(context).size.width >= 600 ? MediaQuery.of(context).size.width / 2 : 12,
           bottom: 12,
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 180),
