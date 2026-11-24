@@ -111,7 +111,12 @@ class _HomeCardState extends State<_HomeCard> with SingleTickerProviderStateMixi
     return Padding(
       padding: EdgeInsets.only(top: lift - 4),
       child: Stack(clipBehavior: Clip.none, children: [
-        Material(
+        Semantics(
+          button: true,
+          label: '오늘 뭐 먹지 룰렛 열기',
+          child: SizedBox(
+          width: double.infinity,
+          child: Material(
           color: Colors.transparent,
           child: InkWell(
             borderRadius: BorderRadius.circular(kRadius + 2),
@@ -144,6 +149,8 @@ class _HomeCardState extends State<_HomeCard> with SingleTickerProviderStateMixi
                 ),
               ]),
             ),
+          ),
+        ),
           ),
         ),
         // 원판: 오른쪽 위로 카드 밖 ⅓
