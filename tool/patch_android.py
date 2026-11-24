@@ -127,3 +127,48 @@ for g in glob.glob("android/app/build.gradle*"):
     t2 = re.sub(r"minSdkVersion\s+flutter\.minSdkVersion", "minSdkVersion 24", t2)
     if t2 != t:
         open(g, "w", encoding="utf-8").write(t2)
+
+
+# 기념일 알림(flutter_local_notifications) · 시계 앱 알람: 권한·받개·desugaring (11-24)
+s = open(path, encoding="utf-8").read()
+for perm in ("POST_NOTIFICATIONS", "RECEIVE_BOOT_COMPLETED"):
+    if f"android.permission.{perm}" not in s:
+        s = s.replace("<application", f'<uses-permission android:name="android.permission.{perm}"/>\n    <application', 1)
+if "com.android.alarm.permission.SET_ALARM" not in s:
+    s = s.replace("<application", '<uses-permission android:name="com.android.alarm.permission.SET_ALARM"/>\n    <application', 1)
+if "ScheduledNotificationReceiver" not in s:
+    rec = """
+        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
+"""
+    s = s.replace("</application>", rec + "    </application>", 1)
+if "android.intent.action.SET_ALARM" not in s and "<queries>" in s:
+    s = s.replace("<queries>", """<queries>
+        <intent>
+            <action android:name="android.intent.action.SET_ALARM" />
+        </intent>""", 1)
+open(path, "w", encoding="utf-8").write(s)
+
+for g in glob.glob("android/app/build.gradle*"):
+    t = open(g, encoding="utf-8").read()
+    kts = g.endswith(".kts")
+    if "CoreLibraryDesugaring" not in t and "coreLibraryDesugaring" not in t:
+        flag = "        isCoreLibraryDesugaringEnabled = true\n" if kts else "        coreLibraryDesugaringEnabled true\n"
+        if "compileOptions {" in t:
+            t = t.replace("compileOptions {\n", "compileOptions {\n" + flag, 1)
+        else:
+            t = t.replace("android {\n", "android {\n    compileOptions {\n" + flag + "    }\n", 1)
+        dep = 'coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")' if kts else "coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'"
+        if re.search(r"^dependencies \{", t, re.M):
+            t = re.sub(r"^dependencies \{", "dependencies {\n    " + dep, t, count=1, flags=re.M)
+        else:
+            t += "\ndependencies {\n    " + dep + "\n}\n"
+        open(g, "w", encoding="utf-8").write(t)
+print("알림·알람 설정 완료")

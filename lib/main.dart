@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 
 import 'core/home_layout.dart';
+import 'features/anniv/data.dart';
 import 'core/nmap.dart';
 
 import 'core/shell.dart';
@@ -10,7 +11,8 @@ import 'core/theme.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initNaverMap(); // 휴대폰: 네이버 지도 준비 (웹은 아무것도 안 함)
-  await loadHomeLayout(); // 「홈 화면 꾸미기」 설정 (이 휴대폰에 저장된 순서·끈 카드)
+  await loadHomeLayout();
+  loadAnnivs(); // 기념일 알림을 해마다 이어서 다시 맞춤 (기다리지 않음) // 「홈 화면 꾸미기」 설정 (이 휴대폰에 저장된 순서·끈 카드)
   runApp(const DongneApp());
 }
 

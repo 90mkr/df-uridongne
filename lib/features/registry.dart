@@ -1,6 +1,8 @@
 // 기능 등록부 (본부 방만 고침)
 // 기능 방이 새 기능을 만들면 본부 방에 「등록 요청」을 남기고, 본부 방이 여기에 한 줄 넣는다.
 import '../core/feature.dart';
+import 'alarm/feature.dart';
+import 'anniv/feature.dart';
 import 'bus/feature.dart';
 import 'charger/feature.dart';
 import 'deals/feature.dart';
@@ -27,6 +29,8 @@ final List<Feature> features = [
   ParkingFeature(),
   PostcodeFeature(),
   LottoFeature(),
+  AnnivFeature(), // 생활 도구 + 홈 한 줄: 다가오는 기념일
+  AlarmFeature(), // 생활 도구: 시계 앱 알람 넣기
 ];
 
 Feature? featureById(String id) => features.where((f) => f.id == id).firstOrNull;
