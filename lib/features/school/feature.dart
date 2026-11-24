@@ -332,6 +332,14 @@ class _MineState extends State<_Mine> {
     });
   }
 
+  Future<void> _alarm(BuildContext context) async {
+    final on = !alarm;
+    await setMealAlarm(widget.s.id, on);
+    if (!mounted) return;
+    setState(() => alarm = on);
+    toast(this.context, on ? '아침마다 「지금 우리 단지」에 오늘 급식을 먼저 보여 드려요' : '급식 알림을 껐어요');
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = widget.s, now = widget.now;
@@ -351,6 +359,15 @@ class _MineState extends State<_Mine> {
           const LineIcon('school', size: 32),
           const SizedBox(width: 10),
           Expanded(child: Text(s.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 18.5, fontWeight: FontWeight.w800, letterSpacing: -0.6))),
+          // 좁은 폰: 학교 이름이 잘리지 않게 종 아이콘만
+          if (MediaQuery.of(context).size.width < 400)
+            IconButton(
+              tooltip: '급식 알림',
+              visualDensity: VisualDensity.compact,
+              onPressed: () => _alarm(context),
+              icon: Icon(alarm ? Icons.notifications_active_rounded : Icons.notifications_none_rounded, size: 23, color: kBlue),
+            )
+          else
           OutlinedButton.icon(
             onPressed: () async {
               final on = !alarm;
@@ -428,7 +445,7 @@ class _MealRow extends StatelessWidget {
         const Icon(Icons.restaurant_rounded, size: 18, color: kBlue),
         const SizedBox(width: 9),
         // 반찬 이름 가운데서 줄이 갈리지 않게 (대표님 규칙) — 글자 사이를 붙이고 「 · 」에서만 줄바꿈
-        Expanded(child: Text(m.dishes.map((d) => d.split('').join('\u2060')).join(' · '), style: const TextStyle(fontSize: 13, height: 1.4, color: kInk, letterSpacing: -0.2))),
+        Expanded(child: Text(m.dishes.map((d) => d.split('').join('\u2060')).join('\u00A0· '), style: const TextStyle(fontSize: 13, height: 1.4, color: kInk, letterSpacing: -0.2))),
       ]),
     );
   }
