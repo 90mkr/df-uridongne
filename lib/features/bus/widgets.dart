@@ -20,7 +20,7 @@ class BusHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final top = MediaQuery.paddingOf(context).top;
     return Container(
-      height: top + (art ? 120 : 64),
+      height: top + (art ? 128 : 64),
       decoration: const BoxDecoration(
         gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.white, Color(0xFFEAF2FD)]),
       ),
@@ -46,9 +46,11 @@ class BusHeader extends StatelessWidget {
             ),
             const Spacer(),
             ...actions,
-            if (trailing != null) ...[trailing!, const SizedBox(width: 12)],
+            if (trailing != null && !art) ...[trailing!, const SizedBox(width: 12)],
           ]),
         ),
+        // 사진 머리띠일 때: 단추는 제목 밑 왼쪽 (대표님 11-24 — 오른쪽은 사진과 겹쳐 자리가 어색)
+        if (trailing != null && art) Positioned(left: 56, top: top + 60, child: trailing!),
       ]),
     );
   }
@@ -60,9 +62,28 @@ class BusPillBtn extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
   final Color iconColor;
-  const BusPillBtn(this.text, this.icon, this.onTap, {super.key, this.iconColor = kInk});
+  final bool glass; // 사진 위: 반투명 흰 유리 단추
+  const BusPillBtn(this.text, this.icon, this.onTap, {super.key, this.iconColor = kInk, this.glass = false});
   @override
-  Widget build(BuildContext context) => Material(
+  Widget build(BuildContext context) => glass
+      ? Material(
+          color: const Color(0x33FFFFFF),
+          borderRadius: BorderRadius.circular(18),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(18),
+            onTap: onTap,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(11, 6, 14, 6),
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xB3FFFFFF))),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(icon, size: 16, color: Colors.white),
+                const SizedBox(width: 6),
+                Text(text, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Colors.white)),
+              ]),
+            ),
+          ),
+        )
+      : Material(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
         child: InkWell(

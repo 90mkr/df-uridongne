@@ -127,7 +127,7 @@ class _BusPageState extends State<BusPage> {
             title: '단지 앞 버스',
             trailing: stops.isEmpty
                 ? null
-                : BusPillBtn(mapView ? '목록' : '지도', mapView ? Icons.view_list_outlined : Icons.map_outlined, () => setState(() => mapView = !mapView)),
+                : BusPillBtn(mapView ? '목록으로 보기' : '지도로 보기', mapView ? Icons.view_list_outlined : Icons.map_outlined, () => setState(() => mapView = !mapView), glass: true),
           ),
           Expanded(
             child: Center(
@@ -161,7 +161,7 @@ class _BusPageState extends State<BusPage> {
     final s = stop!;
     return RefreshIndicator(
       onRefresh: _fetch,
-      child: ListView(padding: const EdgeInsets.fromLTRB(0, 4, 0, 30), children: [
+      child: ListView(padding: const EdgeInsets.fromLTRB(0, 18, 0, 30), children: [
         _tabs(),
         const SizedBox(height: 14),
         Padding(padding: const EdgeInsets.symmetric(horizontal: kPad), child: _stopCard(s)),
