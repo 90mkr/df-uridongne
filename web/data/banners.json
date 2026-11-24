@@ -1,5 +1,5 @@
 {"note": "홈 맨 아래 배너 (대표님 11-24). 그림·주소만 바꾸면 앱을 새로 깔지 않아도 바뀜. img 는 web/data/ 기준",
  "b": [
-  {"img": "banner/designfeel.jpg", "url": "https://designfeel.kr", "alt": "디자인필 맞춤형 홈페이지 제작"},
-  {"img": "banner/kokple.jpg", "url": "https://github.com/90mkr/df-app-lab/releases/latest", "alt": "콕플 유튜브 맛집 지도"}
+  {"img": "banner/designfeel.png", "url": "https://designfeel.kr", "alt": "디자인필 맞춤형 홈페이지 제작"},
+  {"img": "banner/kokple.png", "url": "https://github.com/90mkr/df-app-lab/releases/latest", "alt": "콕플 유튜브 맛집 지도"}
  ]}

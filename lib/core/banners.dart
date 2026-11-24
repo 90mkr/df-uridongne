@@ -50,9 +50,9 @@ class _HomeBannersState extends State<HomeBanners> {
     if (items.isEmpty) return const SizedBox.shrink();
     return Column(children: [
       AspectRatio(
-        aspectRatio: 1035 / 270,
+        aspectRatio: 3, // 대표님 배너 그림 2172×724
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(10),
           child: PageView.builder(
             controller: pc,
             itemCount: items.length,
@@ -62,7 +62,7 @@ class _HomeBannersState extends State<HomeBanners> {
               button: true,
               child: GestureDetector(
                 onTap: items[i].$2.isEmpty ? null : () => openUrl(items[i].$2),
-                child: Image.network(items[i].$1, fit: BoxFit.cover, webHtmlElementStrategy: WebHtmlElementStrategy.prefer, errorBuilder: (_, __, ___) => const ColoredBox(color: Color(0xFFE8EEF8))),
+                child: Image.network(items[i].$1, fit: BoxFit.contain, webHtmlElementStrategy: WebHtmlElementStrategy.prefer, errorBuilder: (_, __, ___) => const SizedBox()),
               ),
             ),
           ),
