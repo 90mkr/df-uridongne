@@ -91,7 +91,8 @@ Future<void> signOut() async {
 Future<String?> _run(Future<void> Function() f, String fail) async {
   if (!await fbReady()) return '지금은 로그인할 수 없어요';
   try {
-    await f();
+    // 브라우저로 넘어갔다 돌아오지 못하면 단추가 계속 잠기지 않게 (대표님 11-24: 구글 단추가 안 눌림)
+    await f().timeout(const Duration(seconds: 90));
     authTick.value++;
     return null;
   } on fa.FirebaseAuthException catch (e) {
