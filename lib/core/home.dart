@@ -390,11 +390,11 @@ class _TodayHeroState extends State<TodayHero> {
       clipBehavior: Clip.antiAlias,
       child: Stack(children: [
         // 사진은 카드 전체, 파랑 필터는 글자 쪽 왼편만 좁게 (대표님 11-24)
-        Positioned.fill(child: Image.asset('assets/art/hero.jpg', fit: BoxFit.cover, alignment: const Alignment(0.6, 0), filterQuality: FilterQuality.medium)),
+        Positioned.fill(child: ColorFiltered(colorFilter: const ColorFilter.mode(Color(0x2E06163F), BlendMode.multiply), child: Image.asset('assets/art/hero.jpg', fit: BoxFit.cover, alignment: const Alignment(0.6, 0), filterQuality: FilterQuality.medium))),
         const Positioned.fill(
           child: DecoratedBox(
             decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [Color(0xF20B4DBA), Color(0xB81570EA), Color(0x001570EA)], stops: [0, 0.38, 0.62]),
+              gradient: LinearGradient(colors: [Color(0xF20B4DBA), Color(0xC21570EA), Color(0x330A2A6E)], stops: [0, 0.46, 0.74]),
             ),
           ),
         ),
