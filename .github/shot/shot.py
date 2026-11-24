@@ -86,12 +86,10 @@ def session(b, tag, W, H, steps):
 
 def phone(shot, tap, drag, sem, W, H):
     shot("홈")
-    tap("전화번호부", wait=6)
-    shot("전화번호부_탭")
-    pg_wheel(800)
-    shot("전화번호부_탭_아래")
-    tap("생활 도구", wait=5)
-    shot("생활도구")
+    for i in range(4):
+        pg_wheel(1500)
+    pg_wheel(-1200)
+    shot("홈_버스지하철")
 
 
 def tablet(shot, tap, drag, sem, W, H):

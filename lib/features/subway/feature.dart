@@ -12,7 +12,6 @@ import '../../core/theme.dart';
 import '../../core/ui.dart';
 import 'data.dart';
 
-const _band = [Color(0xFF6A5AE0), Color(0xFF8E7CF0)];
 const _ink = Color(0xFF5B4BD6);
 
 class SubwayFeature extends Feature {
@@ -77,7 +76,7 @@ class _HomeCardState extends State<_HomeCard> {
     if (s == null) {
       body = const SizedBox(height: 96);
     } else if (!s.hasTable) {
-      body = SizedBox(height: 96, child: Center(child: Text('시간표를 준비하고 있어요', style: T.small)));
+      body = const SizedBox(height: 70, child: Center(child: Text('시간표를 준비하고 있어요', style: T.small)));
     } else {
       body = Column(children: [
         _Dir(s: s, ud: 'U', now: now),
@@ -85,53 +84,94 @@ class _HomeCardState extends State<_HomeCard> {
         _Dir(s: s, ud: 'D', now: now),
       ]);
     }
+    // 대표님 시안(11-24): 보라 머리띠 + 오른쪽 전철 그림 + 흰 「시간표」 단추, 흰 판이 둥글게 겹침, 아래 안내는 옅은 상자
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(kRadius),
+        borderRadius: BorderRadius.circular(20),
         onTap: () => openFeature(context, widget.f),
         child: Ink(
-          decoration: cardBox(),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: const Color(0xFF6A5AE0).withValues(alpha: 0.16), blurRadius: 16)]),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(kRadius),
+            borderRadius: BorderRadius.circular(20),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               Container(
-                height: 64,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: const BoxDecoration(gradient: LinearGradient(colors: _band)),
-                child: Row(children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(11)),
-                    child: const LineIcon('subway', size: 26),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-                      const Text.rich(
-                        TextSpan(children: [
-                          TextSpan(text: '가까운 역 ', style: TextStyle(fontWeight: FontWeight.w400)),
-                          TextSpan(text: '지하철', style: TextStyle(fontWeight: FontWeight.w800)),
-                        ]),
-                        style: TextStyle(fontSize: 15.5, color: Colors.white, letterSpacing: -0.4, height: 1.2),
+                height: 84,
+                decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFF7E6BE7), Color(0xFF8571EE)])),
+                child: Stack(children: [
+                  Positioned(right: 80, bottom: 0, top: 6, child: Image.asset('assets/art/subway_head.png', fit: BoxFit.fitHeight)),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 0, 12, 10),
+                    child: Row(children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(13)),
+                        child: const LineIcon('subway', size: 32),
                       ),
-                      Text(
-                        s == null ? '역을 찾고 있어요' : '${s.name}역 · ${s.line} · ${distText(meters(widget.c.pos, s.pos))}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 12, color: Color(0xE6FFFFFF), height: 1.3),
+                      const SizedBox(width: 11),
+                      Expanded(
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
+                          const Text('가까운 역 지하철', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.w800, letterSpacing: -0.5, height: 1.2)),
+                          const SizedBox(height: 2),
+                          Row(children: [
+                            const Icon(Icons.place_rounded, size: 13, color: Colors.white),
+                            const SizedBox(width: 2),
+                            Flexible(
+                              child: Text(
+                                s == null ? '역을 찾고 있어요' : '${s.name}역 · ${s.line} · ${distText(meters(widget.c.pos, s.pos))}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 12, color: Color(0xF2FFFFFF), height: 1.3),
+                              ),
+                            ),
+                          ]),
+                        ]),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(12, 6, 6, 6),
+                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+                        child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                          Text('시간표', style: TextStyle(fontSize: 12, color: _ink, fontWeight: FontWeight.w800)),
+                          Icon(Icons.chevron_right_rounded, color: _ink, size: 18),
+                        ]),
                       ),
                     ]),
                   ),
-                  const Text('시간표', style: TextStyle(fontSize: 11.5, color: Colors.white, fontWeight: FontWeight.w700)),
-                  const SizedBox(width: 2),
-                  const Icon(Icons.chevron_right_rounded, color: Colors.white, size: 20),
                 ]),
               ),
-              Padding(padding: const EdgeInsets.fromLTRB(14, 2, 14, 0), child: body),
-              if (s != null) _NaverLink(s: s),
+              Transform.translate(
+                offset: const Offset(0, -12),
+                child: Container(
+                  decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(18))),
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    if (s != null)
+                      // 노선 띠: 동그라미 번호 + 노선 이름
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(10, 8, 12, 8),
+                        decoration: BoxDecoration(color: const Color(0xFFEEF2FF), borderRadius: BorderRadius.circular(12)),
+                        child: Row(children: [
+                          Container(
+                            width: 22,
+                            height: 22,
+                            alignment: Alignment.center,
+                            decoration: const BoxDecoration(color: Color(0xFF2F6BFF), shape: BoxShape.circle),
+                            child: Text(RegExp(r'\d').firstMatch(s.line)?.group(0) ?? 'M', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white)),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(s.line, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF2F4FC8))),
+                          const Spacer(),
+                          Text('${s.name}역', style: const TextStyle(fontSize: 12, color: kSub)),
+                        ]),
+                      ),
+                    body,
+                    if (s != null) _NaverLink(s: s),
+                    const SizedBox(height: 2),
+                  ]),
+                ),
+              ),
             ]),
           ),
         ),
@@ -177,17 +217,27 @@ class _NaverLink extends StatelessWidget {
   final Station s;
   const _NaverLink({required this.s});
   @override
-  Widget build(BuildContext context) => InkWell(
-        onTap: () => openUrl(naverStationUrl(s)),
-        child: Container(
-          height: 38,
-          decoration: const BoxDecoration(border: Border(top: BorderSide(color: kLine))),
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: const Row(children: [
-            Expanded(child: Text('시간표 기준이에요. 늦어질 수 있어요.', style: T.tiny)),
-            Text('네이버 지도에서 실시간', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: kBlue)),
-            Icon(Icons.chevron_right_rounded, size: 16, color: kBlue),
-          ]),
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(top: 6),
+        child: Material(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => openUrl(naverStationUrl(s)),
+            child: Container(
+              height: 40,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFE3E8F0))),
+              child: const Row(children: [
+                Icon(Icons.info_outline_rounded, size: 15, color: kSub),
+                SizedBox(width: 6),
+                Expanded(child: Text('시간표 기준이에요. 늦어질 수 있어요.', style: T.tiny)),
+                Text('네이버 지도에서 실시간', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: kBlue)),
+                Icon(Icons.chevron_right_rounded, size: 16, color: kBlue),
+              ]),
+            ),
+          ),
         ),
       );
 }

@@ -142,62 +142,76 @@ class _HomeCardState extends State<_HomeCard> {
       final rows = byRoute(arr!).take(4).toList();
       body = Column(children: [
         for (var i = 0; i < rows.length; i++) ...[
-          if (i > 0) const Divider(height: 1, thickness: 1, color: kLine),
+          if (i > 0) const Divider(height: 1, thickness: 1, color: Color(0xFFEEF1F5), indent: 76),
           _Row(r: rows[i], hot: i == 0),
         ],
       ]);
     }
+    // 대표님 시안(11-24): 진한 파랑 머리띠 + 오른쪽 정류장·버스 그림 + 흰 「실시간」 단추, 흰 판이 둥글게 겹쳐 올라옴
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(kRadius),
+        borderRadius: BorderRadius.circular(20),
         onTap: () => openFeature(context, f),
         child: Ink(
-          decoration: cardBox(),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: const Color(0xFF0A74F4).withValues(alpha: 0.16), blurRadius: 16)]),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(kRadius),
+            borderRadius: BorderRadius.circular(20),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              // 머리띠
               Container(
-                height: 64,
-                decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFF2F6BFF), Color(0xFF5B8CFF)])),
+                height: 84,
+                decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFF0A6CF0), Color(0xFF2A8CFB)])),
                 child: Stack(children: [
+                  Positioned(right: 86, bottom: 0, top: 6, child: Image.asset('assets/art/bus_head.png', fit: BoxFit.fitHeight)),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 0),
+                    padding: const EdgeInsets.fromLTRB(14, 0, 12, 10),
                     child: Row(children: [
                       Container(
-                        width: 36,
-                        height: 36,
+                        width: 44,
+                        height: 44,
                         alignment: Alignment.center,
-                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(11)),
-                        child: const LineIcon('bus', size: 26),
+                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(13)),
+                        child: const LineIcon('bus', size: 32),
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 11),
                       Expanded(
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-                          const Text.rich(
-                            TextSpan(children: [
-                              TextSpan(text: '단지 앞 ', style: TextStyle(fontWeight: FontWeight.w400)),
-                              TextSpan(text: '버스', style: TextStyle(fontWeight: FontWeight.w800)),
-                            ]),
-                            style: TextStyle(fontSize: 15.5, color: Colors.white, letterSpacing: -0.4, height: 1.2),
-                          ),
-                          Text(
-                            s == null ? '정류장을 찾고 있어요' : '${s.name} · ${distText(meters(c.pos, s.pos))}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 12, color: Color(0xE6FFFFFF), height: 1.3),
-                          ),
+                          const Text('단지 앞 버스', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.w800, letterSpacing: -0.5, height: 1.2)),
+                          const SizedBox(height: 2),
+                          Row(children: [
+                            const Icon(Icons.place_rounded, size: 13, color: Colors.white),
+                            const SizedBox(width: 2),
+                            Flexible(
+                              child: Text(
+                                s == null ? '정류장을 찾고 있어요' : '${s.name} · ${distText(meters(c.pos, s.pos))}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 12, color: Color(0xF2FFFFFF), height: 1.3),
+                              ),
+                            ),
+                          ]),
                         ]),
                       ),
-                      const Text('실시간', style: TextStyle(fontSize: 11.5, color: Colors.white, fontWeight: FontWeight.w700)),
-                      const SizedBox(width: 2),
-                      const Icon(Icons.chevron_right_rounded, color: Colors.white, size: 20),
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(12, 6, 6, 6),
+                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+                        child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                          Text('실시간', style: TextStyle(fontSize: 12, color: Color(0xFF0A6CF0), fontWeight: FontWeight.w800)),
+                          Icon(Icons.chevron_right_rounded, color: Color(0xFF0A6CF0), size: 18),
+                        ]),
+                      ),
                     ]),
                   ),
                 ]),
               ),
-              Padding(padding: const EdgeInsets.fromLTRB(14, 4, 14, 6), child: body),
+              Transform.translate(
+                offset: const Offset(0, -12),
+                child: Container(
+                  decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(18))),
+                  padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+                  child: body,
+                ),
+              ),
             ]),
           ),
         ),
@@ -224,24 +238,29 @@ class _Row extends StatelessWidget {
     final a = r.first, n = r.next;
     final col = _typeColor(a.type);
     return SizedBox(
-      height: 46,
+      height: 52,
       child: Row(children: [
+        // 노선 번호: 종류 색으로 꽉 찬 알약 + 흰 글자
         Container(
-          constraints: const BoxConstraints(minWidth: 56),
-          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-          decoration: BoxDecoration(color: col.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(7)),
-          child: Text(a.routeNo, maxLines: 1, textAlign: TextAlign.center, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: col, letterSpacing: -0.3, height: 1.2)),
+          constraints: const BoxConstraints(minWidth: 64),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+          decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [col.withValues(alpha: 0.85), col]), borderRadius: BorderRadius.circular(14)),
+          child: Text(a.routeNo, maxLines: 1, textAlign: TextAlign.center, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.3, height: 1.2)),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 12),
         Expanded(
-          child: Text(
-            n == null ? a.leftText : '${a.leftText} · 다음 ${n.minsText}',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: T.tiny,
-          ),
+          child: Text(n == null ? a.leftText : '${a.leftText} · 다음 ${n.minsText}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, color: Color(0xFF4A5468))),
         ),
-        Text(a.minsText, style: TextStyle(fontSize: hot ? 18 : 16, fontWeight: FontWeight.w800, letterSpacing: -0.4, color: hot ? kBlue : kInk)),
+        // 도착 시간: 옅은 파랑 알약 + 버스 아이콘
+        Container(
+          padding: const EdgeInsets.fromLTRB(10, 5, 12, 5),
+          decoration: BoxDecoration(color: const Color(0xFFEEF4FF), borderRadius: BorderRadius.circular(14)),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Icons.directions_bus_rounded, size: 15, color: Color(0xFF5B78B0)),
+            const SizedBox(width: 6),
+            Text(a.minsText, style: TextStyle(fontSize: hot ? 17 : 15.5, fontWeight: FontWeight.w800, letterSpacing: -0.4, color: hot ? kBlue : kInk)),
+          ]),
+        ),
       ]),
     );
   }
