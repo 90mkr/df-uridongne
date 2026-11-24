@@ -88,8 +88,10 @@ def phone(shot, tap, drag, sem, W, H):
     shot("홈")
     tap("세탁소", wait=6)
     shot("전화번호부_목록")
-    pg_wheel(500)
-    shot("전화번호부_목록_아래")
+    tap("지도로 보기", wait=8)
+    shot("지도_세탁소")
+    tap("^약국$", wait=8)
+    shot("지도_약국")
 
 
 def tablet(shot, tap, drag, sem, W, H):

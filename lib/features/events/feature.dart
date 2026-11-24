@@ -35,6 +35,20 @@ class EventsFeature extends Feature {
   @override
   Widget page(BuildContext context, Complex c) => EventsPage(c: c);
 
+  // 지도 탭: 30km 안 행사 (짧은 이름표, 누르면 행사 창)
+  @override
+  Future<List<MapPoint>> mapPoints(Complex c) async => [
+        for (final e in await _near(c))
+          MapPoint(
+            id: e.id,
+            name: e.title,
+            sub: '${e.period} · ${e.place}',
+            badge: e.title.length > 8 ? '${e.title.substring(0, 8)}…' : e.title,
+            pos: e.pos,
+            onTap: (ctx) => showEvent(ctx, e, c),
+          ),
+      ];
+
   @override
   Future<Brief?> brief(Complex c, DateTime now) async {
     // 금요일 12시 ~ 일요일
