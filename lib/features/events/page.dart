@@ -3,6 +3,7 @@
 // 행사를 누르면 바텀시트: 사진 · 기간 · 시간 · 장소 · 요금 · 설명 · 길안내 · 공유 · 일정에 담기 · 행사장 근처 콕플 맛집 3곳
 import 'dart:convert';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
@@ -55,6 +56,8 @@ class _EventsPageState extends State<EventsPage> {
       pending = p;
       loading = false;
     });
+    final pts = [widget.c.pos, for (final e in all) e.pos];
+    if (pts.length > 1) Future.delayed(const Duration(milliseconds: 700), () => ctl.fit(pts, const EdgeInsets.fromLTRB(50, 60, 50, 110), maxZoom: 15));
   }
 
   List<Ev> get shown {
@@ -384,7 +387,11 @@ class _EvSheetState extends State<_EvSheet> {
           child: PageView.builder(
             itemCount: nPhotos,
             onPageChanged: (i) => setState(() => photo = i),
-            itemBuilder: (_, i) => evPhoto(e, h: 250, i: i, full: true),
+            itemBuilder: (_, i) => Stack(fit: StackFit.expand, children: [
+              ImageFiltered(imageFilter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18), child: evPhoto(e, h: 250, i: i, full: true)),
+              const ColoredBox(color: Color(0x33000000)),
+              evPhoto(e, h: 250, i: i, full: true, fit: BoxFit.contain),
+            ]),
           ),
         ),
         Positioned(top: 8, left: 0, right: 0, child: Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: const Color(0xCCFFFFFF), borderRadius: BorderRadius.circular(2))))),
@@ -417,6 +424,13 @@ class _EvSheetState extends State<_EvSheet> {
           if (e.fee.isNotEmpty || e.local) _Info(Icons.confirmation_number_outlined, e.fee.isEmpty ? '무료' : e.fee),
           if (e.tel.isNotEmpty) _Info(Icons.call_outlined, e.tel.replaceAll(RegExp('<[^>]*>'), ' ')),
           if (e.desc.isNotEmpty) ...[const SizedBox(height: 10), Text(e.desc, style: const TextStyle(fontSize: 14, height: 1.55, color: Color(0xFF3A3F4B)))],
+          if (!e.local)
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+              decoration: BoxDecoration(color: const Color(0xFFF4F6FA), borderRadius: BorderRadius.circular(10)),
+              child: Text('${e.src.isEmpty ? '공공' : e.src} 자료예요. 시간·요금은 바뀔 수 있으니 가기 전에 문의처로 확인해 주세요.', style: T.small),
+            ),
           const SizedBox(height: 18),
           Row(children: [
             Expanded(child: Btn('길안내', primary: true, h: 46, onTap: () => startNav(context, name: e.title, lat: e.pos.latitude, lng: e.pos.longitude))),
