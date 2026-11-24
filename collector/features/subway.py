@@ -39,8 +39,13 @@ def get(url, headers=None):
             with urllib.request.urlopen(req, timeout=20) as r:
                 return r.read().decode("utf-8")
         except Exception as e:  # noqa: BLE001
-            if tryn == 2:
-                print("  부르기 오류:", str(e)[:120])
+            body = ""
+            try:
+                body = e.read().decode("utf-8", "replace")[:300]  # type: ignore[attr-defined]
+            except Exception:  # noqa: BLE001
+                pass
+            if body or tryn == 2:
+                print("  부르기 오류:", str(e)[:120], body.replace("\n", " "))
                 return ""
             time.sleep(1.5 * (tryn + 1))
 
@@ -132,8 +137,16 @@ def main():
             print(f"  역 {len(st)}곳 (호선별)")
             if DKEY:
                 ok = 0
+                fails = 0
                 for x in st:
-                    found = tago("getKwrdFndSubwaySttnList", {"subwayStationName": x["n"]}) or []
+                    if fails >= 3:
+                        print("  TAGO 지하철정보가 계속 실패해 멈춤")
+                        break
+                    found = tago("getKwrdFndSubwaySttnList", {"subwayStationName": x["n"]})
+                    if found is None:
+                        fails += 1
+                        continue
+                    fails = 0
                     # 호선 이름이 맞는 역 고르기 (예: 「인천1호선」 ↔ 「인천지하철 1호선」)
                     digits = re.sub(r"\D", "", x["l"])
                     city = "인천" if "인천" in x["l"] else ("" if not x["l"] else x["l"][:2])
