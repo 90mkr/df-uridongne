@@ -38,9 +38,9 @@ class _HomeBannersState extends State<HomeBanners> {
       ];
       setState(() => items = l);
       if (l.length > 1) {
-        t = Timer.periodic(const Duration(seconds: 6), (_) {
+        t = Timer.periodic(const Duration(seconds: 4), (_) {
           if (!mounted || !pc.hasClients) return;
-          pc.animateToPage((page + 1) % items.length, duration: const Duration(milliseconds: 700), curve: Curves.easeInOutCubic);
+          pc.animateToPage((page + 1) % items.length, duration: const Duration(milliseconds: 470), curve: Curves.easeInOutCubic);
         });
       }
     });
