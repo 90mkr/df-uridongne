@@ -107,3 +107,7 @@ Future<List<School>> mySchoolList(Complex c) async {
   final all = await schoolsOf(c.areaId);
   return [for (final id in ids) ...all.where((s) => s.id == id)];
 }
+
+// 급식 알림 (학교마다): 켜면 아침 「지금 우리 단지」 카드에 오늘 급식을 맨 위로 (11-25)
+Future<bool> mealAlarmOn(String id) async => (await prefGet('school.alarm.$id')) == '1';
+Future<void> setMealAlarm(String id, bool on) => prefSet('school.alarm.$id', on ? '1' : '');

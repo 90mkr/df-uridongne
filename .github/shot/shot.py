@@ -17,6 +17,7 @@ def session(b, tag, W, H, steps):
     ctx = b.new_context(viewport={"width": W, "height": H}, device_scale_factor=2, locale="ko-KR")
     ctx.add_init_script(
         "localStorage.setItem('flutter.complex', %s);" % json.dumps(json.dumps(json.dumps(CPX, ensure_ascii=False)))
+        + "localStorage.setItem('flutter.school.mine', %s);" % json.dumps(json.dumps(json.dumps(["7341308"])))
     )
     pg = ctx.new_page()
     pg.on("console", lambda m: log.append(f"[{tag} 콘솔] {m.text}"[:300]) if m.type == "error" else None)
@@ -115,6 +116,14 @@ def phone(shot, tap, drag, sem, W, H):
     shot("버스_목록")
 
 
+def school(shot, tap, drag, sem, W, H):
+    tap_has("생활 도구", wait=4)
+    tap_has("급식", wait=8)
+    shot("학교급식")
+    pg_wheel(900)
+    shot("학교급식_아래")
+
+
 def tablet(shot, tap, drag, sem, W, H):
     shot("홈")
     for i in range(4):
@@ -127,7 +136,7 @@ def tablet(shot, tap, drag, sem, W, H):
 
 with sync_playwright() as p:
     b = p.chromium.launch(args=["--use-gl=swiftshader", "--enable-unsafe-swiftshader"])
-    for tag, W, H, f in [("폰작은", 360, 740, phone), ("폰큰", 430, 932, phone), ("탭", 1180, 820, tablet), ("탭세로", 820, 1180, tablet)]:
+    for tag, W, H, f in [("폰작은", 360, 740, phone), ("폰큰", 430, 932, phone), ("폰학교", 430, 932, school), ("탭", 1180, 820, tablet), ("탭세로", 820, 1180, tablet)]:
         try:
             session(b, tag, W, H, f)
         except Exception as e:
