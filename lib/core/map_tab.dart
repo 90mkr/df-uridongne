@@ -79,6 +79,7 @@ class _MapTabState extends State<MapTab> {
     final f = mapFeatures.where((x) => x.id == a.feature).firstOrNull;
     if (f == null) return;
     forComplex = c.id;
+    folded = true;
     _show(f, c, filter: a.filter, focus: a.focus);
   }
 
