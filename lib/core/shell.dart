@@ -74,15 +74,9 @@ class _ShellState extends State<Shell> {
   }
 
   // 하단 메뉴: 떠 있는 흰 둥근 띠 + 색 아이콘, 고른 칸은 파란 알약 (시안 11-23)
-  // 하단 메뉴 (대표님 11-24): 둥근 띄움 없이 화면 끝까지 평평하게 · 새 아이콘 · 고른 칸만 색, 나머지는 흐린 회색
+  // 하단 메뉴 (대표님 11-24): 둥근 띄움 없이 화면 끝까지 평평하게 · 새 아이콘 · 아이콘은 늘 원래 색, 고른 칸은 옅은 파랑 바탕·파랑 글자·위 파랑 줄
   Widget _nav() {
     const items = [('home', '단지 홈'), ('list', '전화번호부'), ('map', '지도'), ('grid', '생활 도구'), ('me', '내 정보')];
-    const gray = ColorFilter.matrix([
-      0.2126, 0.7152, 0.0722, 0, 0, //
-      0.2126, 0.7152, 0.0722, 0, 0,
-      0.2126, 0.7152, 0.0722, 0, 0,
-      0, 0, 0, 0.45, 0,
-    ]);
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -92,7 +86,7 @@ class _ShellState extends State<Shell> {
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 64,
+          height: 66,
           child: Row(children: [
             for (var i = 0; i < items.length; i++)
               Expanded(
@@ -117,16 +111,20 @@ class _ShellState extends State<Shell> {
                     Center(
                       child: Column(mainAxisSize: MainAxisSize.min, children: [
                         AnimatedScale(
-                          scale: tab == i ? 1.1 : 0.92,
+                          scale: tab == i ? 1.06 : 0.94,
                           duration: const Duration(milliseconds: 160),
-                          child: tab == i
-                              ? Image.asset('assets/nav/${items[i].$1}.png', width: 28, height: 28)
-                              : ColorFiltered(colorFilter: gray, child: Image.asset('assets/nav/${items[i].$1}.png', width: 28, height: 28)),
+                          // 원래 색 그대로 · 고른 칸은 옅은 파랑 바탕 + 살짝 크게
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+                            decoration: BoxDecoration(color: tab == i ? const Color(0xFFE3EDFF) : Colors.transparent, borderRadius: BorderRadius.circular(14)),
+                            child: Image.asset('assets/nav/${items[i].$1}.png', width: 27, height: 27),
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Text(items[i].$2,
                             maxLines: 1,
-                            style: TextStyle(fontSize: 11, fontWeight: tab == i ? FontWeight.w800 : FontWeight.w500, color: tab == i ? kBlue : const Color(0xFF9AA3B2), letterSpacing: -0.3)),
+                            style: TextStyle(fontSize: 11, fontWeight: tab == i ? FontWeight.w800 : FontWeight.w500, color: tab == i ? kBlue : const Color(0xFF5B6475), letterSpacing: -0.3)),
                       ]),
                     ),
                   ]),
@@ -147,7 +145,7 @@ class _Splash extends StatelessWidget {
   Widget build(BuildContext context) => Scaffold(
         backgroundColor: const Color(0xFF015DFD),
         body: SafeArea(
-          child: Column(children: [
+          child: Column(crossAxisAlignment: CrossAxisAlignment.center, children: [
             const Spacer(flex: 3),
             const Text('우리 단지 생활정보, 한 번에', style: TextStyle(fontSize: 15, color: Color(0xD9FFFFFF), fontWeight: FontWeight.w500, letterSpacing: -0.3)),
             const SizedBox(height: 8),
@@ -161,7 +159,11 @@ class _Splash extends StatelessWidget {
             const SizedBox(height: 24),
             const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xB3FFFFFF))),
             const Spacer(flex: 2),
-            FractionallySizedBox(widthFactor: 0.78, child: Image.asset('assets/art/splash_home.png', fit: BoxFit.contain)),
+            // 넓은 화면(폴드)에서도 한가운데 · 높이에 맞춰 크기 제한 (대표님 11-24: 폴드7에서 왼쪽으로 쏠림)
+            LayoutBuilder(builder: (ctx, box) {
+              final w = [box.maxWidth * 0.78, MediaQuery.of(ctx).size.height * 0.42, 420.0].reduce((a, b) => a < b ? a : b);
+              return SizedBox(width: box.maxWidth, child: Center(child: Image.asset('assets/art/splash_home.png', width: w, height: w, fit: BoxFit.contain)));
+            }),
             const Spacer(flex: 2),
           ]),
         ),
