@@ -75,8 +75,8 @@ def phone(shot, tap, drag, sem, W, H):
     drag(200, 700, 200, 150)
     drag(200, 700, 200, 150)
     shot("홈_맨아래")
-    tap("홈 화면 꾸미기", wait=4)
-    shot("홈_꾸미기")
+    tap("홈 편집", wait=4)
+    shot("홈_편집")
 
 
 def tablet(shot, tap, drag, sem, W, H):

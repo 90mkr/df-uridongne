@@ -19,7 +19,7 @@ class PharmacyFeature extends Feature {
   @override
   String get icon => 'pharm';
   @override
-  Slot get slot => Slot.half;
+  Slot get slot => Slot.tool; // 대표님 11-24: 낮엔 덜 중요 — 홈은 한 줄 카드(아래쪽)로, 밤엔 「지금 우리 단지」에 뜸
   @override
   int get order => 20;
   @override
@@ -30,7 +30,28 @@ class PharmacyFeature extends Feature {
   Color get tint => kSoftGreen;
 
   @override
-  Widget? homeCard(BuildContext context, Complex c) => _HomeCard(feature: this, complex: c);
+  Widget? mainCard(BuildContext context, Complex c) => _RowCard(f: this, c: c);
+  @override
+  int get mainOrder => 4;
+
+  // 밤(9시~아침 9시)·주말엔 「지금 우리 단지」 맨 위 카드에 지금 연 약국을 띄운다
+  @override
+  Future<Brief?> brief(Complex c, DateTime now) async {
+    final night = now.hour >= 21 || now.hour < 9;
+    final weekend = now.weekday >= DateTime.saturday;
+    if (!night && !weekend) return null;
+    final list = (await placesNear(c.pos, r: 5000)).where((p) => p.isPharm && p.stateAt(now).open).toList();
+    if (list.isEmpty) return null;
+    final p = list.first;
+    return Brief(
+      icon: 'pharm',
+      kicker: night ? '밤에도 · 지금 문 연 약국' : '주말 · 지금 문 연 약국',
+      bold: p.name,
+      rest: ' ${distText(meters(c.pos, p.pos))}',
+      sub: '${p.stateAt(now).untilText}${list.length > 1 ? ' · 5km 안 ${list.length}곳 영업 중' : ''}',
+      score: night ? 75 : 45,
+    );
+  }
 
   @override
   Widget page(BuildContext context, Complex c) => PharmacyPage(complex: c);
@@ -53,109 +74,6 @@ class PharmacyFeature extends Feature {
   }
 }
 
-class _HomeCard extends StatefulWidget {
-  final PharmacyFeature feature;
-  final Complex complex;
-  const _HomeCard({required this.feature, required this.complex});
-  @override
-  State<_HomeCard> createState() => _HomeCardState();
-}
-
-class _HomeCardState extends State<_HomeCard> {
-  late Future<List<Place>> _f;
-
-  @override
-  void initState() {
-    super.initState();
-    _f = placesNear(widget.complex.pos, r: 5000);
-  }
-
-  @override
-  void didUpdateWidget(covariant _HomeCard old) {
-    super.didUpdateWidget(old);
-    if (old.complex.id != widget.complex.id) _f = placesNear(widget.complex.pos, r: 5000);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final f = widget.feature, c = widget.complex;
-    return FutureBuilder<List<Place>>(
-      future: _f,
-      builder: (context, snap) {
-        Widget body;
-        String? foot;
-        Place? callTo;
-        if (snap.connectionState != ConnectionState.done) {
-          body = const ComingSoon('찾고 있어요…');
-        } else {
-          final now = DateTime.now();
-          final pharm = (snap.data ?? const <Place>[]).where((p) => p.isPharm).toList();
-          if (pharm.isEmpty) {
-            body = const ComingSoon('약국 자료를 모으고 있어요');
-          } else {
-            final open = [for (final p in pharm) if (p.stateAt(now).open) p];
-            final run = holidayRun(now);
-            if (open.isNotEmpty) {
-              final p = open.first, s = p.stateAt(now);
-              callTo = p;
-              foot = run.isNotEmpty ? '연휴에 문 여는 약국 보기 ›' : (open.length > 1 ? '5km 안 ${open.length}곳 영업 중 ›' : '5km 안 1곳 영업 중');
-              final more = open.skip(1).take(2).toList();
-              body = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, letterSpacing: -0.5, height: 1.25)),
-                const SizedBox(height: 3),
-                Text.rich(
-                  TextSpan(children: [
-                    TextSpan(text: '${distText(meters(c.pos, p.pos))} · '),
-                    s.closingSoon
-                        ? const TextSpan(text: '곧 마감', style: TextStyle(color: kWarn, fontWeight: FontWeight.w700))
-                        : TextSpan(text: s.untilText, style: const TextStyle(color: kOpenC, fontWeight: FontWeight.w600)),
-                  ]),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: T.small,
-                ),
-                // 가로 한 줄 전체일 때: 다음으로 가까운 영업 중 약국 두 곳
-                if (more.isNotEmpty) ...[
-                  const SizedBox(height: 9),
-                  Wrap(spacing: 6, runSpacing: 6, children: [
-                    for (final m in more)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.85), borderRadius: BorderRadius.circular(20), border: Border.all(color: kLine)),
-                        child: Text('${m.name} · ${distText(meters(c.pos, m.pos))}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, letterSpacing: -0.3)),
-                      ),
-                  ]),
-                ],
-              ]);
-            } else {
-              final p = pharm.first, s = p.stateAt(now);
-              foot = holidayRun(now).isNotEmpty ? '연휴에 문 여는 약국 보기 ›' : '가까운 곳: ${p.name}';
-              body = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('지금 연 곳이 없어요', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, height: 1.25)),
-                const SizedBox(height: 3),
-                Text(s.next.isEmpty ? '응급실·편의점 보기' : '${s.next} 열어요', maxLines: 1, overflow: TextOverflow.ellipsis, style: T.small),
-              ]);
-            }
-          }
-        }
-        return HomeCardBox(
-          icon: f.icon,
-          title: '문 연 약국',
-          foot: foot,
-          onTap: () => openFeature(context, f),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-            Expanded(child: body),
-            if (callTo != null && callTo.tel.isNotEmpty) ...[
-              const SizedBox(width: 6),
-              _CallMini(tel: callTo.tel, label: '${callTo.name} 전화', big: true),
-            ],
-          ]),
-        );
-      },
-    );
-  }
-}
-
 class _CallMini extends StatelessWidget {
   final String tel, label;
   final bool big;
@@ -175,5 +93,57 @@ class _CallMini extends StatelessWidget {
             child: LineIcon('phone', size: big ? 24 : 20, fill: kSoft),
           ),
         ),
+      );
+}
+
+// 단지 홈 한 줄 카드: 가장 가까운 지금 연 약국 · 몇 시까지 · 전화
+class _RowCard extends StatefulWidget {
+  final PharmacyFeature f;
+  final Complex c;
+  const _RowCard({required this.f, required this.c});
+  @override
+  State<_RowCard> createState() => _RowCardState();
+}
+
+class _RowCardState extends State<_RowCard> {
+  late Future<List<Place>> _f = placesNear(widget.c.pos, r: 5000);
+
+  @override
+  void didUpdateWidget(covariant _RowCard old) {
+    super.didUpdateWidget(old);
+    if (old.c.id != widget.c.id) _f = placesNear(widget.c.pos, r: 5000);
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<List<Place>>(
+        future: _f,
+        builder: (context, snap) {
+          final now = DateTime.now();
+          final pharm = (snap.data ?? const <Place>[]).where((p) => p.isPharm).toList();
+          final open = [for (final p in pharm) if (p.stateAt(now).open) p];
+          String sub;
+          Widget? trailing;
+          if (snap.connectionState != ConnectionState.done) {
+            sub = '찾고 있어요…';
+          } else if (pharm.isEmpty) {
+            sub = '약국 자료를 모으고 있어요';
+          } else if (open.isEmpty) {
+            final s = pharm.first.stateAt(now);
+            sub = '지금 연 곳이 없어요${s.next.isEmpty ? '' : ' · ${s.next} 열어요'}';
+          } else {
+            final p = open.first, s = p.stateAt(now);
+            sub = '${p.name} · ${distText(meters(widget.c.pos, p.pos))} · ${s.closingSoon ? '곧 마감' : s.untilText}';
+            if (p.tel.isNotEmpty) trailing = _CallMini(tel: p.tel, label: '${p.name} 전화', big: true);
+          }
+          return MainRowCard(
+            icon: 'pharm',
+            bold: '문 연',
+            thin: '약국',
+            sub: sub,
+            subLines: 1,
+            trailing: trailing ?? const Icon(Icons.chevron_right_rounded, color: kSub),
+            onTap: () => openFeature(context, widget.f),
+          );
+        },
       );
 }

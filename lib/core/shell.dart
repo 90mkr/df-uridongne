@@ -8,6 +8,7 @@ import 'data.dart';
 import 'fb.dart';
 import 'feature.dart';
 import 'home.dart';
+import 'home_layout.dart';
 import 'map_tab.dart';
 import 'me.dart';
 import 'theme.dart';
@@ -28,6 +29,12 @@ class _ShellState extends State<Shell> {
     super.initState();
     _boot();
     mapAsk.addListener(_toMap);
+    homeEditAsk.addListener(_toHome);
+  }
+
+  // 내 정보의 「홈 편집」 → 홈 탭으로 (홈이 편집 모드로 바뀜)
+  void _toHome() {
+    if (mounted) setState(() => tab = 0);
   }
 
   // 다른 화면의 「지도로 보기」 → 지도 탭으로

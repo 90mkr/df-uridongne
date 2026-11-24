@@ -1,4 +1,4 @@
-// 「홈 화면 꾸미기」 (본부 방만 고침): 사용자가 단지 홈 카드의 순서를 바꾸고, 안 보고 싶은 카드·생활 도구를 끈다.
+// 「홈 편집」 (본부 방만 고침): 사용자가 단지 홈 카드의 순서를 바꾸고, 안 보고 싶은 카드·생활 도구를 끈다.
 // 설정은 이 휴대폰에만 저장 (prefs: home.order · home.hide · home.hideTools)
 import 'dart:convert';
 
@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import '../features/registry.dart';
 import 'data.dart';
 import 'feature.dart';
-import 'icons.dart';
 import 'theme.dart';
 import 'ui.dart';
 
@@ -100,7 +99,7 @@ class HomeBlock {
 }
 
 /// 기본 순서의 홈 칸들 (만들 수 있는 것만)
-List<HomeBlock> defaultBlocks(BuildContext context, Complex c, {required Widget Function() today, required Widget Function() tools, required Widget Function(Feature f) card}) {
+List<HomeBlock> defaultBlocks(BuildContext context, Complex c, {required Widget Function() today, required Widget Function(Feature f) card}) {
   List<Feature> at(Slot s) => features.where((f) => f.slot == s).toList()..sort((a, b) => a.order.compareTo(b.order));
   final out = <HomeBlock>[];
   for (final f in at(Slot.hero)) {
@@ -128,7 +127,6 @@ List<HomeBlock> defaultBlocks(BuildContext context, Complex c, {required Widget 
   for (final f in at(Slot.tail)) {
     out.add(HomeBlock('f:${f.id}', f.name, f.icon, (_) => card(f)));
   }
-  out.add(HomeBlock('tools', '생활 도구 띠', 'grid', (_) => tools()));
   return out;
 }
 
@@ -153,111 +151,33 @@ List<HomeBlock> arrange(List<HomeBlock> base, {bool withHidden = false}) {
   return withHidden ? out : out.where((b) => !isHidden(b.id)).toList();
 }
 
-void openHomeEdit(BuildContext context, List<HomeBlock> base) {
-  Navigator.push(context, MaterialPageRoute(builder: (_) => _HomeEditPage(base: base)));
+// ---- 홈 편집 (홈 화면 그 자리에서: 작은 막대로 줄여 끌어 옮기기 · ⊖ 끄기 · ⊕ 켜기) ----
+
+/// 내 정보 탭 등에서 「홈 편집」을 열어 달라고 할 때 (셸이 홈 탭으로 넘기고, 홈이 편집 모드로)
+final homeEditAsk = ValueNotifier<int>(0);
+
+void setHomeOrder(List<HomeBlock> visible, List<HomeBlock> hidden) {
+  _order = [for (final b in visible) b.id, for (final b in hidden) b.id];
+  _save();
 }
 
-class _HomeEditPage extends StatefulWidget {
-  final List<HomeBlock> base;
-  const _HomeEditPage({required this.base});
-  @override
-  State<_HomeEditPage> createState() => _HomeEditPageState();
+void hideBlock(String id, List<HomeBlock> visible, List<HomeBlock> hidden) {
+  _setOn(id, false);
+  final v = visible.where((b) => b.id != id).toList();
+  final h = [...visible.where((b) => b.id == id), ...hidden];
+  setHomeOrder(v, h);
 }
 
-class _HomeEditPageState extends State<_HomeEditPage> {
-  late List<HomeBlock> list = arrange(widget.base, withHidden: true);
+void showBlock(String id, List<HomeBlock> visible, List<HomeBlock> hidden) {
+  _setOn(id, true);
+  final v = [...visible, ...hidden.where((b) => b.id == id)]; // 켜면 맨 아래에 붙는다
+  final h = hidden.where((b) => b.id != id).toList();
+  setHomeOrder(v, h);
+}
 
-  void _changed() {
-    _order = [for (final b in list) b.id];
-    _save();
-    setState(() {});
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: kBg,
-      appBar: AppBar(
-        backgroundColor: kBg,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        titleSpacing: 0,
-        title: const Text('홈 화면 꾸미기', style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.w800, letterSpacing: -0.4)),
-        actions: [
-          TextButton(
-            onPressed: () {
-              _order = [];
-              _hide = {};
-              _on = {};
-              _save();
-              setState(() => list = arrange(widget.base, withHidden: true));
-            },
-            child: const Text('처음대로', style: TextStyle(color: kSub, fontSize: 13.5)),
-          ),
-        ],
-      ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 720),
-          child: CustomScrollView(slivers: [
-            const SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(kPad, 4, kPad, 10),
-                child: Text('오른쪽 손잡이를 끌어 순서를 바꾸고, 보실 카드만 켜 두세요. 꺼도 아래 「생활 도구」에는 그대로 있어요. 이 휴대폰에만 저장돼요.', style: T.small),
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: kPad),
-              sliver: SliverReorderableList(
-                itemCount: list.length,
-                onReorder: (a, b) {
-                  if (b > a) b--;
-                  final x = list.removeAt(a);
-                  list.insert(b, x);
-                  _changed();
-                },
-                proxyDecorator: (child, _, __) => Material(color: Colors.transparent, elevation: 6, borderRadius: BorderRadius.circular(12), child: child),
-                itemBuilder: (_, i) {
-                  final b = list[i];
-                  final on = !isHidden(b.id);
-                  return Padding(
-                    key: ValueKey(b.id),
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Container(
-                      height: 58,
-                      decoration: cardBox(),
-                      padding: const EdgeInsets.only(left: 12, right: 4),
-                      child: Row(children: [
-                        Opacity(opacity: on ? 1 : 0.35, child: LineIcon(b.icon, size: 28)),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(b.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700, letterSpacing: -0.3, color: on ? kInk : kSub)),
-                        ),
-                        Switch(
-                          value: on,
-                          activeTrackColor: kBlue,
-                          onChanged: (v) {
-                            _setOn(b.id, v);
-                            _changed();
-                          },
-                        ),
-                        ReorderableDragStartListener(
-                          index: i,
-                          child: const Padding(padding: EdgeInsets.all(10), child: Icon(Icons.drag_indicator_rounded, color: kSub)),
-                        ),
-                      ]),
-                    ),
-                  );
-                },
-              ),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 28)),
-          ]),
-        ),
-      ),
-    );
-  }
+void resetHomeLayout() {
+  _order = [];
+  _hide = {};
+  _on = {};
+  _save();
 }

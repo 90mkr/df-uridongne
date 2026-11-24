@@ -14,11 +14,8 @@ import 'icons.dart';
 import 'theme.dart';
 import 'ui.dart';
 
-// 내 정보 탭 등 홈 밖에서 「홈 화면 꾸미기」 열기
-void openHomeEditFor(BuildContext context, Complex c) {
-  final base = defaultBlocks(context, c, today: () => const SizedBox(), tools: () => const SizedBox(), card: (_) => const SizedBox());
-  openHomeEdit(context, base);
-}
+// 내 정보 탭 등 홈 밖에서 「홈 편집」 열기: 홈 탭으로 넘어가 그 자리에서 편집 모드
+void openHomeEditFor(BuildContext context, Complex c) => homeEditAsk.value++;
 
 // 단지 홈을 아래로 당겨 새로고침하면 1씩 늘어난다. 기능 카드가 자료를 다시 받으려면 이 값을 들으면 된다.
 final homeRefresh = ValueNotifier<int>(0);
@@ -31,6 +28,23 @@ class HomeTab extends StatefulWidget {
 
 class _HomeTabState extends State<HomeTab> {
   int gen = 0; // 새로고침마다 카드들을 새로 만든다
+  bool editing = false; // 「홈 편집」: 카드들을 작은 막대로 줄여 끌어 옮기기 · 끄기 · 켜기
+
+  @override
+  void initState() {
+    super.initState();
+    homeEditAsk.addListener(_askEdit);
+  }
+
+  @override
+  void dispose() {
+    homeEditAsk.removeListener(_askEdit);
+    super.dispose();
+  }
+
+  void _askEdit() {
+    if (mounted) setState(() => editing = true);
+  }
 
   Future<void> _refresh() async {
     setState(() => gen++);
@@ -76,25 +90,9 @@ class _HomeTabState extends State<HomeTab> {
 
   Widget _bodyIn(BuildContext context, Complex c) {
     Widget card(Feature f) => KeyedSubtree(key: ValueKey('${f.id}$gen'), child: f.homeCard(context, c) ?? const SizedBox());
-    final allTools = [
-      ...features.where((f) => f.slot == Slot.tool).toList()..sort((a, b) => a.order.compareTo(b.order)),
-      ...features.where((f) => f.slot != Slot.tool && f.ready && _short.containsKey(f.id)),
-    ];
-    final tools = allTools; // 생활 도구 띠에는 꺼 둔 것도 다 보인다
-    // 홈 칸들: 기본 순서 → 사용자가 「홈 화면 꾸미기」에서 바꾼 순서·끈 칸 적용
-    final base = defaultBlocks(
-      context,
-      c,
-      today: () => TodayHero(key: ValueKey('today${c.id}$gen'), c: c),
-      card: card,
-      tools: () => tools.isEmpty
-          ? const SizedBox.shrink()
-          : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              const Padding(padding: EdgeInsets.fromLTRB(2, 8, 0, 10), child: Text('생활 도구', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: -0.3))),
-              // 옆으로 넘기는 줄 (4개 반쯤 보여 더 있다는 걸 알게)
-              _ToolStrip(tools: tools),
-            ]),
-    );
+    // 홈 칸들: 기본 순서 → 사용자가 「홈 편집」에서 바꾼 순서·끈 칸 적용
+    final base = defaultBlocks(context, c, today: () => TodayHero(key: ValueKey('today${c.id}$gen'), c: c), card: card);
+    if (editing) return _editor(context, base);
     final blocks = arrange(base);
     final kids = <Widget>[];
     for (var i = 0; i < blocks.length; i++) {
@@ -129,12 +127,12 @@ class _HomeTabState extends State<HomeTab> {
               padding: const EdgeInsets.fromLTRB(kPad, 14, kPad, 28),
               children: [
                 ...kids,
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Center(
                   child: TextButton.icon(
-                    onPressed: () => openHomeEdit(context, base),
+                    onPressed: () => setState(() => editing = true),
                     icon: const Icon(Icons.tune_rounded, size: 17, color: kSub),
-                    label: const Text('홈 화면 꾸미기', style: TextStyle(color: kSub, fontSize: 13, fontWeight: FontWeight.w600)),
+                    label: const Text('홈 편집', style: TextStyle(color: kSub, fontSize: 13, fontWeight: FontWeight.w600)),
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -146,6 +144,104 @@ class _HomeTabState extends State<HomeTab> {
       ),
     );
   }
+
+  // 홈 편집: 휴대폰 「빠른 설정 편집」처럼 — 위는 보이는 카드(꾹 눌러 끌기 · ⊖ 끄기), 아래는 꺼 둔 카드(⊕ 켜기)
+  Widget _editor(BuildContext context, List<HomeBlock> base) {
+    final all = arrange(base, withHidden: true);
+    final visible = all.where((b) => !isHidden(b.id)).toList();
+    final hidden = all.where((b) => isHidden(b.id)).toList();
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 720),
+        child: Column(children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(kPad, 8, 12, 4),
+            child: Row(children: [
+              const Expanded(child: MixTitle('홈', '편집', size: 17)),
+              TextButton(onPressed: resetHomeLayout, child: const Text('처음대로', style: TextStyle(color: kSub, fontSize: 13))),
+              const SizedBox(width: 4),
+              SizedBox(width: 72, child: Btn('완료', primary: true, h: 36, onTap: () => setState(() => editing = false))),
+            ]),
+          ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(kPad, 0, kPad, 8),
+            child: Align(alignment: Alignment.centerLeft, child: Text('꾹 눌러 위아래로 옮기고, ⊖ 로 끄고, 아래 ⊕ 로 다시 켜요. 이 휴대폰에만 저장돼요.', style: T.tiny)),
+          ),
+          Expanded(
+            child: ReorderableListView.builder(
+              buildDefaultDragHandles: false,
+              padding: const EdgeInsets.fromLTRB(kPad, 4, kPad, 28),
+              itemCount: visible.length,
+              onReorder: (a, b) {
+                if (b > a) b--;
+                final v = [...visible];
+                v.insert(b, v.removeAt(a));
+                setHomeOrder(v, hidden);
+              },
+              proxyDecorator: (child, _, __) => Material(color: Colors.transparent, elevation: 8, shadowColor: const Color(0x33000000), borderRadius: BorderRadius.circular(14), child: child),
+              itemBuilder: (_, i) {
+                final b = visible[i];
+                return ReorderableDelayedDragStartListener(
+                  key: ValueKey('e${b.id}'),
+                  index: i,
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _EditBar(
+                      b: b,
+                      on: true,
+                      onToggle: () => hideBlock(b.id, visible, hidden),
+                      handle: ReorderableDragStartListener(index: i, child: const Padding(padding: EdgeInsets.all(10), child: Icon(Icons.drag_indicator_rounded, color: kSub))),
+                    ),
+                  ),
+                );
+              },
+              footer: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                const SizedBox(height: 14),
+                const Padding(padding: EdgeInsets.only(left: 2, bottom: 8), child: MixTitle('꺼 둔', '카드', size: 15)),
+                if (hidden.isEmpty)
+                  const Padding(padding: EdgeInsets.symmetric(vertical: 14), child: Text('꺼 둔 카드가 없어요', style: T.small, textAlign: TextAlign.center)),
+                for (final b in hidden)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _EditBar(b: b, on: false, onToggle: () => showBlock(b.id, visible, hidden)),
+                  ),
+                const SizedBox(height: 6),
+                const Text('꺼 둔 기능도 아래 「생활 도구」 탭에는 언제나 있어요.', style: T.tiny),
+              ]),
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+// 편집 막대: ⊖/⊕ · 아이콘 · 이름 · (손잡이)
+class _EditBar extends StatelessWidget {
+  final HomeBlock b;
+  final bool on;
+  final VoidCallback onToggle;
+  final Widget? handle;
+  const _EditBar({required this.b, required this.on, required this.onToggle, this.handle});
+  @override
+  Widget build(BuildContext context) => Container(
+        height: 56,
+        decoration: cardBox(),
+        padding: const EdgeInsets.only(left: 4, right: 2),
+        child: Row(children: [
+          IconButton(
+            onPressed: onToggle,
+            tooltip: on ? '끄기' : '켜기',
+            icon: Icon(on ? Icons.remove_circle_rounded : Icons.add_circle_rounded, color: on ? const Color(0xFFE5484D) : kBlue, size: 24),
+          ),
+          Opacity(opacity: on ? 1 : 0.55, child: LineIcon(b.icon, size: 28)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(b.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700, letterSpacing: -0.3, color: on ? kInk : kSub)),
+          ),
+          if (handle != null) handle! else const SizedBox(width: 12),
+        ]),
+      );
 }
 
 class _Header extends StatelessWidget {
@@ -351,67 +447,6 @@ class _TodayHeroState extends State<TodayHero> {
   }
 }
 
-// 생활 도구 줄: 저절로 천천히 흘러가고(끝없이 이어짐), 손으로 만지면 잠깐 멈춘다 (대표님 11-24)
-class _ToolStrip extends StatefulWidget {
-  final List<Feature> tools;
-  const _ToolStrip({required this.tools});
-  @override
-  State<_ToolStrip> createState() => _ToolStripState();
-}
-
-class _ToolStripState extends State<_ToolStrip> {
-  final ctl = ScrollController();
-  Timer? tick;
-  DateTime pauseUntil = DateTime(0);
-  double setW = 0; // 한 바퀴 길이
-
-  @override
-  void initState() {
-    super.initState();
-    tick = Timer.periodic(const Duration(milliseconds: 30), (_) {
-      if (!ctl.hasClients || setW <= 0 || DateTime.now().isBefore(pauseUntil)) return;
-      var o = ctl.offset + 0.6;
-      if (o >= setW) o -= setW;
-      ctl.jumpTo(o);
-    });
-  }
-
-  @override
-  void dispose() {
-    tick?.cancel();
-    ctl.dispose();
-    super.dispose();
-  }
-
-  void _pause() => pauseUntil = DateTime.now().add(const Duration(seconds: 4));
-
-  @override
-  Widget build(BuildContext context) => LayoutBuilder(builder: (ctx, box) {
-        final w = (box.maxWidth - 8 * 4) / 4.4;
-        final n = widget.tools.length;
-        setW = n * (w + 8);
-        final loop = setW > box.maxWidth; // 넘칠 때만 흐름
-        return Listener(
-          onPointerDown: (_) => _pause(),
-          onPointerMove: (_) => _pause(),
-          child: SizedBox(
-            height: 92,
-            child: ListView.builder(
-              controller: ctl,
-              scrollDirection: Axis.horizontal,
-              clipBehavior: Clip.none,
-              itemCount: loop ? n * 3 : n,
-              itemBuilder: (_, i) => Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: SizedBox(width: w, child: ToolTile(f: widget.tools[i % n])),
-              ),
-            ),
-          ),
-        );
-      });
-}
-
-// 생활 도구 줄에 함께 넣는 다른 기능의 짧은 이름
 const _short = {'trash': '분리수거', 'lotto': '로또', 'weather': '날씨', 'bus': '버스', 'pharmacy': '약국', 'phonebook': '전화번호부', 'deals': '실거래가', 'subway': '지하철'};
 
 // 생활 도구 작은 칸
