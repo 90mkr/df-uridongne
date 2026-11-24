@@ -40,7 +40,8 @@ Future<void> _save() async {
 }
 
 // 한 줄 카드(r:)는 처음엔 꺼 둔다 — 홈이 너무 길어지지 않게. 꾸미기에서 켜면 보인다
-bool isHidden(String id) => _hide.contains(id) || (id.startsWith('r:') && !_on.contains(id));
+const _defaultOn = {'r:alarm'}; // 한 줄 카드 중 처음부터 켜 둘 것 (11-24: 알람을 못 찾으셔서)
+bool isHidden(String id) => _hide.contains(id) || (id.startsWith('r:') && !_on.contains(id) && !_defaultOn.contains(id));
 
 void _setOn(String id, bool v) {
   if (v) {
@@ -58,6 +59,7 @@ const _rowTitles = {
   'trash': ('오늘', '배출', '오늘 내놓을 쓰레기·분리수거'),
   'lotto': ('로또', '당첨 번호', '이번 회차 번호와 내 번호 맞춰 보기'),
   'postcode': ('택배', '우편번호', '우리 단지 우편번호·택배 조회'),
+  'alarm': ('알람', '맞추기', '휴대폰 시계 앱에 알람을 넣어 드려요'),
 };
 
 class _RowCard extends StatelessWidget {
