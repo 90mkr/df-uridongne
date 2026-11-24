@@ -171,6 +171,11 @@ class _ShopCardState extends State<ShopCard> {
                     Row(children: [
                       if (open != Open.unknown) ...[OpenMark(open), const Text('  ·  ', style: TextStyle(fontSize: 11.5, color: kMute))],
                       Text('단지에서 ${distText(meters(c.pos, s.pos))}', style: const TextStyle(fontSize: 11.5, color: kInk, fontWeight: FontWeight.w600)),
+                      if ((rec?.n ?? 0) > 0) ...[
+                        const Text('  ·  ', style: TextStyle(fontSize: 11.5, color: kMute)),
+                        const Icon(Icons.thumb_up_alt_rounded, size: 12, color: kBlue),
+                        Text(' ${rec!.n}', style: const TextStyle(fontSize: 11.5, color: kBlue, fontWeight: FontWeight.w800)),
+                      ],
                     ]),
                   ]),
                 ),
@@ -194,45 +199,14 @@ class _ShopCardState extends State<ShopCard> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              // ---- 이웃 추천 (카드 안에서 바로) ----
-              Row(children: [
-                Text.rich(TextSpan(children: [
-                  const TextSpan(text: '이웃 추천 '),
-                  TextSpan(text: '${rec?.n ?? 0}', style: TextStyle(fontWeight: FontWeight.w800, color: (rec?.n ?? 0) > 0 ? kBlue : kMute)),
-                ]), style: const TextStyle(fontSize: 12, color: kSub)),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(children: [
-                      for (final st in rec?.topStickers ?? const <String>[]) ...[
-                        Pill('${stickerText(st)} ${rec!.st[st]}'),
-                        const SizedBox(width: 4),
-                      ],
-                    ]),
-                  ),
+              // ---- 이웃 추천 칭찬 (있을 때만) ----
+              if ((rec?.topStickers ?? const <String>[]).isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Wrap(spacing: 4, runSpacing: 4, children: [for (final st in rec!.topStickers) Pill('${stickerText(st)} ${rec.st[st]}')]),
                 ),
-                InkWell(
-                    borderRadius: BorderRadius.circular(14),
-                    onTap: _startRec,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: mine ? Colors.white : const Color(0xFFEEF3FF),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: mine ? kLine : const Color(0xFFCADAFD)),
-                      ),
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(mine ? Icons.thumb_up_alt_rounded : Icons.thumb_up_alt_outlined, size: 14, color: kBlue),
-                        const SizedBox(width: 4),
-                        Text(mine ? '내 추천' : '추천', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: kBlue)),
-                      ]),
-                    ),
-                  ),
-              ]),
-              const SizedBox(height: 10),
               // ---- 근처 주차장 (없으면 주소) ----
               Row(children: [
                 if (lot != null)
@@ -256,11 +230,11 @@ class _ShopCardState extends State<ShopCard> {
               ]),
               const SizedBox(height: 10),
               Row(children: [
-                Expanded(
-                  child: Btn(s.tel.isEmpty ? '번호 없음' : '전화하기', icon: 'phone', primary: s.tel.isNotEmpty, h: 38, onTap: s.tel.isEmpty ? null : () => callTel(s.tel)),
-                ),
-                const SizedBox(width: 8),
-                Expanded(child: Btn('길안내', icon: 'route', h: 38, onTap: () => startNav(context, name: s.name, lat: s.lat, lng: s.lng))),
+                Expanded(flex: 4, child: _mini(s.tel.isEmpty ? '번호 없음' : '전화하기', Icons.call_rounded, s.tel.isEmpty ? null : () => callTel(s.tel), primary: s.tel.isNotEmpty, h: 34)),
+                const SizedBox(width: 6),
+                Expanded(flex: 4, child: _mini('길안내', Icons.near_me_rounded, () => startNav(context, name: s.name, lat: s.lat, lng: s.lng), h: 34)),
+                const SizedBox(width: 6),
+                Expanded(flex: 2, child: _mini('', mine ? Icons.thumb_up_alt_rounded : Icons.thumb_up_alt_outlined, _startRec, soft: true, h: 34)),
               ]),
               const SizedBox(height: 4),
               Row(mainAxisAlignment: MainAxisAlignment.end, children: [
@@ -341,21 +315,21 @@ class _ShopCardState extends State<ShopCard> {
     );
   }
 
-  Widget _mini(String t, IconData icon, VoidCallback? f, {bool primary = false, bool soft = false}) => Material(
+  Widget _mini(String t, IconData icon, VoidCallback? f, {bool primary = false, bool soft = false, double h = 28}) => Material(
         color: primary ? kBlue : (soft ? const Color(0xFFEEF3FF) : Colors.white),
         borderRadius: BorderRadius.circular(8),
         child: InkWell(
           borderRadius: BorderRadius.circular(8),
           onTap: f,
           child: Container(
-            height: 28,
+            height: h,
             alignment: Alignment.center,
             decoration: primary || soft ? null : BoxDecoration(borderRadius: BorderRadius.circular(8), border: Border.all(color: const Color(0xFFD5D9E0))),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(icon, size: 13, color: primary ? Colors.white : (soft ? kBlue : kInk)),
+              Icon(icon, size: h > 30 ? 15 : 13, color: primary ? Colors.white : (soft ? kBlue : kInk)),
               if (t.isNotEmpty) ...[
                 const SizedBox(width: 2),
-                Flexible(child: Text(t, maxLines: 1, overflow: TextOverflow.clip, style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: primary ? Colors.white : kInk))),
+                Flexible(child: Text(t, maxLines: 1, overflow: TextOverflow.clip, style: TextStyle(fontSize: h > 30 ? 12 : 10.5, fontWeight: FontWeight.w700, color: primary ? Colors.white : kInk))),
               ],
             ]),
           ),
