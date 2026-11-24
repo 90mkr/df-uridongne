@@ -218,14 +218,13 @@ class _BusRoutePageState extends State<BusRoutePage> with SingleTickerProviderSt
         body: Column(children: [
           BusHeader(
             title: '${a.routeNo}번 노선',
-            art: false,
             actions: [
               IconButton(
                 tooltip: fav ? '즐겨찾기 풀기' : '즐겨찾기',
                 onPressed: _toggleFav,
-                icon: Icon(fav ? Icons.star_rounded : Icons.star_outline_rounded, size: 26, color: fav ? kBlue : kInk),
+                icon: Icon(fav ? Icons.star_rounded : Icons.star_outline_rounded, size: 26, color: fav ? const Color(0xFFFFD84D) : Colors.white),
               ),
-              IconButton(tooltip: '공유', onPressed: _share, icon: const Icon(Icons.share_outlined, size: 23, color: kInk)),
+              IconButton(tooltip: '공유', onPressed: _share, icon: const Icon(Icons.share_outlined, size: 23, color: Colors.white)),
               const SizedBox(width: 4),
             ],
           ),
@@ -449,43 +448,37 @@ class _BusRoutePageState extends State<BusRoutePage> with SingleTickerProviderSt
         );
     final title = Text(i == null || i.start.isEmpty ? '${a.routeNo}번' : '${i.start} ↔ ${i.end}',
         maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: -0.5, height: 1.3));
+    // 큰 파란 노선 칸 대신 작은 노선 알약 (대표님 11-24: 노선 번호가 너무 큼)
+    final col = busTypeColor(i?.type ?? a.type);
+    final pill = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [col.withValues(alpha: 0.85), col]), borderRadius: BorderRadius.circular(14)),
+      child: Text(a.routeNo, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.3, height: 1.2)),
+    );
     return Container(
       decoration: cardBox(r: 16),
-      child: IntrinsicHeight(
-        child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          RouteBadge(
-            no: a.routeNo,
-            type: routeTypeShort(i?.type ?? a.type),
-            vertical: true,
-            width: wide ? 150 : 108,
-            radius: const BorderRadius.horizontal(left: Radius.circular(16)),
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-                if (wide)
-                  Row(children: [Expanded(child: title), const SizedBox(width: 10), chip])
-                else ...[
-                  title,
-                  const SizedBox(height: 6),
-                  chip,
-                ],
-                const SizedBox(height: 10),
-                Container(height: 1, color: kLine),
-                const SizedBox(height: 10),
-                Row(children: [
-                  fact(Icons.calendar_today_outlined, '첫차', i?.first ?? ''),
-                  if (wide) busVLine() else const SizedBox(width: 4),
-                  fact(Icons.dark_mode_outlined, '막차', i?.last ?? ''),
-                  if (wide) busVLine() else const SizedBox(width: 4),
-                  fact(Icons.schedule_rounded, wide ? '배차간격' : '배차', i?.gap ?? ''),
-                ]),
-              ]),
-            ),
-          ),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          pill,
+          const SizedBox(width: 6),
+          Text(routeTypeShort(i?.type ?? a.type), style: const TextStyle(fontSize: 12, color: kSub, fontWeight: FontWeight.w600)),
+          const Spacer(),
+          Flexible(flex: 3, child: chip),
         ]),
-      ),
+        const SizedBox(height: 10),
+        title,
+        const SizedBox(height: 10),
+        Container(height: 1, color: kLine),
+        const SizedBox(height: 10),
+        Row(children: [
+          fact(Icons.calendar_today_outlined, '첫차', i?.first ?? ''),
+          if (wide) busVLine() else const SizedBox(width: 4),
+          fact(Icons.dark_mode_outlined, '막차', i?.last ?? ''),
+          if (wide) busVLine() else const SizedBox(width: 4),
+          fact(Icons.schedule_rounded, wide ? '배차간격' : '배차', i?.gap ?? ''),
+        ]),
+      ]),
     );
   }
 

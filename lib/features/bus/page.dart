@@ -485,12 +485,6 @@ class _ArrCard extends StatelessWidget {
   }
 }
 
-// 노선 종류 색 (광역 빨강 · 간선 파랑 · 지선 초록) — 홈 카드와 같게
-Color busTypeColor(String t) {
-  if (t.contains('광역') || t.contains('급행') || t.contains('좌석')) return const Color(0xFFE5484D);
-  if (t.contains('지선') || t.contains('마을')) return const Color(0xFF2EA36B);
-  return kBlue;
-}
 
 class _Track extends StatelessWidget {
   final double p;

@@ -20,7 +20,7 @@ class BusHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final top = MediaQuery.paddingOf(context).top;
     return Container(
-      height: top + (art ? 128 : 64),
+      height: top + (art ? (trailing != null ? 128 : 92) : 64),
       decoration: const BoxDecoration(
         gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.white, Color(0xFFEAF2FD)]),
       ),
@@ -166,4 +166,11 @@ class BusDotLine extends StatelessWidget {
     }
     return Text.rich(TextSpan(children: out), style: TextStyle(fontSize: size, color: kSub, height: 1.35));
   }
+}
+
+// 노선 종류 색 (광역 빨강 · 간선 파랑 · 지선 초록) — 홈 카드와 같게
+Color busTypeColor(String t) {
+  if (t.contains('광역') || t.contains('급행') || t.contains('좌석')) return const Color(0xFFE5484D);
+  if (t.contains('지선') || t.contains('마을')) return const Color(0xFF2EA36B);
+  return kBlue;
 }
