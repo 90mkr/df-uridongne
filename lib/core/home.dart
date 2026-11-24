@@ -6,12 +6,19 @@ import 'package:flutter/material.dart';
 
 import '../features/registry.dart';
 import 'complex_info.dart';
+import 'home_layout.dart';
 import 'complex_pick.dart';
 import 'data.dart';
 import 'feature.dart';
 import 'icons.dart';
 import 'theme.dart';
 import 'ui.dart';
+
+// 내 정보 탭 등 홈 밖에서 「홈 화면 꾸미기」 열기
+void openHomeEditFor(BuildContext context, Complex c) {
+  final base = defaultBlocks(context, c, today: () => const SizedBox(), tools: () => const SizedBox(), card: (_) => const SizedBox());
+  openHomeEdit(context, base);
+}
 
 // 단지 홈을 아래로 당겨 새로고침하면 1씩 늘어난다. 기능 카드가 자료를 다시 받으려면 이 값을 들으면 된다.
 final homeRefresh = ValueNotifier<int>(0);
@@ -62,11 +69,51 @@ class _HomeTabState extends State<HomeTab> {
         ),
       );
 
-  Widget _body(BuildContext context, Complex c) {
-    List<Feature> at(Slot s) => features.where((f) => f.slot == s).toList()..sort((a, b) => a.order.compareTo(b.order));
+  Widget _body(BuildContext context, Complex c) => ValueListenableBuilder<int>(
+        valueListenable: homeLayoutTick,
+        builder: (context, _, __) => _bodyIn(context, c),
+      );
+
+  Widget _bodyIn(BuildContext context, Complex c) {
     Widget card(Feature f) => KeyedSubtree(key: ValueKey('${f.id}$gen'), child: f.homeCard(context, c) ?? const SizedBox());
-    final halves = at(Slot.half);
-    final tools = at(Slot.tool);
+    final allTools = [
+      ...features.where((f) => f.slot == Slot.tool).toList()..sort((a, b) => a.order.compareTo(b.order)),
+      ...features.where((f) => f.slot != Slot.tool && f.ready && _short.containsKey(f.id)),
+    ];
+    final tools = allTools; // 생활 도구 띠에는 꺼 둔 것도 다 보인다
+    // 홈 칸들: 기본 순서 → 사용자가 「홈 화면 꾸미기」에서 바꾼 순서·끈 칸 적용
+    final base = defaultBlocks(
+      context,
+      c,
+      today: () => TodayHero(key: ValueKey('today${c.id}$gen'), c: c),
+      card: card,
+      tools: () => tools.isEmpty
+          ? const SizedBox.shrink()
+          : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              const Padding(padding: EdgeInsets.fromLTRB(2, 8, 0, 10), child: Text('생활 도구', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: -0.3))),
+              // 옆으로 넘기는 줄 (4개 반쯤 보여 더 있다는 걸 알게)
+              _ToolStrip(tools: tools),
+            ]),
+    );
+    final blocks = arrange(base);
+    final kids = <Widget>[];
+    for (var i = 0; i < blocks.length; i++) {
+      final b = blocks[i];
+      // 반쪽 카드 둘이 이어지면 나란히, 하나면 가로 한 줄 전체
+      if (b.half && i + 1 < blocks.length && blocks[i + 1].half) {
+        kids.add(IntrinsicHeight(
+          child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Expanded(child: b.build(context)),
+            const SizedBox(width: 10),
+            Expanded(child: blocks[i + 1].build(context)),
+          ]),
+        ));
+        i++;
+      } else {
+        kids.add(KeyedSubtree(key: ValueKey('b${b.id}$gen'), child: b.build(context)));
+      }
+      kids.add(const SizedBox(height: 12));
+    }
     return RefreshIndicator(
       onRefresh: _refresh,
       color: kBlue,
@@ -74,44 +121,27 @@ class _HomeTabState extends State<HomeTab> {
       child: ScrollConfiguration(
         behavior: ScrollConfiguration.of(context).copyWith(dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse, PointerDeviceKind.trackpad, PointerDeviceKind.stylus}),
         child: Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 720),
-        child: ListView(
-          key: ValueKey('home$gen'),
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(kPad, 14, kPad, 28),
-          children: [
-            for (final f in at(Slot.hero)) ...[card(f), const SizedBox(height: 12)],
-            // 맨 위 자리: 「지금 우리 단지」 — 시간대·날씨·배출일에 맞춰 기능들이 낸 카드가 넘어간다
-            if (at(Slot.hero).isEmpty) ...[TodayHero(key: ValueKey('today${c.id}$gen'), c: c), const SizedBox(height: 12)],
-            for (var i = 0; i < halves.length; i += 2) ...[
-              // 반쪽 카드가 하나만 남으면 가로 한 줄 전체로
-              if (i + 1 >= halves.length) card(halves[i]) else IntrinsicHeight(
-                child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  Expanded(child: card(halves[i])),
-                  const SizedBox(width: 10),
-                  Expanded(child: i + 1 < halves.length ? card(halves[i + 1]) : const SizedBox()),
-                ]),
-              ),
-              const SizedBox(height: 12),
-            ],
-            for (final f in at(Slot.section)) ...[card(f), const SizedBox(height: 12)],
-            for (final f in at(Slot.wide)) ...[card(f), const SizedBox(height: 12)],
-            // 본문 큰 카드 (예: 주차장 「내 차 어디 댔지」)
-            for (final f in [...features]..sort((a, b) => a.mainOrder.compareTo(b.mainOrder)))
-              if (f.mainCard(context, c) case final w?) ...[KeyedSubtree(key: ValueKey('m${f.id}$gen'), child: w), const SizedBox(height: 12)],
-            // 맨 아래 큰 카드 (늦게 뜨는 실시간 자료 — 위 카드들이 밀리지 않게)
-            for (final f in at(Slot.tail)) ...[card(f), const SizedBox(height: 12)],
-            if (tools.isNotEmpty) ...[
-              const Padding(padding: EdgeInsets.fromLTRB(2, 8, 0, 10), child: Text('생활 도구', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: -0.3))),
-              // 옆으로 넘기는 줄 (4개 반쯤 보여 더 있다는 걸 알게)
-              _ToolStrip(tools: [...tools, ...features.where((f) => f.slot != Slot.tool && f.ready && _short.containsKey(f.id))]),
-            ],
-            const SizedBox(height: 22),
-            const Text('정보는 공공데이터·카카오 장소 정보를 바탕으로 해요. 방문 전 전화로 한 번 확인해 주세요.', style: T.tiny),
-          ],
-        ),
-      ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: ListView(
+              key: ValueKey('home$gen'),
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(kPad, 14, kPad, 28),
+              children: [
+                ...kids,
+                const SizedBox(height: 4),
+                Center(
+                  child: TextButton.icon(
+                    onPressed: () => openHomeEdit(context, base),
+                    icon: const Icon(Icons.tune_rounded, size: 17, color: kSub),
+                    label: const Text('홈 화면 꾸미기', style: TextStyle(color: kSub, fontSize: 13, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text('정보는 공공데이터·카카오 장소 정보를 바탕으로 해요. 방문 전 전화로 한 번 확인해 주세요.', style: T.tiny),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -382,7 +412,7 @@ class _ToolStripState extends State<_ToolStrip> {
 }
 
 // 생활 도구 줄에 함께 넣는 다른 기능의 짧은 이름
-const _short = {'trash': '분리수거', 'lotto': '로또', 'weather': '날씨', 'bus': '버스', 'pharmacy': '약국', 'phonebook': '전화번호부', 'deals': '실거래가'};
+const _short = {'trash': '분리수거', 'lotto': '로또', 'weather': '날씨', 'bus': '버스', 'pharmacy': '약국', 'phonebook': '전화번호부', 'deals': '실거래가', 'subway': '지하철'};
 
 // 생활 도구 작은 칸
 class ToolTile extends StatelessWidget {

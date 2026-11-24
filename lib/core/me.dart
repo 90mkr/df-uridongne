@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'complex_pick.dart';
 import 'data.dart';
 import 'fb.dart';
+import 'home.dart';
 import 'icons.dart';
 import 'theme.dart';
 import 'ui.dart';
@@ -55,6 +56,7 @@ class MeTab extends StatelessWidget {
                     const SizedBox(height: 12),
                     _group([
                       _row('우리 단지', c?.name ?? '고르기', () => pickComplex(context)),
+                      if (c != null) _row('홈 화면 꾸미기', '순서 · 보일 카드', () => openHomeEditFor(context, c)),
                       _row('개인정보처리방침', '', () => openUrl('${kSiteUrl}policy/privacy.html', inApp: true)),
                       _row('이용약관', '', () => openUrl('${kSiteUrl}policy/terms.html', inApp: true)),
                       if (u != null) _row('회원 탈퇴', '', () => openUrl('${kSiteUrl}policy/delete.html', inApp: true)),

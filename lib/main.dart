@@ -1,6 +1,7 @@
 // 우리동네 — 시작점 (본부 방만 고침)
 import 'package:flutter/material.dart';
 
+import 'core/home_layout.dart';
 import 'core/nmap.dart';
 
 import 'core/shell.dart';
@@ -9,6 +10,7 @@ import 'core/theme.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initNaverMap(); // 휴대폰: 네이버 지도 준비 (웹은 아무것도 안 함)
+  await loadHomeLayout(); // 「홈 화면 꾸미기」 설정 (이 휴대폰에 저장된 순서·끈 카드)
   runApp(const DongneApp());
 }
 
