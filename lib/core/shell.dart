@@ -131,33 +131,31 @@ const _navSvg = {
   'me': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><circle cx="24" cy="16" r="8" fill="#DCEBFF" stroke="$_nv" stroke-width="2.6"/><path d="M9 41c1.5-8 7.5-13 15-13s13.5 5 15 13z" fill="#4C8DF6" stroke="$_nv" stroke-width="2.6" stroke-linejoin="round"/></svg>',
 };
 
-// 첫 화면 (대표님 시안 11-23): 파란 바탕 + 아래 동네 그림, 위에 앱 이름
+// 첫 화면 (대표님 11-24 요기콕): 아이콘과 같은 파랑 바탕 + 웃는 집 그림, 위에 앱 이름
 class _Splash extends StatelessWidget {
   const _Splash();
   @override
   Widget build(BuildContext context) => Scaffold(
-        backgroundColor: const Color(0xFF013DCD),
-        body: Stack(fit: StackFit.expand, children: [
-          Image.asset('assets/art/splash.jpg', fit: BoxFit.cover, alignment: Alignment.bottomCenter),
-          SafeArea(
-            child: Align(
-              alignment: const Alignment(0, -0.52),
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                const Text('우리 단지 생활정보, 한 번에', style: TextStyle(fontSize: 15, color: Color(0xCCFFFFFF), fontWeight: FontWeight.w500, letterSpacing: -0.3)),
-                const SizedBox(height: 8),
-                Text.rich(
-                  const TextSpan(children: [
-                    TextSpan(text: '우리', style: TextStyle(fontWeight: FontWeight.w300)),
-                    TextSpan(text: '동네', style: TextStyle(fontWeight: FontWeight.w800)),
-                  ]),
-                  style: const TextStyle(fontSize: 44, color: Colors.white, letterSpacing: -1.5, height: 1.1),
-                ),
-                const SizedBox(height: 26),
-                const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xB3FFFFFF))),
+        backgroundColor: const Color(0xFF015DFD),
+        body: SafeArea(
+          child: Column(children: [
+            const Spacer(flex: 3),
+            const Text('우리 단지 생활정보, 한 번에', style: TextStyle(fontSize: 15, color: Color(0xD9FFFFFF), fontWeight: FontWeight.w500, letterSpacing: -0.3)),
+            const SizedBox(height: 8),
+            Text.rich(
+              const TextSpan(children: [
+                TextSpan(text: '요기', style: TextStyle(fontWeight: FontWeight.w300)),
+                TextSpan(text: '콕', style: TextStyle(fontWeight: FontWeight.w800)),
               ]),
+              style: const TextStyle(fontSize: 46, color: Colors.white, letterSpacing: -1.5, height: 1.1),
             ),
-          ),
-        ]),
+            const SizedBox(height: 24),
+            const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xB3FFFFFF))),
+            const Spacer(flex: 2),
+            FractionallySizedBox(widthFactor: 0.78, child: Image.asset('assets/art/splash_home.png', fit: BoxFit.contain)),
+            const Spacer(flex: 2),
+          ]),
+        ),
       );
 }
 
