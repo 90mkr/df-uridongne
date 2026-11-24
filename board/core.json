@@ -4,7 +4,7 @@
  "folder": "lib/core · lib/main.dart · lib/features/registry.dart · .github · collector/collect.py",
  "room": "우리동네 본부 방",
  "state": "대기",
- "doing": "홈 본문 한 줄 카드(MainRowCard, Feature.mainCard·mainOrder): 내 차(0)·충전소 찾기(1)·제일 싼 주유소(2) — parking·charger·gas 파일은 대표님 직접 요청으로 본부가 고침. 내 차 사진(휴대폰에만, image_picker). 전국 /kk/ 다리 배포·KK_KEY 대기",
+ "doing": "11-24: 홈 편집(그 자리 편집 모드, home_layout.dart) · 생활 도구 띠 뺌 · 약국 한 줄 카드+밤 브리프 · 지하철(본부, 시간표 자료 TAGO 폐기 → 철도산업정보센터 키 대기) · 기념일·알람(본부 새 기능, flutter_local_notifications·klc·android_intent_plus) · 전국 /kk/ 다리 배포·KK_KEY 대기",
  "version": "0.3.0",
  "updated": "2026-11-24",
  "order": 0

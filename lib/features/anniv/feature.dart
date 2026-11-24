@@ -63,7 +63,8 @@ class _UpcomingState extends State<_Upcoming> {
               icon: 'anniv',
               bold: '기념일',
               thin: '챙기기',
-              sub: '생일·결혼기념일·제사를 등록하면 미리 알려 드려요',
+              sub: '생일·제사 등록하면 미리 알려 드려요',
+              subLines: 1,
               trailing: SizedBox(width: 72, child: Btn('등록', primary: true, h: 38, onTap: () => openFeature(context, widget.f))),
               onTap: () => openFeature(context, widget.f),
             );
