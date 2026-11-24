@@ -130,7 +130,7 @@ class _HomeTabState extends State<HomeTab> {
                 ...kids,
                 const SizedBox(height: 14),
                 const HomeBanners(), // 맨 아래 배너 (디자인필 · 콕플)
-                const SizedBox(height: 14),
+                const SizedBox(height: 42), // 홈 편집 단추와 넉넉히 (대표님 11-24: 3배)
                 Center(
                   // 홈 편집: 또렷한 흰 단추 (대표님 11-24 — 글자만 있으니 약함)
                   child: Material(
