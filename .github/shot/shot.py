@@ -60,28 +60,47 @@ def session(b, tag, W, H, steps):
     pg.goto(URL, wait_until="load", timeout=120000)
     time.sleep(9)
     sem()
-    global tap_xy
+    global tap_xy, pg_wheel, seen
     def tap_xy(x, y, wait=4.0):
         pg.mouse.click(x, y)
         time.sleep(wait)
+
+    def pg_wheel(dy, x=None, y=None):
+        pg.mouse.move(x or W // 2, y or H // 2)
+        pg.mouse.wheel(0, dy)
+        time.sleep(2)
+
+    def seen(text):
+        try:
+            loc = pg.get_by_text(re.compile(text))
+            for i in range(loc.count()):
+                bb = loc.nth(i).bounding_box()
+                if bb and 0 <= bb["y"] < H - 260:
+                    return True
+        except Exception:
+            pass
+        return False
     steps(shot, tap, drag, sem, W, H)
     ctx.close()
 
 
 def phone(shot, tap, drag, sem, W, H):
     shot("홈")
-    for i in range(4):
-        if tap("지도로 보기", wait=8):
+    for i in range(6):
+        pg_wheel(500)
+        if seen("주변 행사"):
             break
-        drag(200, H - 150, 200, H - 450)
+    shot("홈_행사카드")
+    tap("생활 도구", wait=4)
+    tap("주변 행사·축제", wait=8)
     shot("행사_지도")
     tap("^목록", wait=5)
     shot("행사_목록")
-    tap_xy(W // 2, 300, wait=5)
+    tap_xy(W // 2, 330, wait=5)
     shot("행사_시트")
-    drag(W // 2, H - 200, W // 2, 200)
+    pg_wheel(700, x=W // 2, y=H - 200)
     shot("행사_시트_아래")
-    tap_xy(W // 2, 30, wait=3)
+    tap_xy(W // 2, 20, wait=3)
     tap("행사 알리기", wait=4)
     shot("행사_알리기")
 

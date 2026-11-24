@@ -263,7 +263,7 @@ Widget evPhoto(Ev e, {double? h, BoxFit fit = BoxFit.cover, int i = 0, bool full
         alignment: Alignment.center,
         child: Text(e.kind, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
       );
-  if (e.img.isNotEmpty && i == 0) return Image.network(e.img, height: h, width: double.infinity, fit: fit, errorBuilder: (_, __, ___) => ph());
+  if (e.img.isNotEmpty && i == 0) return Image.network(e.img, height: h, width: double.infinity, fit: fit, webHtmlElementStrategy: WebHtmlElementStrategy.prefer, errorBuilder: (_, __, ___) => ph());
   final list = full && e.photos.isNotEmpty ? e.photos : e.thumbs;
   if (list.length > i) {
     try {
