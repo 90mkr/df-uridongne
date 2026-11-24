@@ -92,7 +92,7 @@ class _DongneMapState extends State<DongneMap> {
         onTap: (_, __) => setState(() => sel = null),
       ),
       children: [
-        TileLayer(urlTemplate: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', subdomains: const ['a', 'b', 'c', 'd'], retinaMode: true, userAgentPackageName: 'kr.designfeel.dongne'), // 웹 미리보기: 선명한(2배) 지도 — 휴대폰 앱은 네이버 지도
+        TileLayer(urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', userAgentPackageName: 'kr.designfeel.dongne'),
         MarkerLayer(markers: [
           if (c != null)
             Marker(
