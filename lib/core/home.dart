@@ -11,6 +11,7 @@ import 'complex_pick.dart';
 import 'data.dart';
 import 'feature.dart';
 import 'icons.dart';
+import 'banners.dart';
 import 'theme.dart';
 import 'ui.dart';
 
@@ -127,7 +128,9 @@ class _HomeTabState extends State<HomeTab> {
               padding: const EdgeInsets.fromLTRB(kPad, 14, kPad, 28),
               children: [
                 ...kids,
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
+                const HomeBanners(), // 맨 아래 배너 (디자인필 · 콕플)
+                const SizedBox(height: 14),
                 Center(
                   // 홈 편집: 또렷한 흰 단추 (대표님 11-24 — 글자만 있으니 약함)
                   child: Material(

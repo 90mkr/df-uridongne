@@ -86,11 +86,9 @@ def session(b, tag, W, H, steps):
 
 def phone(shot, tap, drag, sem, W, H):
     shot("홈")
-    tap("생활 도구", wait=5)
-    tap("우리 단지 이야기", wait=6)
-    shot("게시판")
-    tap("글쓰기", wait=4)
-    shot("게시판_글쓰기")
+    for i in range(6):
+        pg_wheel(1500)
+    shot("홈_맨아래_배너")
 
 
 def tablet(shot, tap, drag, sem, W, H):
