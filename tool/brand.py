@@ -6,6 +6,7 @@ import shutil
 import sys
 
 what = set(sys.argv[1:]) or {"web", "android"}
+APP = "요기콕"  # 앱 이름 (대표님 11-24)
 BLUE = "#015DFD"  # 새 아이콘 바탕 (대표님 11-24 웃는 집 아이콘)
 
 if "web" in what and os.path.isdir("web"):
@@ -16,12 +17,16 @@ if "web" in what and os.path.isdir("web"):
     p = "web/index.html"
     if os.path.exists(p):
         s = open(p, encoding="utf-8").read()
+        s = re.sub(r"<title>[^<]*</title>", f"<title>{APP}</title>", s)
+        s = re.sub(r'(apple-mobile-web-app-title" content=")[^"]*', lambda m: m.group(1) + APP, s)
         if "dongne-boot" not in s:
             s = s.replace("</head>", f'  <style id="dongne-boot">html,body{{background:{BLUE};}}</style>\n</head>', 1)
         open(p, "w", encoding="utf-8").write(s)
     p = "web/manifest.json"
     if os.path.exists(p):
         s = open(p, encoding="utf-8").read()
+        s = re.sub(r'"name":\s*"[^"]*"', f'"name": "{APP}"', s)
+        s = re.sub(r'"short_name":\s*"[^"]*"', f'"short_name": "{APP}"', s)
         s = re.sub(r'"background_color":\s*"[^"]*"', f'"background_color": "{BLUE}"', s)
         s = re.sub(r'"theme_color":\s*"[^"]*"', f'"theme_color": "{BLUE}"', s)
         open(p, "w", encoding="utf-8").write(s)

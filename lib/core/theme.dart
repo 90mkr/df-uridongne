@@ -16,7 +16,7 @@ const kSoftGreen = Color(0xFFE7F6EE);
 const kSoftOrange = Color(0xFFFFEFE3);
 const kSoftYellow = Color(0xFFFFF4D6);
 const kBg = Color(0xFFF1F5FB); // 아주 옅은 하늘빛 (시안 11-23)
-const kAppName = '우리동네';
+const kAppName = '요기콕'; // 앱 이름 (대표님 11-24)
 
 const kRadius = 16.0;
 const kPad = 20.0; // 휴대폰 화면 양옆 여백

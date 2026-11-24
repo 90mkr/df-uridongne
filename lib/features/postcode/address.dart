@@ -213,7 +213,7 @@ class _ZipPageState extends State<ZipPage> {
 }
 
 // =====================================================================
-// 검색 화면에서 「우리동네에 저장」 → 앱으로 돌아오면 이름 붙여 저장
+// 검색 화면에서 「요기콕에 저장」 → 앱으로 돌아오면 이름 붙여 저장
 // (검색 화면이 클립보드에 주소를 담아 두면, 돌아올 때 그걸 읽는다)
 // =====================================================================
 mixin _ClipCatch<W extends StatefulWidget> on State<W>, WidgetsBindingObserver {
@@ -385,7 +385,7 @@ class _EngPageState extends State<EngPage> with WidgetsBindingObserver, _ClipCat
                 Expanded(child: MixTitle('해외직구', '영문 주소', size: 16)),
               ]),
               const SizedBox(height: 8),
-              const Text('주소를 찾아 고르면 영문 주소가 나오고, 「우리동네에 저장」을 누른 뒤 돌아오면 Address1·City·State·ZIP 을 한 칸씩 복사할 수 있어요.', style: T.small),
+              const Text('주소를 찾아 고르면 영문 주소가 나오고, 「요기콕에 저장」을 누른 뒤 돌아오면 Address1·City·State·ZIP 을 한 칸씩 복사할 수 있어요.', style: T.small),
               const SizedBox(height: 12),
               Btn('우리 단지 영문 주소 찾기', primary: true, h: 42, onTap: _mine),
               const SizedBox(height: 8),
