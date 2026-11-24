@@ -12,6 +12,7 @@ import 'parking/feature.dart';
 import 'pharmacy/feature.dart';
 import 'phonebook/feature.dart';
 import 'postcode/feature.dart';
+import 'roulette/feature.dart';
 import 'school/feature.dart';
 import 'subway/feature.dart';
 import 'trash/feature.dart';
@@ -21,6 +22,7 @@ final List<Feature> features = [
   WeatherFeature(), // 머리 줄: 날씨·미세먼지
   TrashFeature(), // 맨 위: 오늘의 단지 소식
   BusFeature(), // 맨 아래 큰 카드: 단지 앞 버스
+  RouletteFeature(), // 맨 아래 큰 카드: 오늘 뭐 먹지? 룰렛 (원판이 카드 밖으로)
   SubwayFeature(), // 맨 아래 큰 카드: 가까운 역 지하철 (시간표 기준)
   PharmacyFeature(), // 반쪽: 지금 문 연 약국
   PhonebookFeature(), // 묶음: 동네 전화번호부

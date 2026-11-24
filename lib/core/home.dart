@@ -447,7 +447,7 @@ class _TodayHeroState extends State<TodayHero> {
   }
 }
 
-const _short = {'trash': '분리수거', 'lotto': '로또', 'weather': '날씨', 'bus': '버스', 'pharmacy': '약국', 'phonebook': '전화번호부', 'deals': '실거래가', 'subway': '지하철', 'school': '학교 급식'};
+const _short = {'trash': '분리수거', 'lotto': '로또', 'weather': '날씨', 'bus': '버스', 'pharmacy': '약국', 'phonebook': '전화번호부', 'deals': '실거래가', 'subway': '지하철', 'school': '학교 급식', 'roulette': '뭐 먹지'};
 
 // 생활 도구 작은 칸
 class ToolTile extends StatelessWidget {
