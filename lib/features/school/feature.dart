@@ -427,7 +427,8 @@ class _MealRow extends StatelessWidget {
         const SizedBox(width: 10),
         const Icon(Icons.restaurant_rounded, size: 18, color: kBlue),
         const SizedBox(width: 9),
-        Expanded(child: Text(m.dishes.join(' · '), style: const TextStyle(fontSize: 13, height: 1.4, color: kInk, letterSpacing: -0.2))),
+        // 반찬 이름 가운데서 줄이 갈리지 않게 (대표님 규칙) — 글자 사이를 붙이고 「 · 」에서만 줄바꿈
+        Expanded(child: Text(m.dishes.map((d) => d.split('').join('\u2060')).join(' · '), style: const TextStyle(fontSize: 13, height: 1.4, color: kInk, letterSpacing: -0.2))),
       ]),
     );
   }

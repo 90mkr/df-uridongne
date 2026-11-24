@@ -20,20 +20,26 @@ class ToolsTab extends StatelessWidget {
     final list = [...features]..sort((a, b) => a.slot.index != b.slot.index ? a.slot.index.compareTo(b.slot.index) : a.order.compareTo(b.order));
     final top = MediaQuery.of(context).padding.top;
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F8FF),
-      body: ListView(padding: EdgeInsets.zero, children: [
-        Container(
+      backgroundColor: const Color(0xFFF1F5FE),
+      body: Stack(children: [
+        // 대표님 배경(11-25): 오른쪽 위 반짝이 아이콘 + 물결, 아래로 바탕색에 녹아듦
+        Positioned(
+          left: 0,
+          right: 0,
+          top: 0,
+          height: top + 300,
+          child: ShaderMask(
+            shaderCallback: (r) => const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.white, Colors.white, Colors.transparent], stops: [0, 0.7, 1]).createShader(r),
+            blendMode: BlendMode.dstIn,
+            child: Image.asset('assets/art/tools_bg.jpg', fit: BoxFit.cover, alignment: Alignment.topRight, filterQuality: FilterQuality.medium),
+          ),
+        ),
+        ListView(padding: EdgeInsets.zero, children: [
+        SizedBox(
           height: 120 + top,
-          padding: EdgeInsets.only(top: top),
-          decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFFF2F7FF), Color(0xFFD9E7FF)])),
-          child: Stack(children: [
-            const Positioned(right: 70, top: 18, child: Icon(Icons.auto_awesome, size: 16, color: Color(0xFF6FA0F5))),
-            const Positioned(right: 14, top: 40, child: Icon(Icons.auto_awesome, size: 12, color: Color(0xFF8DB4F7))),
-            Positioned(
-              right: 24,
-              bottom: 8,
-              child: Opacity(opacity: 0.95, child: Image.asset('assets/nav/grid.png', width: 84, height: 84)),
-            ),
+          child: Padding(
+            padding: EdgeInsets.only(top: top),
+            child: Stack(children: [
             Positioned(
               left: kPad,
               top: 34,
@@ -44,6 +50,7 @@ class ToolsTab extends StatelessWidget {
               ]),
             ),
           ]),
+          ),
         ),
         Center(
           child: ConstrainedBox(
@@ -106,6 +113,7 @@ class ToolsTab extends StatelessWidget {
             ),
           ),
         ),
+      ]),
       ]),
     );
   }
