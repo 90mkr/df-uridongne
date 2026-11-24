@@ -4,9 +4,10 @@ import 'package:latlong2/latlong.dart';
 
 class DnPin {
   final String id, name, sub, icon;
+  final String badge; // 점 대신 보일 짧은 글자 (예: 주유소 가격 「1,689원」)
   final LatLng pos;
   final bool selected, apt;
-  const DnPin({required this.id, required this.pos, this.name = '', this.sub = '', this.icon = 'pin', this.selected = false, this.apt = false});
+  const DnPin({required this.id, required this.pos, this.name = '', this.sub = '', this.icon = 'pin', this.selected = false, this.apt = false, this.badge = ''});
 }
 
 typedef DnIdle = void Function(LatLng center, double zoom, (LatLng, LatLng)? bounds, bool gesture);

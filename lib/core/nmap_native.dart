@@ -86,6 +86,36 @@ class _NMapState extends State<_NMap> {
     _sync();
   }
 
+  // 가격 말풍선 (주유소 등): 색 아이콘 + 글자 + 꼭지
+  Size _badgeSize(String t) => Size(34 + t.length * 7.6, 30);
+  Future<NOverlayImage> _badge(String icon, String t, bool sel) async {
+    final k = 'b|$icon|$t|$sel';
+    final have = _img[k];
+    if (have != null) return have;
+    if (kColorPng.contains(icon)) await precacheImage(AssetImage('assets/icons/$icon.png'), context);
+    if (!mounted) return NOverlayImage.fromAssetImage('assets/icons/apt.png');
+    final sz = _badgeSize(t);
+    final w = SizedBox(
+      width: sz.width,
+      height: sz.height,
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Container(
+          height: 25,
+          padding: const EdgeInsets.fromLTRB(5, 0, 8, 0),
+          decoration: BoxDecoration(color: sel ? kBlue : Colors.white, borderRadius: BorderRadius.circular(13), border: Border.all(color: sel ? kBlue : const Color(0xFFCDD3DD))),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            if (icon.isNotEmpty && !sel) ...[LineIcon(icon, size: 15), const SizedBox(width: 3)],
+            Text(t, maxLines: 1, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, height: 1.1, color: sel ? Colors.white : kInk)),
+          ]),
+        ),
+        Container(width: 2, height: 5, color: sel ? kBlue : const Color(0xFFCDD3DD)),
+      ]),
+    );
+    final img = await NOverlayImage.fromWidget(widget: w, size: sz, context: context);
+    _img[k] = img;
+    return img;
+  }
+
   Future<NOverlayImage> _icon(String icon, bool sel, bool apt) async {
     final k = '$icon|$sel|$apt';
     final have = _img[k];
@@ -123,7 +153,7 @@ class _NMapState extends State<_NMap> {
       final m = NMarker(
         id: p.id,
         position: _n(p.pos),
-        icon: await _icon(p.icon, p.selected, p.apt),
+        icon: p.badge.isNotEmpty ? await _badge(p.icon, p.badge, p.selected) : await _icon(p.icon, p.selected, p.apt),
         caption: p.name.isEmpty
             ? null
             : NOverlayCaption(

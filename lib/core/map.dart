@@ -68,7 +68,7 @@ class _DongneMapState extends State<DongneMap> {
         pins: [
           if (c != null) DnPin(id: '_apt', pos: c.pos, name: c.name, apt: true),
           for (final p in pts)
-            DnPin(id: p.id, pos: p.pos, name: p.badge.isNotEmpty ? '${p.badge}  ${p.name}' : p.name, sub: p.sub, icon: p.icon.isNotEmpty ? p.icon : (widget.icon.isEmpty ? 'pin' : widget.icon), selected: sel == p.id),
+            DnPin(id: p.id, pos: p.pos, name: p.name, badge: p.badge, sub: p.sub, icon: p.icon.isNotEmpty ? p.icon : (widget.icon.isEmpty ? 'pin' : widget.icon), selected: sel == p.id),
         ],
         onMapTap: () => setState(() => sel = null),
         onIdle: (center, z, b, gesture) {
