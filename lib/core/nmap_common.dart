@@ -8,7 +8,8 @@ class DnPin {
   final LatLng pos;
   final bool selected, apt;
   final bool box; // 콕플식 상자(아이콘+상호). false 면 아이콘만
-  const DnPin({this.box = false, required this.id, required this.pos, this.name = '', this.sub = '', this.icon = 'pin', this.selected = false, this.apt = false, this.badge = ''});
+  final bool dot; // 멀리서: 작은 점만
+  const DnPin({this.box = false, this.dot = false, required this.id, required this.pos, this.name = '', this.sub = '', this.icon = 'pin', this.selected = false, this.apt = false, this.badge = ''});
 }
 
 typedef DnIdle = void Function(LatLng center, double zoom, (LatLng, LatLng)? bounds, bool gesture);

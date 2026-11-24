@@ -29,6 +29,23 @@ class DongneMap extends StatefulWidget {
 class _DongneMapState extends State<DongneMap> {
   String? sel;
   final nctl = DnMapCtl();
+  late double _z = widget.zoom; // 지금 확대 정도
+
+  // 점이 많은 업종: 멀리서는 작은 점 → 조금 당기면 아이콘 → 더 당기면 상호 상자 (떡처럼 뭉치지 않게, 대표님 11-24)
+  // 가격 표시(주유소 등)나 점이 적을 때는 늘 그대로
+  int _level(List<MapPoint> pts) {
+    final dense = pts.where((p) => p.badge.isEmpty).length > 20;
+    if (!dense) return 2;
+    if (_z < 14.5) return 0;
+    if (_z < 16) return 1;
+    return 2;
+  }
+
+  void _zoomTo(double z) {
+    final before = _level(widget.points);
+    _z = z;
+    if (_level(widget.points) != before && mounted) setState(() {});
+  }
   String _focused = '';
 
   // 「지도로 보기」로 넘어온 점: 고르고 그쪽으로 (점이 다 들어온 뒤 한 번)
@@ -57,6 +74,7 @@ class _DongneMapState extends State<DongneMap> {
     final c = complex.value;
     final pts = widget.points.take(500).toList();
     _applyFocus();
+    final lv = _level(pts);
     // 휴대폰 앱: 네이버 지도 (첫 번 누르면 이름·설명, 두 번 누르면 그 곳 열기)
     if (naverMapOn) {
       return _withCard(naverMap(
@@ -70,10 +88,11 @@ class _DongneMapState extends State<DongneMap> {
         pins: [
           if (c != null) DnPin(id: '_apt', pos: c.pos, name: c.name, apt: true),
           for (final p in pts)
-            DnPin(id: p.id, pos: p.pos, name: p.name, badge: widget.names ? p.badge : '', box: widget.names, sub: p.sub, icon: p.icon.isNotEmpty ? p.icon : (widget.icon.isEmpty ? 'pin' : widget.icon), selected: sel == p.id),
+            DnPin(id: p.id, pos: p.pos, name: p.name, badge: widget.names ? p.badge : '', box: widget.names && lv == 2, dot: lv == 0 && sel != p.id && p.badge.isEmpty, sub: p.sub, icon: p.icon.isNotEmpty ? p.icon : (widget.icon.isEmpty ? 'pin' : widget.icon), selected: sel == p.id),
         ],
         onMapTap: () => setState(() => sel = null),
         onIdle: (center, z, b, gesture) {
+          _zoomTo(z);
           if (gesture) _nearest(center, pts);
         },
         onPinTap: (id) {
@@ -90,6 +109,7 @@ class _DongneMapState extends State<DongneMap> {
         interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
         onTap: (_, __) => setState(() => sel = null),
         onMapEvent: (e) {
+          if (e is MapEventMoveEnd || e is MapEventScrollWheelZoom || e is MapEventDoubleTapZoomEnd || e is MapEventFlingAnimationEnd) _zoomTo(e.camera.zoom);
           if ((e is MapEventMoveEnd || e is MapEventFlingAnimationEnd) && e.source != MapEventSource.mapController && e.source != MapEventSource.fitCamera) {
             _nearest(e.camera.center, pts);
           }
@@ -121,8 +141,8 @@ class _DongneMapState extends State<DongneMap> {
                 ]),
               ),
             ),
-          for (final p in pts.where((p) => p.id != sel)) _marker(p),
-          for (final p in pts.where((p) => p.id == sel)) _marker(p),
+          for (final p in pts.where((p) => p.id != sel)) _marker(p, lv),
+          for (final p in pts.where((p) => p.id == sel)) _marker(p, 2),
         ]),
         const RichAttributionWidget(attributions: [TextSourceAttribution('OpenStreetMap')]),
       ],
@@ -170,11 +190,20 @@ class _DongneMapState extends State<DongneMap> {
   }
 
   // 점 하나: 흰 둥근 칸 안에 기능 색 아이콘 + 꼭지 (고르면 파랑 + 위에 이름 카드)
-  Marker _marker(MapPoint p) {
+  Marker _marker(MapPoint p, int lv) {
     final on = sel == p.id;
+    if (lv == 0 && p.badge.isEmpty && !on) {
+      return Marker(
+        point: p.pos,
+        width: 14,
+        height: 14,
+        child: GestureDetector(onTap: () => setState(() => sel = p.id), child: const _Dot()),
+      );
+    }
+    final box = widget.names && lv == 2 && p.name.isNotEmpty;
     return Marker(
       point: p.pos,
-      width: p.badge.isNotEmpty && widget.names ? 44.0 + p.badge.length * 8.5 : (widget.names && p.name.isNotEmpty ? pinBoxSize(p.name).width : 44),
+      width: p.badge.isNotEmpty && widget.names ? 44.0 + p.badge.length * 8.5 : (box ? pinBoxSize(p.name).width : 44),
       height: 52,
       alignment: Alignment.topCenter,
       child: GestureDetector(
@@ -184,7 +213,7 @@ class _DongneMapState extends State<DongneMap> {
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             if (p.badge.isNotEmpty && widget.names)
               _Badge(p.badge, on: on, icon: widget.icon)
-            else if (widget.names && p.name.isNotEmpty)
+            else if (box)
               PinBox(icon: p.icon.isNotEmpty ? p.icon : (widget.icon.isEmpty ? 'pin' : widget.icon), name: p.name, on: on)
             else
               _IconPin(p.icon.isNotEmpty ? p.icon : (widget.icon.isEmpty ? 'pin' : widget.icon), on: on),
@@ -193,6 +222,19 @@ class _DongneMapState extends State<DongneMap> {
       ),
     );
   }
+}
+
+// 멀리서 볼 때 작은 점
+class _Dot extends StatelessWidget {
+  const _Dot();
+  @override
+  Widget build(BuildContext context) => Center(
+        child: Container(
+          width: 11,
+          height: 11,
+          decoration: BoxDecoration(color: kBlue, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2), boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 3)]),
+        ),
+      );
 }
 
 // 지도 아래 기본 카드: 이름·설명 + 자세히

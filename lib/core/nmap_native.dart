@@ -87,6 +87,19 @@ class _NMapState extends State<_NMap> {
     _sync();
   }
 
+  // 멀리서: 작은 파랑 점
+  Future<NOverlayImage> _dot() async {
+    final have = _img['dot'];
+    if (have != null) return have;
+    final img = await NOverlayImage.fromWidget(
+      widget: Container(width: 12, height: 12, decoration: BoxDecoration(color: kBlue, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2))),
+      size: const Size(12, 12),
+      context: context,
+    );
+    _img['dot'] = img;
+    return img;
+  }
+
   // 콕플식 상자: 아이콘 + 상호
   Future<NOverlayImage> _box(String icon, String name, bool sel) async {
     final k = 'x|$icon|$name|$sel';
@@ -159,7 +172,7 @@ class _NMapState extends State<_NMap> {
   Future<void> _sync() async {
     final cc = c;
     if (cc == null || !mounted) return;
-    final sig = widget.pins.map((p) => '${p.id}${p.selected ? 1 : 0}').join(',');
+    final sig = widget.pins.map((p) => '${p.id}${p.selected ? 1 : 0}${p.dot ? 'd' : ''}${p.box ? 'b' : ''}${p.badge}').join(',');
     if (sig == _sig) return;
     _sig = sig;
     final set = <NAddableOverlay>{};
@@ -167,12 +180,15 @@ class _NMapState extends State<_NMap> {
       final m = NMarker(
         id: p.id,
         position: _n(p.pos),
-        icon: p.badge.isNotEmpty
+        anchor: p.dot ? const NPoint(0.5, 0.5) : const NPoint(0.5, 1),
+        icon: p.dot
+            ? await _dot()
+            : p.badge.isNotEmpty
             ? await _badge(p.icon, p.badge, p.selected)
             : (p.box && p.name.isNotEmpty && !p.apt)
                 ? await _box(p.icon, p.name, p.selected)
                 : await _icon(p.icon, p.selected, p.apt),
-        caption: p.name.isEmpty || (p.box && !p.apt && p.badge.isEmpty) || (!p.box && !p.apt && !p.selected)
+        caption: p.name.isEmpty || p.dot || (p.box && !p.apt && p.badge.isEmpty) || (!p.box && !p.apt && !p.selected)
             ? null
             : NOverlayCaption(
                 text: p.name,

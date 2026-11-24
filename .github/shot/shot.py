@@ -96,6 +96,15 @@ def phone(shot, tap, drag, sem, W, H):
     shot("지도")
     tap("주유소", wait=8)
     shot("지도_주유소")
+    tap("업종 펼치기", wait=3)
+    tap("세탁소", wait=8)
+    shot("지도_세탁소_가까이")
+    pg_wheel(500)
+    time.sleep(3)
+    shot("지도_세탁소_조금멀리")
+    pg_wheel(700)
+    time.sleep(3)
+    shot("지도_세탁소_멀리")
 
 
 def tablet(shot, tap, drag, sem, W, H):
