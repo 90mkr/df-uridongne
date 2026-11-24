@@ -77,3 +77,37 @@
       allow update: if isAdmin();
       allow delete: if (request.auth != null && resource.data.uid == request.auth.uid) || isAdmin();
     }
+
+    // 우리 단지 게시판 (11-24): 로그인 회원이 읽고 씀 · 글쓴이만 지우기/나눔 완료 · 댓글 수(n)는 누구나 ±1 · 관리자 모두
+    match /dn_posts/{id} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['cid', 'area', 'cat', 't', 'b', 'uid', 'name', 'at', 'n', 'done', 'ph', 'th'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.at == request.time
+        && request.resource.data.n == 0
+        && request.resource.data.cat in ['news', 'share', 'free', 'rec']
+        && request.resource.data.t is string && request.resource.data.t.size() >= 2 && request.resource.data.t.size() <= 60
+        && request.resource.data.b is string && request.resource.data.b.size() <= 1000
+        && request.resource.data.ph is list && request.resource.data.ph.size() <= 3
+        && request.resource.data.th is list && request.resource.data.th.size() <= 3;
+      allow update: if isAdmin()
+        || (request.auth != null && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['n'])
+            && (request.resource.data.n == resource.data.n + 1 || request.resource.data.n == resource.data.n - 1))
+        || (request.auth != null && resource.data.uid == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['done']));
+      allow delete: if (request.auth != null && resource.data.uid == request.auth.uid) || isAdmin();
+      match /cm/{c} {
+        allow read: if request.auth != null;
+        allow create: if request.auth != null
+          && request.resource.data.keys().hasOnly(['b', 'uid', 'name', 'at'])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.at == request.time
+          && request.resource.data.b is string && request.resource.data.b.size() >= 1 && request.resource.data.b.size() <= 300;
+        allow delete: if (request.auth != null && resource.data.uid == request.auth.uid) || isAdmin();
+      }
+    }
+    // 게시판 신고: 누구나(로그인) 보내기만 · 보기는 관리자
+    match /dn_post_reports/{id} {
+      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
+      allow read, delete: if isAdmin();
+    }
