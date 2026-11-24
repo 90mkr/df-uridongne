@@ -174,3 +174,44 @@ Color busTypeColor(String t) {
   if (t.contains('지선') || t.contains('마을')) return const Color(0xFF2EA36B);
   return kBlue;
 }
+
+// 움직이는 버스 둘레로 원이 퍼져 나가는 효과 (대표님 11-25: 달리는 느낌)
+class BusPulse extends StatefulWidget {
+  final Widget child;
+  final double size; // 안쪽 그림 크기
+  final Color color;
+  const BusPulse({super.key, required this.child, this.size = 22, this.color = kBlue});
+  @override
+  State<BusPulse> createState() => _BusPulseState();
+}
+
+class _BusPulseState extends State<BusPulse> with SingleTickerProviderStateMixin {
+  late final AnimationController _a = AnimationController(vsync: this, duration: const Duration(milliseconds: 1600))..repeat();
+
+  @override
+  void dispose() {
+    _a.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+        animation: _a,
+        builder: (_, child) {
+          Widget ring(double t) {
+            final v = Curves.easeOut.transform(t % 1);
+            return Opacity(
+              opacity: (1 - v) * 0.55,
+              child: Container(
+                width: widget.size * (1 + v * 0.9),
+                height: widget.size * (1 + v * 0.9),
+                decoration: BoxDecoration(color: widget.color.withValues(alpha: 0.35), borderRadius: BorderRadius.circular(widget.size * 0.4 * (1 + v * 0.9))),
+              ),
+            );
+          }
+
+          return Stack(alignment: Alignment.center, clipBehavior: Clip.none, children: [ring(_a.value), ring(_a.value + 0.5), child!]);
+        },
+        child: widget.child,
+      );
+}

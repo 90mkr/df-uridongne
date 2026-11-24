@@ -317,18 +317,23 @@ class _BusRoutePageState extends State<BusRoutePage> with SingleTickerProviderSt
                 if (_shown(b) case final p?)
                   Marker(
                     point: p,
-                    width: 32,
-                    height: 32,
+                    width: 64,
+                    height: 64,
                     child: GestureDetector(
                       onTap: () => setState(() => sel = sel == b.vehicleNo ? null : b.vehicleNo),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: kBusGrad,
-                          borderRadius: BorderRadius.circular(9),
-                          border: Border.all(color: sel == b.vehicleNo ? kInk : Colors.white),
-                          boxShadow: kShadow,
+                      child: BusPulse(
+                        size: 32,
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            gradient: kBusGrad,
+                            borderRadius: BorderRadius.circular(9),
+                            border: Border.all(color: sel == b.vehicleNo ? kInk : Colors.white),
+                            boxShadow: kShadow,
+                          ),
+                          child: const Icon(Icons.directions_bus_rounded, size: 20, color: Colors.white),
                         ),
-                        child: const Icon(Icons.directions_bus_rounded, size: 20, color: Colors.white),
                       ),
                     ),
                   ),
@@ -600,14 +605,16 @@ class _BusRoutePageState extends State<BusRoutePage> with SingleTickerProviderSt
         SizedBox(
           width: 36,
           height: 56, // 칸 높이를 꽉 잡아야 정류장 사이 세로선이 이어짐 (대표님 11-25)
-          child: Stack(alignment: Alignment.center, children: [
+          child: Stack(alignment: Alignment.center, clipBehavior: Clip.none, children: [
             Positioned(top: first ? 28 : 0, bottom: last ? 28 : 0, child: Container(width: 1.5, color: const Color(0xFFC3CDDC))),
             if (busHere.isNotEmpty)
-              Container(
-                width: 22,
-                height: 22,
-                decoration: BoxDecoration(gradient: kBusGrad, borderRadius: BorderRadius.circular(6), border: Border.all(color: Colors.white)),
-                child: const Icon(Icons.directions_bus_rounded, size: 14, color: Colors.white),
+              BusPulse(
+                child: Container(
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(gradient: kBusGrad, borderRadius: BorderRadius.circular(6), border: Border.all(color: Colors.white)),
+                  child: const Icon(Icons.directions_bus_rounded, size: 14, color: Colors.white),
+                ),
               )
             else if (here)
               Container(
