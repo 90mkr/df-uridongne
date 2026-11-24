@@ -98,7 +98,7 @@ class _RowCard extends StatelessWidget {
 }
 
 // 본문 큰 카드 이름 (mainCard 는 기능 이름과 다르게 부름)
-const _mainNames = {'parking': '내 차 어디 댔지', 'charger': '충전소 찾기', 'gas': '제일 싼 주유소', 'anniv': '다가오는 기념일', 'school': '우리 아이 학교 급식'};
+const _mainNames = {'parking': '내 차 어디 댔지', 'charger': '충전소 찾기', 'gas': '제일 싼 주유소', 'anniv': '다가오는 기념일', 'school': '우리 아이 학교 급식', 'events': '주변 행사·축제'};
 
 /// 홈 한 칸
 class HomeBlock {

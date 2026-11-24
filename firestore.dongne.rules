@@ -57,3 +57,23 @@
       allow read: if true;
       allow write: if isAdmin();
     }
+
+    // 동네 행사 알리기 (11-24): 로그인 회원이 「신청」으로 올림 → 관리자 승인(st=ok) 뒤 누구나 보기
+    //   본인은 자기 글을 보고 지울 수 있음 · 고치기·승인은 관리자 · 사진은 base64 (약 80KB × 3장까지)
+    match /dn_events/{id} {
+      allow read: if resource.data.st == 'ok' || (request.auth != null && resource.data.uid == request.auth.uid) || isAdmin();
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['t', 's', 'e', 'time', 'place', 'y', 'x', 'desc', 'kind', 'scope', 'cid', 'area', 'uid', 'name', 'st', 'at', 'ph', 'th', 'fee'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.st == 'new'
+        && request.resource.data.at == request.time
+        && request.resource.data.t is string && request.resource.data.t.size() >= 2 && request.resource.data.t.size() <= 60
+        && request.resource.data.desc is string && request.resource.data.desc.size() <= 200
+        && request.resource.data.place is string && request.resource.data.place.size() <= 80
+        && request.resource.data.y is number && request.resource.data.x is number
+        && request.resource.data.scope in ['apt', 'near']
+        && request.resource.data.ph is list && request.resource.data.ph.size() <= 3
+        && request.resource.data.th is list && request.resource.data.th.size() <= 3;
+      allow update: if isAdmin();
+      allow delete: if (request.auth != null && resource.data.uid == request.auth.uid) || isAdmin();
+    }

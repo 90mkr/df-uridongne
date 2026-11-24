@@ -6,6 +6,7 @@ import 'anniv/feature.dart';
 import 'bus/feature.dart';
 import 'charger/feature.dart';
 import 'deals/feature.dart';
+import 'events/feature.dart';
 import 'gas/feature.dart';
 import 'lotto/feature.dart';
 import 'parking/feature.dart';
@@ -34,6 +35,7 @@ final List<Feature> features = [
   LottoFeature(),
   AnnivFeature(), // 생활 도구 + 홈 한 줄: 다가오는 기념일
   AlarmFeature(), // 생활 도구: 시계 앱 알람 넣기
+  EventsFeature(), // 생활 도구 + 홈 사진 카드: 주변 행사·축제 (주말엔 「지금 우리 단지」)
   SchoolFeature(), // 생활 도구 + 홈 한 줄(등록한 집만): 우리 아이 학교 급식·쉬는 날
 ];
 

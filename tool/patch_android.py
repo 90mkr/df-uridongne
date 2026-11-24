@@ -172,3 +172,97 @@ for g in glob.glob("android/app/build.gradle*"):
             t += "\ndependencies {\n    " + dep + "\n}\n"
         open(g, "w", encoding="utf-8").write(t)
 print("알림·알람 설정 완료")
+
+
+# 행사 알리기 사진 (11-24, 콕플과 같은 방식): 방향 바로잡기 · 줄이기(약 80KB) · 작은 사진 · 얼굴이 크게 나온 사진 찾기
+#   안드로이드 기본 얼굴 찾기(android.media.FaceDetector) — 따로 받는 부품 없음. 채널 이름 dongne/photo
+MAIN_KT = '''package {pkg}
+
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.media.ExifInterface
+import android.media.FaceDetector
+import android.os.Handler
+import android.os.Looper
+import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.MethodChannel
+import java.io.ByteArrayOutputStream
+import java.util.concurrent.Executors
+
+class MainActivity : FlutterActivity() {{
+    private val pool = Executors.newSingleThreadExecutor()
+
+    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {{
+        super.configureFlutterEngine(flutterEngine)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "dongne/photo").setMethodCallHandler {{ call, result ->
+            if (call.method != "prep") {{
+                result.notImplemented()
+                return@setMethodCallHandler
+            }}
+            val path = call.argument<String>("path") ?: ""
+            val full = call.argument<Int>("full") ?: 960
+            val thumb = call.argument<Int>("thumb") ?: 320
+            pool.execute {{
+                val out = try {{ prep(path, full, thumb) }} catch (e: Throwable) {{ null }}
+                Handler(Looper.getMainLooper()).post {{
+                    if (out == null) result.error("prep", "photo", null) else result.success(out)
+                }}
+            }}
+        }}
+    }}
+
+    private fun prep(path: String, fullMax: Int, thumbMax: Int): Map<String, Any> {{
+        val bounds = BitmapFactory.Options().apply {{ inJustDecodeBounds = true }}
+        BitmapFactory.decodeFile(path, bounds)
+        var sample = 1
+        while (bounds.outWidth / (sample * 2) >= fullMax && bounds.outHeight / (sample * 2) >= fullMax) sample *= 2
+        val src = BitmapFactory.decodeFile(path, BitmapFactory.Options().apply {{ inSampleSize = sample }}) ?: throw IllegalStateException("decode")
+        val ori = try {{
+            ExifInterface(path).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+        }} catch (e: Exception) {{ ExifInterface.ORIENTATION_NORMAL }}
+        val m = Matrix()
+        when (ori) {{
+            ExifInterface.ORIENTATION_ROTATE_90 -> m.postRotate(90f)
+            ExifInterface.ORIENTATION_ROTATE_180 -> m.postRotate(180f)
+            ExifInterface.ORIENTATION_ROTATE_270 -> m.postRotate(270f)
+        }}
+        val s = minOf(1f, fullMax.toFloat() / maxOf(src.width, src.height))
+        m.postScale(s, s)
+        val big = Bitmap.createBitmap(src, 0, 0, src.width, src.height, m, true)
+        var fw = minOf(big.width, 640)
+        fw -= fw % 2
+        val fh = maxOf(2, (big.height.toFloat() * fw / big.width).toInt())
+        val small = Bitmap.createScaledBitmap(big, fw, fh, true).copy(Bitmap.Config.RGB_565, false)
+        val faces = arrayOfNulls<FaceDetector.Face>(5)
+        val n = try {{ FaceDetector(fw, fh, 5).findFaces(small, faces) }} catch (e: Throwable) {{ 0 }}
+        var eyes = 0f
+        for (i in 0 until n) {{
+            val f = faces[i] ?: continue
+            if (f.confidence() >= 0.4f) eyes = maxOf(eyes, f.eyesDistance())
+        }}
+        val faceBig = eyes * 2.4f / minOf(fw, fh) >= 0.22f
+        // 약 80KB 가 될 때까지 화질을 낮춤
+        var q = 78
+        var bytes: ByteArray
+        do {{
+            val o = ByteArrayOutputStream()
+            big.compress(Bitmap.CompressFormat.JPEG, q, o)
+            bytes = o.toByteArray()
+            q -= 8
+        }} while (bytes.size > 85 * 1024 && q >= 40)
+        val side = minOf(big.width, big.height)
+        val sq = Bitmap.createBitmap(big, (big.width - side) / 2, (big.height - side) / 2, side, side)
+        val th = Bitmap.createScaledBitmap(sq, thumbMax, thumbMax, true)
+        val thumbOut = ByteArrayOutputStream()
+        th.compress(Bitmap.CompressFormat.JPEG, 70, thumbOut)
+        return mapOf("full" to bytes, "thumb" to thumbOut.toByteArray(), "faceBig" to faceBig)
+    }}
+}}
+'''
+for kt in glob.glob("android/app/src/main/kotlin/**/MainActivity.kt", recursive=True):
+    old = open(kt, encoding="utf-8").read()
+    pkg = re.search(r"^package\s+([\w.]+)", old, re.M).group(1)
+    open(kt, "w", encoding="utf-8").write(MAIN_KT.format(pkg=pkg))
+    print("MainActivity: 사진 준비 채널 넣음")

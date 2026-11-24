@@ -70,15 +70,20 @@ def session(b, tag, W, H, steps):
 
 def phone(shot, tap, drag, sem, W, H):
     shot("홈")
-    drag(200, 600, 200, 250)
-    shot("홈_아래")
-    drag(200, 700, 200, 150)
-    drag(200, 700, 200, 150)
-    shot("홈_맨아래")
-    tap_xy(120, 625, wait=4)
-    shot("룰렛")
-    tap("돌리기", wait=6)
-    shot("룰렛_결과")
+    for i in range(4):
+        if tap("지도로 보기", wait=8):
+            break
+        drag(200, H - 150, 200, H - 450)
+    shot("행사_지도")
+    tap("^목록", wait=5)
+    shot("행사_목록")
+    tap_xy(W // 2, 300, wait=5)
+    shot("행사_시트")
+    drag(W // 2, H - 200, W // 2, 200)
+    shot("행사_시트_아래")
+    tap_xy(W // 2, 30, wait=3)
+    tap("행사 알리기", wait=4)
+    shot("행사_알리기")
 
 
 def tablet(shot, tap, drag, sem, W, H):
@@ -89,7 +94,7 @@ def tablet(shot, tap, drag, sem, W, H):
 
 with sync_playwright() as p:
     b = p.chromium.launch(args=["--use-gl=swiftshader", "--enable-unsafe-swiftshader"])
-    for tag, W, H, f in [("폰", 390, 844, phone), ("탭", 1180, 820, tablet)]:
+    for tag, W, H, f in [("폰작은", 360, 740, phone), ("폰큰", 430, 932, phone), ("탭", 1180, 820, tablet)]:
         try:
             session(b, tag, W, H, f)
         except Exception as e:

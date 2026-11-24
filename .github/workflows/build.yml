@@ -6,7 +6,7 @@ on:
   schedule:
     # 매주 월요일 새벽 3시 13분(한국 시각)에 업체 자료를 새로 모은다 (생활 업체는 자주 바뀌지 않음)
     - cron: '13 18 * * 0'
-    # 주유소 가격만 하루 3번 (한국 시각 07:40 · 12:40 · 18:40) — 카카오 업체 모으기는 건너뜀
+    # 주유소 가격 + 주변 행사만 하루 3번 (한국 시각 07:40 · 12:40 · 18:40) — 카카오 업체 모으기는 건너뜀
     - cron: '40 22,3,9 * * *'
     # 로또 당첨번호만 — 토요일 21:20, (막혔을 때) 일요일 09:07 (한국 시각)
     - cron: '20 12 * * 6'
@@ -64,7 +64,9 @@ jobs:
           AIRKOREA_KEY: ${{ secrets.AIRKOREA_KEY }}
           EV_KEY: ${{ secrets.EV_KEY }}
           NEIS_KEY: ${{ secrets.NEIS_KEY }}
-          FEATURES: ${{ github.event.schedule == '40 22,3,9 * * *' && 'gas' || ((github.event.schedule == '20 12 * * 6' || github.event.schedule == '7 0 * * 0') && 'lotto' || inputs.features) }}
+          KOPIS_KEY: ${{ secrets.KOPIS_KEY }}
+          KRIC_KEY: ${{ secrets.KRIC_KEY }}
+          FEATURES: ${{ github.event.schedule == '40 22,3,9 * * *' && 'gas,events' || ((github.event.schedule == '20 12 * * 6' || github.event.schedule == '7 0 * * 0') && 'lotto' || inputs.features) }}
         run: |
           for f in collector/features/*.py; do
             [ -f "$f" ] || continue

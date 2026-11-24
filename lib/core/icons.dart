@@ -68,6 +68,7 @@ const Map<String, String> kIconBody = {
   'pin': '<path d="M24 41s-11-10-11-19a11 11 0 0 1 22 0c0 9-11 19-11 19z" fill="F"/><path d="M24 41s-11-10-11-19a11 11 0 0 1 22 0c0 9-11 19-11 19z"/><circle cx="24" cy="22" r="4"/>',
   'search': '<circle cx="21" cy="21" r="12"/><path d="M30 30l10 10"/>',
   'phone': '<path d="M15 8l5 9-3.5 3c2 4.5 6 8.5 10.5 10.5l3-3.5 9 5-2 6c-14 1-27-12-26-26z" fill="F"/><path d="M15 8l5 9-3.5 3c2 4.5 6 8.5 10.5 10.5l3-3.5 9 5-2 6c-14 1-27-12-26-26z"/>',
+  'event': '<path d="M12 41V9"/><path d="M12 10c6-3 10 3 16 0s8-1 10 1v14c-2-2-4-3-10 0s-10-3-16 0z" fill="F"/><path d="M33 31l1.5 3 3 .5-2.2 2 .6 3.1-2.9-1.5-2.9 1.5.6-3.1-2.2-2 3-.5z"/>',
   'route': '<circle cx="12" cy="36" r="4"/><circle cx="36" cy="12" r="4" fill="F"/><circle cx="36" cy="12" r="4"/><path d="M15 33l6-6c3-3 2-7 6-9l5-3"/>',
   'map': '<path d="M7 12l11-4 12 4 11-4v28l-11 4-12-4-11 4z" fill="F"/><path d="M7 12l11-4 12 4 11-4v28l-11 4-12-4-11 4z"/><path d="M18 8v28M30 12v28"/>',
   'list': '<path d="M16 13h24M16 24h24M16 35h24"/><circle cx="9" cy="13" r="1.6"/><circle cx="9" cy="24" r="1.6"/><circle cx="9" cy="35" r="1.6"/>',
@@ -126,6 +127,7 @@ const kColorPng = {
 const _n = '#24539F'; // 남색 선
 const Map<String, String> kColorSvg = {
   // 기념일: 케이크 (11-24)
+  'event': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path d="M12 42V8" stroke="$_n" stroke-width="2" stroke-linecap="round"/><path d="M12 9c6-3 10 3 16 0s8-1 10 1v15c-2-2-4-3-10 0s-10-3-16 0z" fill="#FF9A7A" stroke="$_n" stroke-width="2" stroke-linejoin="round"/><path d="M33 30l1.6 3.2 3.4.5-2.5 2.3.6 3.4-3.1-1.6-3.1 1.6.6-3.4-2.5-2.3 3.4-.5z" fill="#FFE27A" stroke="$_n" stroke-width="1.6" stroke-linejoin="round"/></svg>',
   'anniv': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect x="8" y="24" width="32" height="16" rx="4" fill="#FF9FB3" stroke="$_n" stroke-width="2"/><path d="M8 31c4 3 8 3 12 0s8-3 12 0 6 2 8 0" fill="none" stroke="#fff" stroke-width="2.4"/><rect x="12" y="16" width="24" height="9" rx="3" fill="#FFE27A" stroke="$_n" stroke-width="2"/><path d="M24 8v8" stroke="$_n" stroke-width="2"/><path d="M24 4c2 2 2 4 0 5-2-1-2-3 0-5z" fill="#FF7A59"/><path d="M6 40h36" stroke="$_n" stroke-width="2" stroke-linecap="round"/></svg>',
   // 학교: 깃발 건물 (11-24)
   'school': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path d="M6 20L24 11l18 9" fill="#FFB547" stroke="$_n" stroke-width="2" stroke-linejoin="round"/><rect x="9" y="20" width="30" height="20" rx="2" fill="#FFE9B8" stroke="$_n" stroke-width="2"/><rect x="20" y="29" width="8" height="11" rx="1.5" fill="#4C8DF6" stroke="$_n" stroke-width="1.8"/><rect x="12" y="24" width="5" height="5" rx="1" fill="#fff" stroke="$_n" stroke-width="1.6"/><rect x="31" y="24" width="5" height="5" rx="1" fill="#fff" stroke="$_n" stroke-width="1.6"/><path d="M24 11V4" stroke="$_n" stroke-width="2"/><path d="M24 4h7l-2 2.5 2 2.5h-7" fill="#FF7A59" stroke="$_n" stroke-width="1.4"/><path d="M5 40h38" stroke="$_n" stroke-width="2" stroke-linecap="round"/></svg>',
