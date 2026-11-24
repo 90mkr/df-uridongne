@@ -124,6 +124,7 @@ const kColorPng = {
   'weather', 'trash', 'bus', 'book', 'deals', 'gas', 'charger', 'parking', 'post', 'lotto',
   // 대표님 그림 11-24: 행사·기념일·알람·학교·지하철도 그림 파일로
   'event', 'anniv', 'alarm', 'school', 'subway',
+  'apt', // 우리 단지: 웃는 집 (대표님 11-24)
 };
 
 // 기능·도구: 남색 선 + 색 면 (시안 느낌으로 직접 그림)

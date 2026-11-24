@@ -100,18 +100,18 @@ class _DongneMapState extends State<DongneMap> {
             Marker(
               point: c.pos,
               width: 170,
-              height: 40,
+              height: 88,
               alignment: Alignment.topCenter,
               child: Align(
                 alignment: Alignment.bottomCenter,
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Image.asset('assets/icons/apt.png', width: 46, height: 46), // 우리 단지: 웃는 집 (대표님 11-24)
+                  const SizedBox(height: 2),
                   Container(
                     constraints: const BoxConstraints(maxWidth: 170),
                     padding: const EdgeInsets.fromLTRB(7, 5, 11, 5),
                     decoration: BoxDecoration(color: kBlue, borderRadius: BorderRadius.circular(14), boxShadow: [BoxShadow(color: kBlue.withValues(alpha: 0.35), blurRadius: 12)]),
                     child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      const LineIcon('apt', size: 16, line: Colors.white, fill: Color(0x40FFFFFF)),
-                      const SizedBox(width: 4),
                       Flexible(child: Text(c.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Colors.white, height: 1.2))),
                     ]),
                   ),

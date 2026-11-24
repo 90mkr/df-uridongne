@@ -90,14 +90,10 @@ class _NMapState extends State<_NMap> {
     final k = '$icon|$sel|$apt';
     final have = _img[k];
     if (have != null) return have;
+    if (apt) await precacheImage(const AssetImage('assets/icons/apt.png'), context); // 그림으로 찍기 전에 미리 읽어 둠
+    if (!mounted) return NOverlayImage.fromAssetImage('assets/icons/apt.png');
     final w = apt
-        ? Container(
-            width: 34,
-            height: 34,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(color: kBlue, borderRadius: BorderRadius.circular(11), border: Border.all(color: Colors.white, width: 2)),
-            child: const LineIcon('apt', size: 22, line: Colors.white, fill: Color(0x40FFFFFF)),
-          )
+        ? Image.asset('assets/icons/apt.png', width: 46, height: 46) // 우리 단지: 웃는 집 (대표님 11-24)
         : icon == 'bus'
             ? SizedBox(width: sel ? 40 : 32, height: sel ? 40 : 32, child: const LineIcon('bus', size: 32))
             : Container(
@@ -111,7 +107,7 @@ class _NMapState extends State<_NMap> {
                 ),
                 child: LineIcon(icon, size: sel ? 28 : 23),
               );
-    final img = await NOverlayImage.fromWidget(widget: w, size: Size(sel ? 40 : (apt ? 34 : 32), sel ? 40 : (apt ? 34 : 32)), context: context);
+    final img = await NOverlayImage.fromWidget(widget: w, size: apt ? const Size(46, 46) : Size(sel ? 40 : 32, sel ? 40 : 32), context: context);
     _img[k] = img;
     return img;
   }
@@ -232,6 +228,7 @@ class _NRichState extends State<_NRich> {
     for (final o in widget.circles) {
       set.add(NCircleOverlay(id: 'circle${set.length}', center: _n(o.pos), radius: o.meters, color: o.fill, outlineColor: o.line, outlineWidth: 1));
     }
+    if (widget.marks.any((m) => m.id == '_apt')) await precacheImage(const AssetImage('assets/icons/apt.png'), context); // 단지 표시 그림
     for (final m in widget.marks) {
       var img = _img[m.key];
       if (img == null) {

@@ -44,7 +44,7 @@ class _DnMapState extends State<DnMap> {
     final c = complex.value;
     return [
       if (widget.showComplex && c != null)
-        DnMark(id: '_apt', pos: c.pos, key: 'apt|${c.name}', size: Size(math.min(170, c.name.length * 12.0 + 44), 36), z: 50, child: _AptTag(c.name)),
+        DnMark(id: '_apt', pos: c.pos, key: 'apt2|${c.name}', size: Size(math.min(170, c.name.length * 12.0 + 24), 80), z: 50, child: _AptTag(c.name)),
       ...widget.marks,
     ];
   }
@@ -124,6 +124,7 @@ class _DnMapState extends State<DnMap> {
   }
 }
 
+// 우리 단지 표시: 웃는 집 + 아래 이름표 (대표님 11-24)
 class _AptTag extends StatelessWidget {
   final String name;
   const _AptTag(this.name);
@@ -131,14 +132,12 @@ class _AptTag extends StatelessWidget {
   Widget build(BuildContext context) => Align(
         alignment: Alignment.bottomCenter,
         child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Image.asset('assets/icons/apt.png', width: 46, height: 46),
+          const SizedBox(height: 2),
           Container(
-            padding: const EdgeInsets.fromLTRB(7, 4, 10, 4),
-            decoration: BoxDecoration(color: kBlue, borderRadius: BorderRadius.circular(13)),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              const LineIcon('apt', size: 15, line: Colors.white, fill: Color(0x40FFFFFF)),
-              const SizedBox(width: 4),
-              Flexible(child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Colors.white, height: 1.2))),
-            ]),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(color: kBlue, borderRadius: BorderRadius.circular(13), border: Border.all(color: Colors.white, width: 1)),
+            child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Colors.white, height: 1.2)),
           ),
           CustomPaint(size: const Size(10, 6), painter: _Tri()),
         ]),
