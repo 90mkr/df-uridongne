@@ -86,15 +86,16 @@ def session(b, tag, W, H, steps):
 
 def phone(shot, tap, drag, sem, W, H):
     shot("홈")
-    for i in range(6):
-        pg_wheel(1500)
-    shot("홈_맨아래_배너")
+    tap("전화번호부", wait=6)
+    shot("전화번호부_탭")
+    pg_wheel(800)
+    shot("전화번호부_탭_아래")
 
 
 def tablet(shot, tap, drag, sem, W, H):
     shot("홈")
-    tap("세탁소", wait=6)
-    shot("전화번호부_목록")
+    tap("전화번호부", wait=6)
+    shot("전화번호부_탭")
 
 
 with sync_playwright() as p:

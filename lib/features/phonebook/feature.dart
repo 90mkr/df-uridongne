@@ -184,56 +184,106 @@ class _PhonebookPageState extends State<PhonebookPage> {
     int count(String id) => all.where((s) => s.cats.contains(id)).length;
     final tops = kokTops(c.areaId);
     void go(Cat? cat) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ShopListPage(complex: c, all: all, cat: cat)));
-    return DetailPage(
-      title: '동네 전화번호부',
-      body: ListView(padding: const EdgeInsets.fromLTRB(kPad, 14, kPad, 30), children: [
-        InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () => go(null),
-          child: Container(
-            height: 46,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), border: Border.all(color: kLine), color: kBg),
-            child: const Row(children: [
-              LineIcon('search', size: 18, line: kMute),
-              SizedBox(width: 9),
-              Text('세탁소, 떡집, 가게 이름으로 찾기', style: TextStyle(fontSize: 13.5, color: kMute)),
-            ]),
-          ),
+    // 대표님 시안(11-24) 참고: 위 하늘색 띠 + 큰 전화번호부 그림, 흰 판이 둥글게 올라옴, 업종은 옅은 칸 4개씩
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: ListView(padding: EdgeInsets.zero, children: [
+        Container(
+          height: 150 + MediaQuery.of(context).padding.top,
+          padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
+          decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFFF2F7FF), Color(0xFFDCE9FF)])),
+          child: Stack(children: [
+            const Positioned(right: 0, bottom: 20, child: CustomPaint(size: Size(230, 90), painter: _Skyline())),
+            const Positioned(right: 22, bottom: 34, child: LineIcon('book', size: 92)),
+            if (Navigator.of(context).canPop())
+              Positioned(left: 4, top: 4, child: IconButton(onPressed: () => Navigator.of(context).maybePop(), icon: const Icon(Icons.arrow_back_rounded, color: kInk))),
+            Positioned(
+              left: kPad,
+              top: Navigator.of(context).canPop() ? 52 : 34,
+              child: Row(children: const [
+                LineIcon('book', size: 40),
+                SizedBox(width: 10),
+                Text('동네 전화번호부', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800, letterSpacing: -0.6)),
+              ]),
+            ),
+          ]),
         ),
-        const SizedBox(height: 18),
-        Row(children: [
-          const MixTitle('업종', '별로 보기'),
-          const SizedBox(width: 7),
-          Text(loading ? '' : '${all.length}곳', style: T.tiny),
-        ]),
-        const SizedBox(height: 8),
-        LayoutBuilder(builder: (context, box) {
-          final cols = box.maxWidth > 520 ? 6 : 4;
-          final w = box.maxWidth / cols;
-          return Wrap(children: [
-            for (final cat in kCats)
-              SizedBox(
-                width: w,
+        Transform.translate(
+          offset: const Offset(0, -26),
+          child: Container(
+            decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+            padding: const EdgeInsets.fromLTRB(kPad, 16, kPad, 6),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              // 찾기 칸: 흰 바탕 + 옅은 파랑 테두리·빛
+              Material(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
                 child: InkWell(
-                  borderRadius: BorderRadius.circular(10),
-                  onTap: loading ? null : () => go(cat),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    child: Column(children: [
-                      LineIcon(cat.id, size: 34),
-                      const SizedBox(height: 6),
-                      Text(cat.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-                      Text(loading ? ' ' : '${count(cat.id)}', style: const TextStyle(fontSize: 10.5, color: kMute)),
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () => go(null),
+                  child: Container(
+                    height: 52,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFB9CEF3)),
+                      boxShadow: [BoxShadow(color: kBlue.withValues(alpha: 0.10), blurRadius: 14)],
+                    ),
+                    child: const Row(children: [
+                      Icon(Icons.search_rounded, size: 24, color: kBlue),
+                      SizedBox(width: 10),
+                      Text('세탁소, 떡집, 가게 이름으로 찾기', style: TextStyle(fontSize: 14, color: kMute)),
                     ]),
                   ),
                 ),
               ),
-          ]);
-        }),
+              const SizedBox(height: 24),
+              Row(children: [
+                Container(width: 4, height: 18, decoration: BoxDecoration(color: kBlue, borderRadius: BorderRadius.circular(2))),
+                const SizedBox(width: 9),
+                const Text('업종 별로 보기', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, letterSpacing: -0.4)),
+                const SizedBox(width: 8),
+                Text(loading ? '' : '${all.length}곳', style: const TextStyle(fontSize: 12.5, color: kSub)),
+              ]),
+              const SizedBox(height: 12),
+              LayoutBuilder(builder: (context, box) {
+                final cols = box.maxWidth > 520 ? 6 : 4;
+                const gap = 8.0;
+                final w = (box.maxWidth - gap * (cols - 1)) / cols;
+                return Wrap(spacing: gap, runSpacing: gap, children: [
+                  for (final cat in kCats)
+                    SizedBox(
+                      width: w,
+                      child: Material(
+                        color: const Color(0xFFF3F7FD),
+                        borderRadius: BorderRadius.circular(16),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: loading ? null : () => go(cat),
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(4, 12, 4, 10),
+                            child: Column(children: [
+                              LineIcon(cat.id, size: 42),
+                              const SizedBox(height: 7),
+                              Text(cat.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: -0.3)),
+                              const SizedBox(height: 1),
+                              Text(loading ? ' ' : '${count(cat.id)}', style: const TextStyle(fontSize: 11.5, color: kMute)),
+                            ]),
+                          ),
+                        ),
+                      ),
+                    ),
+                ]);
+              }),
         if (tops.isNotEmpty) ...[
-          const SizedBox(height: 20),
-          const Row(children: [MixTitle('콕플이 고른', '동네 맛집'), SizedBox(width: 7), Text('구글 별점·유튜버 방문 기준', style: T.tiny)]),
+          const SizedBox(height: 28),
+          const Row(children: [
+            Icon(Icons.emoji_events_rounded, size: 22, color: Color(0xFFFFB020)),
+            SizedBox(width: 6),
+            Text('콕플이 고른 동네 맛집', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, letterSpacing: -0.4)),
+            SizedBox(width: 8),
+            Expanded(child: Text('구글 별점·유튜버 방문 기준', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, color: kSub))),
+          ]),
           const SizedBox(height: 10),
           // 유튜브 영상 사진이 크게 보이는 카드 (대표님 11-24)
           SizedBox(
@@ -316,7 +366,37 @@ class _PhonebookPageState extends State<PhonebookPage> {
         Btn('우리 가게 등록하기 (무료)', icon: 'owner', onTap: () => openOwnerForm(context, c)),
         const SizedBox(height: 14),
         Text('업체 정보는 카카오 장소 정보를 바탕으로 모았어요${updatedOf(c.areaId).isEmpty ? '' : ' · ${updatedOf(c.areaId)} 기준'}', style: T.tiny),
+            ]),
+          ),
+        ),
       ]),
     );
   }
+}
+
+// 위 띠 오른쪽 옅은 건물 줄 (시안 느낌)
+class _Skyline extends CustomPainter {
+  const _Skyline();
+  @override
+  void paint(Canvas c, Size s) {
+    final p = Paint()..color = const Color(0x1A3D7BF0);
+    final w = s.width, h = s.height;
+    final bs = [(0.0, 0.55, 0.16), (0.14, 0.8, 0.14), (0.3, 0.45, 0.12), (0.44, 0.95, 0.16), (0.62, 0.6, 0.12), (0.76, 0.75, 0.13), (0.9, 0.5, 0.1)];
+    for (final (x, ht, bw) in bs) {
+      c.drawRRect(RRect.fromRectAndCorners(Rect.fromLTWH(x * w, h * (1 - ht), bw * w, h * ht), topLeft: const Radius.circular(4), topRight: const Radius.circular(4)), p);
+    }
+    final win = Paint()..color = const Color(0x263D7BF0);
+    for (final (x, ht, bw) in bs) {
+      for (var yy = h * (1 - ht) + 8; yy < h - 8; yy += 12) {
+        for (var xx = x * w + 5; xx < (x + bw) * w - 6; xx += 9) {
+          c.drawRect(Rect.fromLTWH(xx, yy, 4, 5), win);
+        }
+      }
+    }
+    final g = Paint()..color = const Color(0x3346B86A);
+    c.drawOval(Rect.fromLTWH(w * 0.5, h - 26, 60, 34), g);
+  }
+
+  @override
+  bool shouldRepaint(_) => false;
 }
