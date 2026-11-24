@@ -31,7 +31,7 @@ class GasFeature extends Feature {
   @override
   Widget page(BuildContext context, Complex c) => GasPage(c);
 
-  // 단지 홈 본문: 「제일 싼 주유소」 (단지 3km 안, 고른 기름 기준) — 자료 없으면 빈칸
+  // 단지 홈 본문: 「제일 싼 주유소」 (단지 5km 안, 고른 기름 기준 — 대표님 11-24) — 자료 없으면 빈칸
   @override
   Widget? mainCard(BuildContext context, Complex c) => _CheapCard(f: this, c: c);
   @override
@@ -68,7 +68,7 @@ class _CheapCard extends StatelessWidget {
     if (d == null) return null;
     final p = await prefGet('gas.fuel') ?? 'B027';
     final fuel = kFuels.any((x) => x.$1 == p) ? p : 'B027';
-    final l = d.around(c.pos, fuel, 3000);
+    final l = d.around(c.pos, fuel, 5000);
     return l.isEmpty ? null : (l.first, fuel);
   }
 
@@ -83,7 +83,7 @@ class _CheapCard extends StatelessWidget {
               icon: 'gas',
               bold: '제일 싼',
               thin: '주유소',
-              sub: s.name,
+              sub: '5km 안 최저 · ${s.name}',
               subLines: 1,
               trailing: MainValue('${won(s.price(fuel)!)}원', '${fuelName(fuel)} · ${distText(s.dist)}'),
               onTap: () => openFeature(context, f),
