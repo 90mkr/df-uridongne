@@ -60,7 +60,7 @@ def session(b, tag, W, H, steps):
     pg.goto(URL, wait_until="load", timeout=120000)
     time.sleep(9)
     sem()
-    global tap_xy, pg_wheel, seen
+    global tap_xy, pg_wheel, seen, tap_has
     def tap_xy(x, y, wait=4.0):
         pg.mouse.click(x, y)
         time.sleep(wait)
@@ -69,6 +69,23 @@ def session(b, tag, W, H, steps):
         pg.mouse.move(x or W // 2, y or H // 2)
         pg.mouse.wheel(0, dy)
         time.sleep(2)
+
+    def tap_has(text, wait=4.0):
+        """의미 칸(aria-label·글자)에 text 가 들어 있는 가장 작은 칸 누르기"""
+        bb = pg.evaluate("""(t) => { let best = null;
+          for (const e of document.querySelectorAll('flt-semantics, [aria-label], [role=button]')) {
+            const s = (e.getAttribute('aria-label') || '') + ' ' + (e.textContent || '');
+            if (!s.includes(t)) continue;
+            const r = e.getBoundingClientRect();
+            if (r.width < 4 || r.height < 4 || r.top < 0 || r.top > innerHeight - 40) continue;
+            if (!best || r.width * r.height < best.w * best.h) best = {x: r.left + r.width / 2, y: r.top + Math.min(r.height / 2, 40), w: r.width, h: r.height};
+          } return best; }""", text)
+        if not bb:
+            log.append(f"[{tag}] 못 찾음(칸): {text}")
+            return False
+        pg.mouse.click(bb["x"], bb["y"])
+        time.sleep(wait)
+        return True
 
     def seen(text):
         try:
@@ -90,11 +107,11 @@ def phone(shot, tap, drag, sem, W, H):
         pg_wheel(1500)
     pg_wheel(-1200)
     shot("홈_버스지하철")
-    tap("^단지 앞 버스", wait=10)
+    tap_has("단지 앞 버스", wait=10) or tap_xy(W // 2, 300, wait=10)
     shot("버스_지도_아래창")
     pg_wheel(500, W // 2, int(H * 0.75))
     shot("버스_아래창_내림")
-    tap("목록으로 보기", wait=6)
+    tap_has("목록으로 보기", wait=6)
     shot("버스_목록")
 
 
@@ -104,7 +121,7 @@ def tablet(shot, tap, drag, sem, W, H):
         pg_wheel(1500)
     pg_wheel(-1200)
     shot("홈_버스")
-    tap("^단지 앞 버스", wait=10)
+    tap_has("단지 앞 버스", wait=10) or tap_xy(W // 2, 300, wait=10)
     shot("버스_지도_창")
 
 
