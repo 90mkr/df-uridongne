@@ -40,7 +40,7 @@ class _HomeBannersState extends State<HomeBanners> {
       if (l.length > 1) {
         t = Timer.periodic(const Duration(seconds: 6), (_) {
           if (!mounted || !pc.hasClients) return;
-          pc.animateToPage((page + 1) % items.length, duration: const Duration(milliseconds: 600), curve: Curves.easeInOut);
+          pc.animateToPage((page + 1) % items.length, duration: const Duration(milliseconds: 700), curve: Curves.easeInOutCubic);
         });
       }
     });
@@ -64,6 +64,8 @@ class _HomeBannersState extends State<HomeBanners> {
           borderRadius: BorderRadius.circular(10),
           child: PageView.builder(
             controller: pc,
+            scrollDirection: Axis.vertical, // 위아래로 넘어감 (대표님 11-24)
+            physics: const NeverScrollableScrollPhysics(), // 손가락은 홈 넘기기에 — 배너는 저절로만
             itemCount: items.length,
             onPageChanged: (i) => setState(() => page = i),
             itemBuilder: (_, i) => Semantics(
