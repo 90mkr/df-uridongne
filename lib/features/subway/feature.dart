@@ -96,12 +96,14 @@ class _HomeCardState extends State<_HomeCard> {
             borderRadius: BorderRadius.circular(20),
             child: Stack(children: [
               Container(
-                height: 84,
+                height: 104,
                 decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFF7E6BE7), Color(0xFF8571EE)])),
                 child: Stack(children: [
-                  Positioned(right: 88, bottom: 6, height: 62, child: Opacity(opacity: 0.9, child: Image.asset('assets/art/subway_head.png', fit: BoxFit.fitHeight))),
+                  // 대표님 사진(11-24) 깔고, 글자 쪽(왼쪽)만 색 필터
+                  Positioned.fill(child: Image.asset('assets/art/subway_bg.jpg', fit: BoxFit.cover, alignment: const Alignment(0.7, 0.1), filterQuality: FilterQuality.medium)),
+                  const Positioned.fill(child: DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(colors: [Color(0xF26A55DC), Color(0xC27E6BE7), Color(0x2E7E6BE7)], stops: [0, 0.45, 0.8])))),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 0, 12, 10),
+                    padding: const EdgeInsets.fromLTRB(14, 0, 12, 16),
                     child: Row(children: [
                       Container(
                         width: 44,
@@ -142,7 +144,7 @@ class _HomeCardState extends State<_HomeCard> {
                 ]),
               ),
               Padding(
-                padding: const EdgeInsets.only(top: 72),
+                padding: const EdgeInsets.only(top: 90),
                 child: Container(
                   decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(18))),
                   padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
