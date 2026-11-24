@@ -85,15 +85,15 @@ class _HomeCardState extends State<_HomeCard> {
       ]);
     }
     // 대표님 시안(11-24): 보라 머리띠 + 오른쪽 전철 그림 + 흰 「시간표」 단추, 흰 판이 둥글게 겹침, 아래 안내는 옅은 상자
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
+    // 모서리까지 깔끔하게 잘리도록: 그림자 상자 > 둥글게 자르기 > 흰 바탕 > 누르기
+    return Container(
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: const Color(0xFF6A5AE0).withValues(alpha: 0.16), blurRadius: 16)]),
+      child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
-        onTap: () => openFeature(context, widget.f),
-        child: Ink(
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: const Color(0xFF6A5AE0).withValues(alpha: 0.16), blurRadius: 16)]),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
+        child: Material(
+          color: Colors.white,
+          child: InkWell(
+            onTap: () => openFeature(context, widget.f),
             child: Stack(children: [
               Container(
                 height: 104,
