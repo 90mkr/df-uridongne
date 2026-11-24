@@ -90,6 +90,8 @@ def phone(shot, tap, drag, sem, W, H):
         pg_wheel(1500)
     pg_wheel(-1200)
     shot("홈_버스지하철")
+    tap("실시간", wait=8)
+    shot("버스_화면")
 
 
 def tablet(shot, tap, drag, sem, W, H):

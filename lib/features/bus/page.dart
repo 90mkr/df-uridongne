@@ -447,41 +447,49 @@ class _ArrCard extends StatelessWidget {
     final n = r.next;
     // 막대: 30정거장 전부터 정류장까지
     final prog = (1 - a.left / 30).clamp(0.04, 1.0);
-    return LayoutBuilder(builder: (context, box) {
-      final narrow = box.maxWidth < 420;
-      return InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: kLine)),
-          child: Row(children: [
-            RouteBadge(no: a.routeNo, type: routeTypeShort(a.type) + (a.lowFloor ? '·저상' : ''), width: narrow ? 118 : 156),
-            Container(width: 1, height: 44, color: kLine, margin: EdgeInsets.symmetric(horizontal: narrow ? 10 : 16)),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [
-                  const Icon(Icons.schedule_rounded, size: 15, color: kBlue),
-                  const SizedBox(width: 4),
-                  const Text('도착 예정', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-                  const Spacer(),
-                  if (n != null) Text('다음 ${(n.secs / 60).ceil()}분', style: T.tiny),
-                ]),
-                const SizedBox(height: 4),
-                Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-                  Text(soon ? '곧 도착' : '$mins분',
-                      style: TextStyle(fontSize: soon ? 20 : (narrow ? 24 : 28), fontWeight: FontWeight.w800, letterSpacing: -0.8, color: kBlue, height: 1.1)),
-                  const SizedBox(width: 10),
-                  Expanded(child: _Track(p: prog, label: a.leftText)),
-                ]),
-              ]),
+    // 홈 카드와 같은 모양 (대표님 11-24): 왼쪽 작은 노선 알약 · 가운데 막대 · 오른쪽 도착 시간 알약
+    final col = busTypeColor(a.type);
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(12, 10, 6, 10),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFE6EBF3))),
+        child: Row(children: [
+          Column(mainAxisSize: MainAxisSize.min, children: [
+            Container(
+              constraints: const BoxConstraints(minWidth: 64),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+              decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [col.withValues(alpha: 0.85), col]), borderRadius: BorderRadius.circular(14)),
+              child: Text(a.routeNo, maxLines: 1, textAlign: TextAlign.center, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.3, height: 1.2)),
             ),
-            const Icon(Icons.chevron_right_rounded, size: 22, color: kSub),
+            const SizedBox(height: 3),
+            Text(routeTypeShort(a.type) + (a.lowFloor ? '·저상' : ''), style: const TextStyle(fontSize: 10.5, color: kSub)),
           ]),
-        ),
-      );
-    });
+          const SizedBox(width: 12),
+          Expanded(child: _Track(p: prog, label: n == null ? a.leftText : '${a.leftText} · 다음 ${(n.secs / 60).ceil()}분')),
+          const SizedBox(width: 10),
+          Container(
+            padding: const EdgeInsets.fromLTRB(10, 6, 12, 6),
+            decoration: BoxDecoration(color: const Color(0xFFEEF4FF), borderRadius: BorderRadius.circular(14)),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.directions_bus_rounded, size: 15, color: Color(0xFF5B78B0)),
+              const SizedBox(width: 5),
+              Text(soon ? '곧 도착' : '$mins분', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, letterSpacing: -0.5, color: kBlue)),
+            ]),
+          ),
+          const Icon(Icons.chevron_right_rounded, size: 20, color: kSub),
+        ]),
+      ),
+    );
   }
+}
+
+// 노선 종류 색 (광역 빨강 · 간선 파랑 · 지선 초록) — 홈 카드와 같게
+Color busTypeColor(String t) {
+  if (t.contains('광역') || t.contains('급행') || t.contains('좌석')) return const Color(0xFFE5484D);
+  if (t.contains('지선') || t.contains('마을')) return const Color(0xFF2EA36B);
+  return kBlue;
 }
 
 class _Track extends StatelessWidget {

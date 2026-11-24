@@ -244,84 +244,122 @@ class _NaverLink extends StatelessWidget {
       );
 }
 
-// 상세: 둘레 역들
+// 상세: 둘레 역들 — 홈 카드와 같은 사진 머리띠 · 노선 띠 · 시간 알약 (대표님 11-24)
 class _Page extends StatelessWidget {
   final Complex c;
   const _Page({required this.c});
   @override
   Widget build(BuildContext context) {
+    final top = MediaQuery.paddingOf(context).top;
     return Scaffold(
       backgroundColor: kBg,
-      appBar: AppBar(
-        backgroundColor: kBg,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        titleSpacing: 0,
-        title: const Text('지하철', style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.w800, letterSpacing: -0.4)),
-      ),
-      body: FutureBuilder<List<Station>>(
-        future: nearStations(c, km: 3),
-        builder: (context, snap) {
-          if (snap.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator(color: kBlue));
-          final l = (snap.data ?? const <Station>[]).take(5).toList();
-          if (l.isEmpty) return const Center(child: Text('단지 3km 안에 지하철역이 없어요', style: T.small));
-          final now = DateTime.now();
-          return Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 720),
-              child: ListView(padding: const EdgeInsets.fromLTRB(kPad, 6, kPad, 28), children: [
-                const Text('시간표 기준이에요. 실제 열차는 몇 분 늦어질 수 있어요.', style: T.small),
-                const SizedBox(height: 10),
-                for (final s in l) ...[
-                  Container(
-                    decoration: cardBox(),
-                    clipBehavior: Clip.antiAlias,
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
-                        child: Row(children: [
-                          const LineIcon('subway', size: 26),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text.rich(
-                              TextSpan(children: [
-                                TextSpan(text: '${s.name}역 ', style: const TextStyle(fontWeight: FontWeight.w800)),
-                                TextSpan(text: s.line, style: const TextStyle(fontWeight: FontWeight.w400, color: kSub, fontSize: 13)),
-                              ]),
-                              style: const TextStyle(fontSize: 15.5, letterSpacing: -0.4),
-                            ),
-                          ),
-                          Text(distText(meters(c.pos, s.pos)), style: T.small),
-                        ]),
-                      ),
-                      if (!s.hasTable)
-                        const Padding(padding: EdgeInsets.fromLTRB(14, 6, 14, 12), child: Text('시간표를 준비하고 있어요', style: T.small))
-                      else
-                        for (final ud in ['U', 'D'])
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(14, 6, 14, 6),
-                            child: Row(children: [
-                              SizedBox(width: 96, child: Text(s.towards(ud, now), style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: _ink))),
-                              Expanded(
-                                child: Wrap(spacing: 10, children: [
-                                  for (final d in s.next(ud, now, n: 3))
-                                    Text('${d.clock} (${d.minsText})', style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
-                                  if (s.next(ud, now).isEmpty) const Text('오늘 열차 끝', style: T.small),
-                                ]),
-                              ),
-                              Text('막차 ${s.last(ud, now)}', style: T.tiny),
-                            ]),
-                          ),
-                      _NaverLink(s: s),
-                    ]),
-                  ),
-                  const SizedBox(height: 12),
-                ],
+      body: Column(children: [
+        SizedBox(
+          height: top + 120,
+          child: Stack(children: [
+            Positioned.fill(child: Image.asset('assets/art/subway_bg.jpg', fit: BoxFit.cover, alignment: const Alignment(0.7, 0.1))),
+            const Positioned.fill(
+              child: DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(colors: [Color(0xF26A55DC), Color(0xC27E6BE7), Color(0x2E7E6BE7)], stops: [0, 0.45, 0.8]))),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              top: top + 6,
+              child: Row(children: [
+                IconButton(onPressed: () => Navigator.of(context).maybePop(), icon: const Icon(Icons.arrow_back_rounded, size: 24, color: Colors.white)),
+                const LineIcon('subway', size: 30),
+                const SizedBox(width: 8),
+                const Text('가까운 역 지하철', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: -0.6, color: Colors.white)),
               ]),
             ),
-          );
-        },
-      ),
+            Positioned(
+              left: kPad,
+              bottom: 14,
+              child: const Text('시간표 기준이에요. 실제 열차는 몇 분 늦어질 수 있어요.', style: TextStyle(fontSize: 12, color: Color(0xE6FFFFFF))),
+            ),
+          ]),
+        ),
+        Expanded(
+          child: FutureBuilder<List<Station>>(
+            future: nearStations(c, km: 3),
+            builder: (context, snap) {
+              if (snap.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator(color: kBlue));
+              final l = (snap.data ?? const <Station>[]).take(5).toList();
+              if (l.isEmpty) return const Center(child: Text('단지 3km 안에 지하철역이 없어요', style: T.small));
+              final now = DateTime.now();
+              return Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 720),
+                  child: ListView(padding: const EdgeInsets.fromLTRB(kPad, 14, kPad, 28), children: [
+                    for (final s in l) ...[
+                      Container(
+                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFE6EBF3)), boxShadow: const [BoxShadow(color: Color(0x101C3A6E), blurRadius: 10)]),
+                        padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                          Container(
+                            padding: const EdgeInsets.fromLTRB(10, 8, 12, 8),
+                            decoration: BoxDecoration(color: const Color(0xFFEEF2FF), borderRadius: BorderRadius.circular(12)),
+                            child: Row(children: [
+                              Container(
+                                width: 22,
+                                height: 22,
+                                alignment: Alignment.center,
+                                decoration: const BoxDecoration(color: Color(0xFF2F6BFF), shape: BoxShape.circle),
+                                child: Text(RegExp(r'\d').firstMatch(s.line)?.group(0) ?? 'M', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white)),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text.rich(
+                                  TextSpan(children: [
+                                    TextSpan(text: '${s.name}역 ', style: const TextStyle(fontWeight: FontWeight.w800, color: kInk)),
+                                    TextSpan(text: s.line, style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF2F4FC8), fontSize: 12.5)),
+                                  ]),
+                                  style: const TextStyle(fontSize: 15, letterSpacing: -0.4),
+                                ),
+                              ),
+                              Text(distText(meters(c.pos, s.pos)), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: kSub)),
+                            ]),
+                          ),
+                          if (!s.hasTable)
+                            const Padding(padding: EdgeInsets.symmetric(vertical: 16), child: Center(child: Text('시간표를 준비하고 있어요', style: T.small)))
+                          else
+                            for (final ud in ['U', 'D'])
+                              Padding(
+                                padding: const EdgeInsets.only(top: 10),
+                                child: Row(children: [
+                                  Container(
+                                    constraints: const BoxConstraints(minWidth: 84),
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                    decoration: BoxDecoration(color: const Color(0x146A5AE0), borderRadius: BorderRadius.circular(12)),
+                                    child: Text(s.towards(ud, now), maxLines: 1, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: _ink)),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Wrap(spacing: 6, runSpacing: 4, children: [
+                                      for (final (i, d) in s.next(ud, now, n: 3).indexed)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                                          decoration: BoxDecoration(color: i == 0 ? const Color(0xFFEEF4FF) : const Color(0xFFF4F6FA), borderRadius: BorderRadius.circular(12)),
+                                          child: Text('${d.clock} · ${d.minsText}', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: i == 0 ? kBlue : kInk)),
+                                        ),
+                                      if (s.next(ud, now).isEmpty) const Text('오늘 열차 끝', style: T.small),
+                                    ]),
+                                  ),
+                                  Text('막차 ${s.last(ud, now)}', style: T.tiny),
+                                ]),
+                              ),
+                          _NaverLink(s: s),
+                        ]),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                  ]),
+                ),
+              );
+            },
+          ),
+        ),
+      ]),
     );
   }
 }
