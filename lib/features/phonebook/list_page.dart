@@ -257,15 +257,29 @@ class _ShopListPageState extends State<ShopListPage> {
     final car = widget.cat?.id == 'car';
     if (list.isEmpty && !car) return _empty();
     final n = list.length > 300 ? 300 : list.length;
-    final colW = wide ? (w - 16 * 2 - _gap) / 2 : w - 14 * 2;
-    Widget card(Shop s) => SizedBox(width: colW, child: ShopCard(key: ValueKey(s.id), shop: s, complex: c, tapHint: '지도', onTap: () => _toMap(s)));
+    // 휴대폰도 태블릿도 두 줄 (대표님 11-24) — 휴대폰은 작은 카드, 태블릿은 큰 카드
+    final phone = w < 600;
+    final pad = phone ? 14.0 : 16.0;
+    final colW = ((w - pad * 2 - _gap) / 2).floorToDouble();
+    Widget card(Shop s) => SizedBox(width: colW, child: ShopCard(key: ValueKey(s.id), shop: s, complex: c, tapHint: '지도', compact: phone, onTap: () => _toMap(s)));
     return ListView(
       controller: listCtl,
-      padding: EdgeInsets.fromLTRB(wide ? 16 : 14, 12, wide ? 16 : 14, 30 + MediaQuery.of(context).padding.bottom),
+      padding: EdgeInsets.fromLTRB(pad, 12, pad, 30 + MediaQuery.of(context).padding.bottom),
       children: [
         if (car) ...[_gasLink(), const SizedBox(height: _gap)],
         if (list.isEmpty) _empty(),
-        Wrap(spacing: _gap, runSpacing: _gap, children: [for (final s in list.take(n)) card(s)]),
+        // 두 칸씩 같은 높이로 (들쭉날쭉하지 않게)
+        for (var i = 0; i < n; i += 2)
+          Padding(
+            padding: EdgeInsets.only(bottom: i + 2 < n ? _gap : 0),
+            child: IntrinsicHeight(
+              child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                card(list[i]),
+                const SizedBox(width: _gap),
+                if (i + 1 < n) card(list[i + 1]) else SizedBox(width: colW),
+              ]),
+            ),
+          ),
         Padding(
           padding: const EdgeInsets.only(top: 14),
           child: Text(list.length > n ? '가까운 $n곳까지 보여 드려요' : '${list.length}곳 · ${c.name} 기준', textAlign: TextAlign.center, style: T.small),

@@ -86,34 +86,21 @@ def session(b, tag, W, H, steps):
 
 def phone(shot, tap, drag, sem, W, H):
     shot("홈")
-    for i in range(6):
-        pg_wheel(500)
-        if seen("주변 행사"):
-            break
-    shot("홈_행사카드")
-    tap("생활 도구", wait=4)
-    tap("주변 행사·축제", wait=8)
-    shot("행사_지도")
-    tap("^목록", wait=5)
-    shot("행사_목록")
-    tap_xy(W // 2, 330, wait=5)
-    shot("행사_시트")
-    pg_wheel(700, x=W // 2, y=H - 200)
-    shot("행사_시트_아래")
-    tap_xy(W // 2, 20, wait=3)
-    tap("행사 알리기", wait=4)
-    shot("행사_알리기")
+    tap("세탁소", wait=6)
+    shot("전화번호부_목록")
+    pg_wheel(500)
+    shot("전화번호부_목록_아래")
 
 
 def tablet(shot, tap, drag, sem, W, H):
     shot("홈")
-    tap_xy(90, 40, wait=6)
-    shot("단지정보")
+    tap("세탁소", wait=6)
+    shot("전화번호부_목록")
 
 
 with sync_playwright() as p:
     b = p.chromium.launch(args=["--use-gl=swiftshader", "--enable-unsafe-swiftshader"])
-    for tag, W, H, f in [("폰작은", 360, 740, phone), ("폰큰", 430, 932, phone), ("탭", 1180, 820, tablet)]:
+    for tag, W, H, f in [("폰작은", 360, 740, phone), ("폰큰", 430, 932, phone), ("탭", 1180, 820, tablet), ("탭세로", 820, 1180, tablet)]:
         try:
             session(b, tag, W, H, f)
         except Exception as e:

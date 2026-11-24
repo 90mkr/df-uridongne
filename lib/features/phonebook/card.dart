@@ -27,7 +27,7 @@ class ShopCard extends StatefulWidget {
 }
 
 class _ShopCardState extends State<ShopCard> {
-  bool editing = false, busy = false;
+
   final picked = <String>{};
 
   Shop get s => widget.shop;
@@ -43,7 +43,6 @@ class _ShopCardState extends State<ShopCard> {
   @override
   void didUpdateWidget(covariant ShopCard old) {
     super.didUpdateWidget(old);
-    if (old.shop.id != widget.shop.id) editing = false;
   }
 
   @override
@@ -57,29 +56,76 @@ class _ShopCardState extends State<ShopCard> {
     if (mounted) setState(() {});
   }
 
+  // 추천: 누르면 작은 창이 떠서 바로 고르고 남김 (카드가 길어지지 않게, 대표님 11-24)
   Future<void> _startRec() async {
     if (me == null) {
       await openLogin(context);
       if (me == null) return;
       await loadRecs(c.areaId);
     }
+    if (!mounted) return;
     final r = recsOf(c.areaId)[s.id];
-    setState(() {
-      picked
-        ..clear()
-        ..addAll(r?.myStickers ?? const []);
-      editing = true;
-    });
+    final mine = r?.mine == true;
+    picked
+      ..clear()
+      ..addAll(r?.myStickers ?? const []);
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, set) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(kPad, 18, kPad, 16),
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                const Icon(Icons.thumb_up_alt_rounded, size: 20, color: kBlue),
+                const SizedBox(width: 8),
+                Expanded(child: Text(s.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: -0.4))),
+              ]),
+              const SizedBox(height: 4),
+              const Text('이웃에게 추천해 주세요. 어떤 점이 좋았나요? (3개까지)', style: TextStyle(fontSize: 12, color: kSub)),
+              const SizedBox(height: 12),
+              Wrap(spacing: 6, runSpacing: 6, children: [
+                for (final st in kStickers)
+                  ChoiceChipBox(st.text, on: picked.contains(st.id), onTap: () {
+                    set(() {
+                      if (picked.contains(st.id)) {
+                        picked.remove(st.id);
+                      } else if (picked.length < 3) {
+                        picked.add(st.id);
+                      } else {
+                        toast(context, '3개까지 고를 수 있어요');
+                      }
+                    });
+                  }),
+              ]),
+              const SizedBox(height: 16),
+              Row(children: [
+                Expanded(
+                  child: Btn(mine ? '추천 거두기' : '닫기', h: 44, onTap: () {
+                    Navigator.pop(ctx);
+                    if (mine) _save(remove: true);
+                  }),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Btn(mine ? '고친 추천 남기기' : '추천 남기기', primary: true, h: 44, onTap: () {
+                    Navigator.pop(ctx);
+                    _save();
+                  }),
+                ),
+              ]),
+            ]),
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _save({bool remove = false}) async {
-    setState(() => busy = true);
     final e = remove ? await removeRec(s, c.areaId) : await saveRec(s, c.areaId, picked.toList());
     if (!mounted) return;
-    setState(() {
-      busy = false;
-      if (e == null) editing = false;
-    });
     toast(context, e ?? (remove ? '추천을 거뒀어요' : '추천했어요. 고마워요!'));
   }
 
@@ -168,8 +214,7 @@ class _ShopCardState extends State<ShopCard> {
                     ]),
                   ),
                 ),
-                if (!editing)
-                  InkWell(
+                InkWell(
                     borderRadius: BorderRadius.circular(14),
                     onTap: _startRec,
                     child: Container(
@@ -179,43 +224,14 @@ class _ShopCardState extends State<ShopCard> {
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(color: mine ? kLine : const Color(0xFFCADAFD)),
                       ),
-                      child: Text(mine ? '내 추천 고치기' : '추천하기', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: mine ? kSub : kBlue)),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(mine ? Icons.thumb_up_alt_rounded : Icons.thumb_up_alt_outlined, size: 14, color: kBlue),
+                        const SizedBox(width: 4),
+                        Text(mine ? '내 추천' : '추천', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: kBlue)),
+                      ]),
                     ),
                   ),
               ]),
-              AnimatedSize(
-                duration: const Duration(milliseconds: 200),
-                alignment: Alignment.topCenter,
-                child: !editing
-                    ? const SizedBox(width: double.infinity)
-                    : Padding(
-                        padding: const EdgeInsets.only(top: 10),
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          const Text('어떤 점이 좋았나요? (3개까지)', style: TextStyle(fontSize: 11.5, color: kSub)),
-                          const SizedBox(height: 7),
-                          Wrap(spacing: 6, runSpacing: 6, children: [
-                            for (final st in kStickers)
-                              ChoiceChipBox(st.text, on: picked.contains(st.id), onTap: () {
-                                setState(() {
-                                  if (picked.contains(st.id)) {
-                                    picked.remove(st.id);
-                                  } else if (picked.length < 3) {
-                                    picked.add(st.id);
-                                  } else {
-                                    toast(context, '3개까지 고를 수 있어요');
-                                  }
-                                });
-                              }),
-                          ]),
-                          const SizedBox(height: 10),
-                          Row(children: [
-                            Expanded(child: Btn(mine ? '추천 거두기' : '취소', h: 38, onTap: busy ? null : () => mine ? _save(remove: true) : setState(() => editing = false))),
-                            const SizedBox(width: 8),
-                            Expanded(child: Btn(busy ? '저장하는 중' : '추천 남기기', primary: true, h: 38, onTap: busy ? null : _save)),
-                          ]),
-                        ]),
-                      ),
-              ),
               const SizedBox(height: 10),
               // ---- 근처 주차장 (없으면 주소) ----
               Row(children: [
@@ -273,7 +289,7 @@ class _ShopCardState extends State<ShopCard> {
       ),
       child: Material(
         color: Colors.transparent,
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+        child: Column(mainAxisAlignment: MainAxisAlignment.spaceBetween, crossAxisAlignment: CrossAxisAlignment.start, children: [
           InkWell(
             borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
             onTap: widget.onTap,
@@ -309,31 +325,6 @@ class _ShopCardState extends State<ShopCard> {
               ]),
             ),
           ),
-          AnimatedSize(
-            duration: const Duration(milliseconds: 200),
-            alignment: Alignment.topCenter,
-            child: !editing
-                ? const SizedBox(width: double.infinity)
-                : Padding(
-                    padding: const EdgeInsets.fromLTRB(9, 8, 9, 0),
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Wrap(spacing: 4, runSpacing: 4, children: [
-                        for (final st in kStickers)
-                          ChoiceChipBox(st.text, on: picked.contains(st.id), onTap: () {
-                            setState(() {
-                              if (picked.contains(st.id)) {
-                                picked.remove(st.id);
-                              } else if (picked.length < 3) {
-                                picked.add(st.id);
-                              }
-                            });
-                          }),
-                      ]),
-                      const SizedBox(height: 6),
-                      Btn(busy ? '저장하는 중' : '추천 남기기', primary: true, h: 32, onTap: busy ? null : _save),
-                    ]),
-                  ),
-          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(8, 7, 8, 8),
             child: Row(children: [
@@ -342,7 +333,7 @@ class _ShopCardState extends State<ShopCard> {
               Expanded(flex: 5, child: _mini('길안내', Icons.near_me_rounded, () => startNav(context, name: s.name, lat: s.lat, lng: s.lng))),
               const SizedBox(width: 4),
               // 추천: 엄지 손 (글 없이)
-              Expanded(flex: 3, child: _mini('', editing ? Icons.close_rounded : (rec?.mine == true ? Icons.thumb_up_alt_rounded : Icons.thumb_up_alt_outlined), editing ? () => setState(() => editing = false) : _startRec, soft: true)),
+              Expanded(flex: 3, child: _mini('', rec?.mine == true ? Icons.thumb_up_alt_rounded : Icons.thumb_up_alt_outlined, _startRec, soft: true)),
             ]),
           ),
         ]),
