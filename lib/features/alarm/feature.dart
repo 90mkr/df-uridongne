@@ -258,20 +258,10 @@ class _AlarmPageState extends State<AlarmPage> {
               ),
               padding: EdgeInsets.fromLTRB(narrow ? 12 : 16, 14, narrow ? 8 : 12, 14),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Image.asset('assets/icons/$icon.png', width: narrow ? 50 : 58, height: narrow ? 50 : 58),
-                const SizedBox(height: 10),
-                Row(children: [
-                  Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Text(p.label, maxLines: 1, style: TextStyle(fontSize: narrow ? 14.5 : 16, fontWeight: FontWeight.w800, letterSpacing: -0.5, color: kInk)),
-                      ),
-                      const SizedBox(height: 3),
-                      Text('${p.time} · ${p.daysText}', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: narrow ? 11.5 : 12.5, color: const Color(0xFF5A6475))),
-                    ]),
-                  ),
+                // 좁은 폰: 스위치를 아이콘 옆 위로 — 시각 글자가 잘리지 않게
+                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Image.asset('assets/icons/$icon.png', width: narrow ? 50 : 58, height: narrow ? 50 : 58),
+                  const Spacer(),
                   Transform.scale(
                     scale: narrow ? 0.78 : 0.85,
                     child: Switch(
@@ -284,6 +274,14 @@ class _AlarmPageState extends State<AlarmPage> {
                     ),
                   ),
                 ]),
+                const SizedBox(height: 8),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(p.label, maxLines: 1, style: TextStyle(fontSize: narrow ? 14.5 : 16, fontWeight: FontWeight.w800, letterSpacing: -0.5, color: kInk)),
+                ),
+                const SizedBox(height: 3),
+                Text('${p.time} · ${p.daysText}', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: narrow ? 11.5 : 12.5, color: const Color(0xFF5A6475))),
               ]),
             ),
           ),
