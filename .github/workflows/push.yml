@@ -4,7 +4,9 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '*/15 * * * *'
-concurrency: { group: push, cancel-in-progress: false }
+concurrency:
+  group: push
+  cancel-in-progress: false
 jobs:
   send:
     runs-on: ubuntu-latest
@@ -16,10 +18,15 @@ jobs:
         if: env.FIREBASE_SA != ''
       - uses: actions/cache/restore@v4
         if: env.FIREBASE_SA != ''
-        with: { path: /tmp/push_state, key: push-state-${{ github.run_id }}, restore-keys: push-state- }
+        with:
+          path: /tmp/push_state
+          key: push-state-${{ github.run_id }}
+          restore-keys: push-state-
       - name: 보내기
         if: env.FIREBASE_SA != ''
         run: pip install -q google-auth requests && python3 collector/push_send.py
       - uses: actions/cache/save@v4
         if: env.FIREBASE_SA != ''
-        with: { path: /tmp/push_state, key: push-state-${{ github.run_id }} }
+        with:
+          path: /tmp/push_state
+          key: push-state-${{ github.run_id }}
