@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 
 import '../../core/data.dart';
 import '../../core/feature.dart';
-import '../../core/icons.dart';
 import '../../core/map.dart';
 import '../../core/nav.dart';
 import '../../core/theme.dart';
@@ -15,6 +14,7 @@ import 'data.dart';
 import 'widgets.dart';
 
 const kNear = 3000.0; // 「단지 근처」 = 3km 안
+const kLottoBg = Color(0xFFF4F7FB); // 그림 머리 아래 끝과 같은 바탕색 (경계선 없게)
 
 class LottoPage extends StatefulWidget {
   final Complex complex;
@@ -69,112 +69,164 @@ class _LottoPageState extends State<LottoPage> {
   }
 
   @override
-  Widget build(BuildContext context) => DetailPage(
-        title: '복권',
-        icon: 'lotto',
-        white: false,
-        body: loading
-            ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
-            : RefreshIndicator(
-                onRefresh: () async {
-                  final d = await loadDraws(fresh: true);
-                  if (mounted && d != null) setState(() => draws = d);
-                },
-                child: ListView(padding: const EdgeInsets.fromLTRB(kPad, 16, kPad, 34), children: [
-                  _result(),
-                  const SizedBox(height: 10),
-                  _checkButtons(),
-                  if (mine.isNotEmpty && draws?.latest != null) ...[const SizedBox(height: 22), _mine()],
-                  const SizedBox(height: 26),
-                  _wins(),
-                  const SizedBox(height: 26),
-                  _shops(),
-                  const SizedBox(height: 26),
-                  _foot(),
-                ]),
-              ),
-      );
+  Widget build(BuildContext context) {
+    Widget inner(Widget w) => Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 720), child: w));
+    return Scaffold(
+      backgroundColor: kLottoBg,
+      body: RefreshIndicator(
+        onRefresh: () async {
+          final d = await loadDraws(fresh: true);
+          if (mounted && d != null) setState(() => draws = d);
+        },
+        child: ListView(padding: EdgeInsets.zero, children: [
+          _head(inner),
+          inner(Padding(
+            padding: const EdgeInsets.fromLTRB(kPad, 12, kPad, 34),
+            child: loading
+                ? const Padding(padding: EdgeInsets.only(top: 60), child: Center(child: CircularProgressIndicator(strokeWidth: 2)))
+                : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    _checkButtons(),
+                    if (mine.isNotEmpty && draws?.latest != null) ...[const SizedBox(height: 22), _mine()],
+                    const SizedBox(height: 16),
+                    _wins(),
+                    const SizedBox(height: 26),
+                    _shops(),
+                    const SizedBox(height: 26),
+                    _foot(),
+                  ]),
+          )),
+        ]),
+      ),
+    );
+  }
+
+  // ── 맨 위: 대표님 로또 그림(아래는 바탕에 녹아 경계선 없음) + ← 아이콘 복권 + 당첨번호 카드가 그림 위에 걸침
+  Widget _head(Widget Function(Widget) inner) {
+    final top = MediaQuery.of(context).padding.top;
+    final full = MediaQuery.of(context).size.width;
+    final narrow = full < 380;
+    final artH = top + (full < 600 ? 210.0 : 260.0);
+    return Stack(children: [
+      Positioned(
+        left: 0,
+        right: 0,
+        top: 0,
+        height: artH,
+        child: IgnorePointer(
+          child: ShaderMask(
+            // 아래 40%부터 서서히 투명 → 맨 아래는 화면 바탕색과 똑같아 경계선이 없다
+            shaderCallback: (r) => const LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Colors.white, Colors.white, Color(0x55FFFFFF), Color(0x00FFFFFF)],
+              stops: [0, 0.45, 0.78, 1],
+            ).createShader(r),
+            blendMode: BlendMode.dstIn,
+            child: Image.asset('assets/art/lotto_head.png', fit: BoxFit.cover, alignment: Alignment.topRight, filterQuality: FilterQuality.medium),
+          ),
+        ),
+      ),
+      Column(children: [
+        SizedBox(height: top + 6),
+        inner(Padding(
+          padding: const EdgeInsets.fromLTRB(2, 0, kPad, 0),
+          child: Row(children: [
+            IconButton(onPressed: () => Navigator.of(context).maybePop(), icon: const Icon(Icons.arrow_back_rounded, size: 24, color: kInk)),
+            Image.asset('assets/icons/lotto.png', width: narrow ? 30 : 34, height: narrow ? 30 : 34),
+            const SizedBox(width: 8),
+            Text('복권', style: TextStyle(fontSize: narrow ? 20 : 22, fontWeight: FontWeight.w800, letterSpacing: -0.7, color: kInk)),
+          ]),
+        )),
+        SizedBox(height: full < 600 ? 26 : 44),
+        inner(Padding(padding: const EdgeInsets.symmetric(horizontal: kPad), child: _result())),
+      ]),
+    ]);
+  }
 
   // ---------------- 이번 회차 당첨번호 ----------------
   Widget _result() {
     final d = draw;
     if (d == null) {
       return Container(
-        decoration: cardBox(),
+        decoration: _card(),
         padding: const EdgeInsets.all(18),
-        child: const Text('당첨번호를 불러오지 못했어요. 잠시 뒤 아래로 당겨 새로고침해 주세요.', style: T.small),
+        child: Text(loading ? '당첨번호를 불러오고 있어요.' : '당첨번호를 불러오지 못했어요. 잠시 뒤 아래로 당겨 새로고침해 주세요.', style: T.small),
       );
     }
     final first = draws!.list.first.no, last = draws!.latest!.no;
     final isLatest = d.no == last;
+    final w = MediaQuery.of(context).size.width;
+    final ball = w < 360 ? 34.0 : (w < 420 ? 38.0 : 42.0);
     return Container(
-      decoration: cardBox(),
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      decoration: _card(),
+      padding: const EdgeInsets.fromLTRB(14, 16, 14, 14),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          _arrow(Icons.chevron_left_rounded, d.no > first ? () => setState(() => shown = d.no - 1) : null),
+          SoftArrow(Icons.chevron_left_rounded, onTap: d.no > first ? () => setState(() => shown = d.no - 1) : null),
           Expanded(
             child: InkWell(
               onTap: _pickRound,
               borderRadius: BorderRadius.circular(8),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Column(children: [
-                  Text.rich(TextSpan(children: [
-                    TextSpan(text: '${d.no}회', style: const TextStyle(fontWeight: FontWeight.w800)),
-                    const TextSpan(text: ' 당첨번호', style: TextStyle(fontWeight: FontWeight.w300)),
-                  ]), style: const TextStyle(fontSize: 17, letterSpacing: -0.5)),
-                  const SizedBox(height: 2),
-                  Text('${d.dayText} 추첨${isLatest ? ' · 이번 주' : ''}', style: T.tiny),
-                ]),
-              ),
+              child: Column(children: [
+                Text.rich(TextSpan(children: [
+                  TextSpan(text: '${d.no}회', style: const TextStyle(fontWeight: FontWeight.w800)),
+                  const TextSpan(text: ' 당첨번호', style: TextStyle(fontWeight: FontWeight.w400)),
+                ]), style: const TextStyle(fontSize: 19, letterSpacing: -0.6, color: kInk)),
+                const SizedBox(height: 3),
+                Text('${d.dayText} 추첨${isLatest ? ' · 이번 주' : ''}', style: const TextStyle(fontSize: 11.5, color: kSub)),
+              ]),
             ),
           ),
-          _arrow(Icons.chevron_right_rounded, d.no < last ? () => setState(() => shown = d.no + 1) : null),
+          SoftArrow(Icons.chevron_right_rounded, onTap: d.no < last ? () => setState(() => shown = d.no + 1) : null),
+        ]),
+        const SizedBox(height: 16),
+        Center(child: FittedBox(fit: BoxFit.scaleDown, child: BallRow(nums: d.nums, bonus: d.bonus, size: ball))),
+        const SizedBox(height: 16),
+        Container(height: 1, color: const Color(0xFFEEF1F5)),
+        const SizedBox(height: 12),
+        Row(children: [
+          const SizedBox(width: 4),
+          const Trophy(size: 44),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              if (d.winners(1) > 0)
+                Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 8, runSpacing: 2, children: [
+                  Text.rich(TextSpan(children: [
+                    const TextSpan(text: '1등  ', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: kSub)),
+                    TextSpan(text: won(d.prize(1)), style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w800, color: kBlue, letterSpacing: -0.8)),
+                  ])),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                    decoration: BoxDecoration(color: const Color(0xFFEEF3FA), borderRadius: BorderRadius.circular(20)),
+                    child: Text(people(d.winners(1)), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF3B4A66))),
+                  ),
+                ])
+              else
+                const Text('1등 당첨자 없음 · 다음 회차로 이월', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+              if (d.how.isNotEmpty && d.how.any((v) => v > 0)) ...[
+                const SizedBox(height: 2),
+                Text(
+                    [if (d.how[0] > 0) '자동 ${d.how[0]}', if (d.how.length > 1 && d.how[1] > 0) '수동 ${d.how[1]}', if (d.how.length > 2 && d.how[2] > 0) '반자동 ${d.how[2]}'].join(' · '),
+                    style: const TextStyle(fontSize: 11.5, color: kSub)),
+              ],
+            ]),
+          ),
         ]),
         const SizedBox(height: 14),
-        Center(child: BallRow(nums: d.nums, bonus: d.bonus, size: 36)),
-        const SizedBox(height: 16),
-        Container(height: 1, color: const Color(0xFFF0F1F4)),
-        const SizedBox(height: 12),
-        Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          const Text('1등', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: kSub)),
-          const SizedBox(width: 8),
-          Expanded(
-            child: d.winners(1) > 0
-                ? Text.rich(TextSpan(children: [
-                    TextSpan(text: won(d.prize(1)), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: kBlue, letterSpacing: -0.4)),
-                    TextSpan(text: '  ${people(d.winners(1))}', style: const TextStyle(fontSize: 12, color: kSub)),
-                  ]))
-                : const Text('당첨자 없음 (다음 회차로 이월)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-          ),
-        ]),
-        if (d.how.isNotEmpty && d.how.any((v) => v > 0)) ...[
-          const SizedBox(height: 4),
-          Padding(
-            padding: const EdgeInsets.only(left: 27),
-            child: Text(
-                [if (d.how[0] > 0) '자동 ${d.how[0]}', if (d.how.length > 1 && d.how[1] > 0) '수동 ${d.how[1]}', if (d.how.length > 2 && d.how[2] > 0) '반자동 ${d.how[2]}'].join(' · '),
-                style: T.tiny),
-          ),
-        ],
-        const SizedBox(height: 12),
         PrizeTable(draw: d),
         if (isLatest && draws!.nextDraw != null) ...[
           const SizedBox(height: 12),
-          Text('다음 추첨 ${draws!.nextDraw!.month}월 ${draws!.nextDraw!.day}일(토) 저녁 8시 35분 · ${last + 1}회', style: T.tiny),
+          Row(children: [
+            const Icon(Icons.event_note_outlined, size: 16, color: kBlue),
+            const SizedBox(width: 6),
+            Text('다음 추첨 ${draws!.nextDraw!.month}월 ${draws!.nextDraw!.day}일(토) 저녁 8시 35분 · ${last + 1}회',
+                style: const TextStyle(fontSize: 11.5, color: kSub)),
+          ]),
         ],
       ]),
     );
   }
-
-  Widget _arrow(IconData i, VoidCallback? onTap) => IconButton(
-        onPressed: onTap,
-        icon: Icon(i, size: 26),
-        color: kInk,
-        disabledColor: kLine,
-        visualDensity: VisualDensity.compact,
-      );
 
   Future<void> _pickRound() async {
     final d = draws;
@@ -185,9 +237,47 @@ class _LottoPageState extends State<LottoPage> {
 
   // ---------------- 내 번호 확인 ----------------
   Widget _checkButtons() => Row(children: [
-        Expanded(child: Btn('QR로 확인', icon: 'search', primary: true, h: 44, onTap: () => _scan())),
+        Expanded(
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: _scan,
+              borderRadius: BorderRadius.circular(14),
+              child: Ink(
+                height: 52,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF3D8BFF), Color(0xFF1F66EE)]),
+                  boxShadow: [BoxShadow(color: kBlue.withValues(alpha: 0.22), blurRadius: 14, offset: const Offset(0, 4))],
+                ),
+                child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Icon(Icons.qr_code_scanner_rounded, size: 21, color: Colors.white),
+                  SizedBox(width: 8),
+                  Text('QR로 확인', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: -0.3)),
+                ]),
+              ),
+            ),
+          ),
+        ),
         const SizedBox(width: 10),
-        Expanded(child: Btn('번호로 확인', icon: 'list', h: 44, onTap: () => _openCheck())),
+        Expanded(
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => _openCheck(),
+              borderRadius: BorderRadius.circular(14),
+              child: Ink(
+                height: 52,
+                decoration: _card(r: 14),
+                child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Icon(Icons.format_list_bulleted_rounded, size: 21, color: kBlue),
+                  SizedBox(width: 8),
+                  Text('번호로 확인', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: kInk, letterSpacing: -0.3)),
+                ]),
+              ),
+            ),
+          ),
+        ),
       ]);
 
   Future<void> _scan() async {
@@ -212,7 +302,7 @@ class _LottoPageState extends State<LottoPage> {
       ]),
       const SizedBox(height: 10),
       Container(
-        decoration: cardBox(),
+        decoration: _card(),
         padding: const EdgeInsets.fromLTRB(14, 6, 14, 6),
         child: games.isEmpty
             ? Padding(
@@ -235,67 +325,74 @@ class _LottoPageState extends State<LottoPage> {
     final near = _near(a?.wins ?? const []);
     near.sort((x, y) => byCount ? (y.$1.wins != x.$1.wins ? y.$1.wins.compareTo(x.$1.wins) : x.$2.compareTo(y.$2)) : x.$2.compareTo(y.$2));
     final show = showAllWins ? near : near.take(6).toList();
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const MixTitle('1등 나온 집', '단지 근처 3km'),
-      const SizedBox(height: 3),
-      Text(a == null || a.upto == 0 ? '로또 1등이 나온 판매점' : '262회~${a.upto}회 로또 1등이 나온 판매점', style: T.tiny),
-      const SizedBox(height: 10),
-      if (near.isEmpty)
-        Container(
-          decoration: cardBox(),
-          padding: const EdgeInsets.all(16),
-          child: Text(a == null ? '자료를 불러오지 못했어요.' : '단지 3km 안에 1등이 나온 판매점이 아직 없어요.', style: T.small),
-        )
-      else ...[
-        // 목록 안 지도는 미리보기 (손가락 스크롤이 지도에 걸리지 않게), 누르면 크게
-        GestureDetector(
-          onTap: () => _bigMap(near),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(kRadius),
-            child: Container(
-              height: 200,
-              decoration: cardBox(),
-              child: Stack(children: [
-                IgnorePointer(
-                  child: DongneMap(
-                    center: c.pos,
-                    zoom: 13,
-                    pinFill: kSoftYellow,
-                    points: [for (final s in near.take(80)) _point(s.$1)],
-                  ),
-                ),
-                Positioned(
-                  right: 10,
-                  bottom: 10,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-                    decoration: cardBox(r: 20),
-                    child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                      LineIcon('map', size: 16),
-                      SizedBox(width: 4),
-                      Text('지도 크게', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600)),
-                    ]),
-                  ),
-                ),
-              ]),
-            ),
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Container(
+        decoration: _card(),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Row(children: [
+            const Icon(Icons.location_on_rounded, size: 22, color: kBlue),
+            const SizedBox(width: 6),
+            const Expanded(child: MixTitle('1등 나온 집', '단지 근처 3km')),
+          ]),
+          Padding(
+            padding: const EdgeInsets.only(left: 28, top: 2),
+            child: Text(a == null || a.upto == 0 ? '로또 1등이 나온 판매점' : '262회~${a.upto}회 로또 1등이 나온 판매점', style: const TextStyle(fontSize: 11.5, color: kSub)),
           ),
-        ),
-        const SizedBox(height: 10),
-        Row(children: [
-          ChoiceChipBox('많이 나온 순', on: byCount, onTap: () => setState(() => byCount = true)),
-          const SizedBox(width: 6),
-          ChoiceChipBox('가까운 순', on: !byCount, onTap: () => setState(() => byCount = false)),
-          const Spacer(),
-          Text('${near.length}곳', style: T.tiny),
+          const SizedBox(height: 12),
+          if (near.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(a == null ? '자료를 불러오지 못했어요.' : '단지 3km 안에 1등이 나온 판매점이 아직 없어요.', style: T.small),
+            )
+          else ...[
+            // 목록 안 지도는 미리보기 (손가락 스크롤이 지도에 걸리지 않게), 누르면 크게
+            GestureDetector(
+              onTap: () => _bigMap(near),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  height: 190,
+                  child: Stack(children: [
+                    IgnorePointer(
+                      child: DongneMap(center: c.pos, zoom: 13, pinFill: kSoftYellow, icon: 'lotto', points: [for (final s in near.take(80)) _point(s.$1)]),
+                    ),
+                    Positioned(
+                      right: 10,
+                      bottom: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                        decoration: _card(r: 20),
+                        child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(Icons.map_outlined, size: 16, color: kBlue),
+                          SizedBox(width: 5),
+                          Text('지도 크게', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                        ]),
+                      ),
+                    ),
+                  ]),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(children: [
+              _sortPill('많이 나온 순', byCount, () => setState(() => byCount = true)),
+              const SizedBox(width: 8),
+              _sortPill('가까운 순', !byCount, () => setState(() => byCount = false)),
+              const Spacer(),
+              Text('${near.length}곳', style: const TextStyle(fontSize: 12, color: kSub)),
+            ]),
+          ],
         ]),
+      ),
+      if (near.isNotEmpty) ...[
         const SizedBox(height: 10),
         Container(
-          decoration: cardBox(),
+          decoration: _card(),
           child: Column(children: [
             for (var i = 0; i < show.length; i++) ...[
-              if (i > 0) Container(height: 1, margin: const EdgeInsets.symmetric(horizontal: 14), color: const Color(0xFFF0F1F4)),
-              StoreLine(store: show[i].$1, dist: show[i].$2, rank: byCount ? i + 1 : 0, onTap: () => showStore(context, show[i].$1, c)),
+              if (i > 0) Container(height: 1, margin: const EdgeInsets.symmetric(horizontal: 16), color: const Color(0xFFF0F2F6)),
+              StoreLine(store: show[i].$1, dist: show[i].$2, rank: i + 1, onTap: () => showStore(context, show[i].$1, c)),
             ],
             if (near.length > show.length) _more('${near.length - show.length}곳 더 보기', () => setState(() => showAllWins = true)),
           ]),
@@ -304,11 +401,25 @@ class _LottoPageState extends State<LottoPage> {
     ]);
   }
 
+  Widget _sortPill(String t, bool on, VoidCallback onTap) => InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: on ? kBlue : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: on ? kBlue : kLine),
+          ),
+          child: Text(t, style: TextStyle(fontSize: 12.5, fontWeight: on ? FontWeight.w700 : FontWeight.w500, color: on ? Colors.white : kInk)),
+        ),
+      );
+
   void _bigMap(List<(Store, double)> near) => Navigator.of(context).push(MaterialPageRoute(
         builder: (_) => DetailPage(
           title: '1등 나온 집 지도',
           icon: 'lotto',
-          body: DongneMap(center: c.pos, zoom: 14, pinFill: kSoftYellow, points: [for (final s in near) _point(s.$1)]),
+          body: DongneMap(center: c.pos, zoom: 14, pinFill: kSoftYellow, icon: 'lotto', points: [for (final s in near) _point(s.$1)]),
         ),
       ));
 
@@ -327,7 +438,7 @@ class _LottoPageState extends State<LottoPage> {
       const MixTitle('복권 판매점', '가까운 순'),
       const SizedBox(height: 10),
       Container(
-        decoration: cardBox(),
+        decoration: _card(),
         child: near.isEmpty
             ? Padding(
                 padding: const EdgeInsets.all(16),
@@ -335,7 +446,7 @@ class _LottoPageState extends State<LottoPage> {
               )
             : Column(children: [
                 for (var i = 0; i < show.length; i++) ...[
-                  if (i > 0) Container(height: 1, margin: const EdgeInsets.symmetric(horizontal: 14), color: const Color(0xFFF0F1F4)),
+                  if (i > 0) Container(height: 1, margin: const EdgeInsets.symmetric(horizontal: 16), color: const Color(0xFFF0F2F6)),
                   StoreLine(store: show[i].$1, dist: show[i].$2, onTap: () => showStore(context, show[i].$1, c)),
                 ],
                 if (near.length > show.length) _more('${near.length - show.length}곳 더 보기', () => setState(() => showAllShops = true)),
@@ -347,11 +458,23 @@ class _LottoPageState extends State<LottoPage> {
   Widget _more(String t, VoidCallback onTap) => InkWell(
         onTap: onTap,
         child: Container(
-          height: 42,
+          height: 48,
           alignment: Alignment.center,
-          decoration: const BoxDecoration(border: Border(top: BorderSide(color: Color(0xFFF0F1F4)))),
-          child: Text(t, style: const TextStyle(fontSize: 12.5, color: kSub, fontWeight: FontWeight.w500)),
+          decoration: const BoxDecoration(border: Border(top: BorderSide(color: Color(0xFFF0F2F6)))),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Text(t, style: const TextStyle(fontSize: 13, color: kInk, fontWeight: FontWeight.w500)),
+            const SizedBox(width: 4),
+            const Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: kInk),
+          ]),
         ),
+      );
+
+  // 시안 카드: 흰 바탕 · 둥근 16 · 아주 옅은 선 · 고르게 퍼진 옅은 그림자
+  static BoxDecoration _card({double r = 16}) => BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(r),
+        border: Border.all(color: const Color(0xFFE6EBF2)),
+        boxShadow: const [BoxShadow(color: Color(0x0F1E3A6E), blurRadius: 18)],
       );
 
   Widget _foot() => Text(
@@ -376,7 +499,7 @@ Future<void> showStore(BuildContext context, Store s, Complex c) => showSheet(
                 Text('${c.name}에서 ${distText(meters(c.pos, s.pos))}', style: T.small),
               ]),
             ),
-            const LineIcon('lotto', size: 40, fill: kSoftYellow),
+            Image.asset('assets/icons/lotto.png', width: 44, height: 44),
           ]),
           if (s.wins > 0) ...[
             const SizedBox(height: 14),
