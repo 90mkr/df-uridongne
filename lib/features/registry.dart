@@ -31,7 +31,8 @@ final List<Feature> features = [
   DealsFeature(), // 한 줄: 우리 단지 최근 거래
   GasFeature(), // 생활 도구
   ChargerFeature(),
-  ParkingFeature(),
+  ParkingFeature(), // 생활 도구 + 홈: 가까운 공영주차장
+  MyCarFeature(), // 생활 도구 + 홈: 내 차 어디 댔지 (주차장과 따로, 11-25)
   PostcodeFeature(),
   LottoFeature(),
   AnnivFeature(), // 생활 도구 + 홈 한 줄: 다가오는 기념일

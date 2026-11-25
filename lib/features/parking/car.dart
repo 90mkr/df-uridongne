@@ -307,11 +307,7 @@ class _CarMainCardState extends State<CarMainCard> {
   @override
   Widget build(BuildContext context) => ValueListenableBuilder<MyCar?>(
         valueListenable: myCar,
-        builder: (_, car, __) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          _carPart(car),
-          const SizedBox(height: 12),
-          NearLotsCard(c: widget.c),
-        ]),
+        builder: (_, car, __) => _carPart(car),
       );
 
   Widget _carPart(MyCar? car) {
