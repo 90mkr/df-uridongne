@@ -10,7 +10,7 @@ import 'remote.dart';
 
 // 아이콘 뒤 옅은 빛 (칸마다 조금씩 다른 색)
 // 칸이 좁아 이름은 짧게 (낱말 중간에서 줄 바뀜 없게)
-const _short = {'weather': '날씨·미세먼지', 'board': '단지 이야기', 'events': '행사·축제', 'trash': '분리수거', 'pharmacy': '문 연 약국', 'postcode': '택배·우편', 'deals': '최근 거래', 'bus': '단지 앞 버스', 'roulette': '오늘 뭐 먹지?', 'school': '학교 급식'};
+const _short = {'weather': '날씨·미세먼지', 'board': '단지 이야기', 'events': '행사·축제', 'trash': '분리수거', 'pharmacy': '문 연 약국', 'postcode': '택배·우편', 'deals': '최근 거래', 'bus': '단지 앞 버스', 'roulette': '오늘 뭐 먹지?', 'school': '학교 급식', 'parking': '주차 어디?', 'mycar': '내 차 어디?'};
 
 const _glow = [Color(0xFFFFE7B8), Color(0xFFCFE2FF), Color(0xFFE6DDFF), Color(0xFFFFD9DF), Color(0xFFD5F3DE), Color(0xFFFFE2CC)];
 
