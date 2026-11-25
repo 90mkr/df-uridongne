@@ -131,6 +131,8 @@ def kric(path, params):
         print("  KRIC 오류:", code, str(hdr.get("resultMsg", ""))[:120])
         return None
     b = j.get("body")
+    if not b and os.environ.get("KRIC_DEBUG"):
+        print("   (빈 응답)", t[:200].replace("\n", " "))
     if isinstance(b, dict):
         b = b.get("item") or b.get("items") or []
     return b if isinstance(b, list) else ([b] if b else [])
@@ -179,9 +181,11 @@ def fill_kric(st):
     ok = 0
     for line in sorted({x["l"] for x in want}):
         opr, ln, route = route_stations(line)
-        # 시험 삼아 한 번: 응답 모양 기록 (키·자료 확인용)
-        probe = kric("trainUseInfo/subwayTimetable", {"railOprIsttCd": opr, "dayCd": "8", "lnCd": ln, "stinCd": route[len(route) // 2][1]})
-        print(f"  {line}: 시험 {route[len(route) // 2][2]} → {len(probe or [])}줄", (probe or [None])[0])
+        # 역 번호 꼴 맞춰 보기 (11-25 시험) — 서울역 견본 + 인천대입구 여러 꼴
+        for o, l_, c_ in (("S1", "1", "150"), ("KR", "1", "150"), ("IC", "I1", "I136"), ("IC", "1", "I136"), ("IC", "I1", "136"), ("IC", "1", "136"),
+                          ("IC", "I1", "1136"), ("IC", "I1", "I1136"), ("IC", "I1", "0136"), ("IC", "I1", "11136")):
+            pr = kric("trainUseInfo/subwayTimetable", {"railOprIsttCd": o, "dayCd": "8", "lnCd": l_, "stinCd": c_})
+            print(f"  시험 {o}/{l_}/{c_} → {len(pr or [])}줄", (pr or [None])[0])
         first, last = route[0][2], route[-1][2]
         idx = {r[2]: i for i, r in enumerate(route)}
         for x in want:
