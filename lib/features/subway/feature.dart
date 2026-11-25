@@ -222,7 +222,7 @@ class StationPeanut extends StatelessWidget {
                   padding: EdgeInsets.only(left: left ? 6 : 4, right: left ? 4 : 6),
                   child: Row(mainAxisAlignment: left ? MainAxisAlignment.start : MainAxisAlignment.end, children: [
                     if (left) const Icon(Icons.chevron_left_rounded, size: 18, color: Colors.white),
-                    Flexible(child: Text(t, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: narrow ? 12 : 13, fontWeight: FontWeight.w700, color: Colors.white))),
+                    Flexible(child: Text(t, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: narrow ? 11.5 : 12, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: -0.3))),
                     if (!left) const Icon(Icons.chevron_right_rounded, size: 18, color: Colors.white),
                   ]),
                 ),
@@ -261,7 +261,7 @@ class StationPeanut extends StatelessWidget {
           // 가운데 이 역: 흰 알약 + 호선 색 테두리(1px) + 작은 호선 알약
           Container(
             height: 42,
-            padding: const EdgeInsets.fromLTRB(6, 0, 16, 0),
+            padding: const EdgeInsets.fromLTRB(5, 0, 14, 0),
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(21), border: Border.all(color: col), boxShadow: const [BoxShadow(color: Color(0x1A0B2A5B), blurRadius: 8)]),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               Container(
@@ -270,7 +270,7 @@ class StationPeanut extends StatelessWidget {
                 child: Text(lineShort(s.line), style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: Colors.white)),
               ),
               const SizedBox(width: 7),
-              Text(s.name, style: TextStyle(fontSize: narrow ? 14.5 : 16, fontWeight: FontWeight.w800, color: kInk, letterSpacing: -0.4)),
+              Text(s.name, style: TextStyle(fontSize: s.name.length > 6 ? (narrow ? 13.5 : 14.5) : (narrow ? 14.5 : 16), fontWeight: FontWeight.w800, color: kInk, letterSpacing: -0.5)),
             ]),
           ),
             label(s.next2, false),
