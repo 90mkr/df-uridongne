@@ -160,11 +160,13 @@ def route_stations(line):
     return opr, ln, [(k, code, n) for k, (code, n) in enumerate(lst)]
 
 
-def times(opr, ln, stin, day):
-    """{열차번호: hhmm}"""
+def times(opr, ln, stin, day, dep_only=False):
+    """{열차번호: hhmm} — dep_only: 이 역에서 떠나는 열차만 (끝역에 들어와 끝나는 열차 빼기)"""
     rows = kric("trainUseInfo/subwayTimetable", {"railOprIsttCd": opr, "dayCd": day, "lnCd": ln, "stinCd": stin}) or []
     out = {}
     for r in rows:
+        if dep_only and not hhmm(r.get("dptTm")):
+            continue
         t = hhmm(r.get("dptTm")) or hhmm(r.get("arvTm"))
         if t and t != "0000":
             if int(t[:2]) < 3:  # 자정 넘은 막차 00:01 → 24:01 (하루 끝에 오도록)
@@ -206,7 +208,7 @@ def fill_kric(st):
                 continue
             tt = {}
             for day, code in (("01", "8"), ("02", "7"), ("03", "9")):
-                here = times(opr, ln, route[i][1], code)
+                here = times(opr, ln, route[i][1], code, dep_only=True)
                 if not here:
                     continue
                 nxt = near_times(opr, ln, route, i, 1, code)
