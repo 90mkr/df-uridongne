@@ -28,11 +28,17 @@ class ToolsTab extends StatelessWidget {
           right: 0,
           top: 0,
           height: top + 300,
-          child: ClipRect(child: ShaderMask(
-            shaderCallback: (r) => const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.white, Colors.white, Colors.transparent], stops: [0, 0.7, 1]).createShader(r),
-            blendMode: BlendMode.dstIn,
-            child: Image.asset('assets/art/tools_bg.jpg', fit: BoxFit.cover, alignment: Alignment.topRight, filterQuality: FilterQuality.medium),
-          )),
+          child: ClipRect(
+            child: Stack(fit: StackFit.expand, children: [
+              Image.asset('assets/art/tools_bg.jpg', fit: BoxFit.cover, alignment: Alignment.topRight, filterQuality: FilterQuality.medium),
+              // 아래 끝을 바탕색으로 덮어 녹임 (사진 끝 줄이 남지 않게 — 페이드 효과 대신 덮개)
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [const Color(0xFFF1F5FE).withValues(alpha: 0), const Color(0xFFF1F5FE).withValues(alpha: 0), const Color(0xFFF1F5FE), const Color(0xFFF1F5FE)], stops: const [0, 0.7, 1, 1]),
+                ),
+              ),
+            ]),
+            ),
         ),
         ListView(padding: EdgeInsets.zero, children: [
         SizedBox(

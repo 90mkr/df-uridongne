@@ -167,11 +167,17 @@ class _PageState extends State<_Page> {
           right: 0,
           top: 0,
           height: top + 250,
-          child: ClipRect(child: ShaderMask(
-            shaderCallback: (r) => const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.white, Colors.white, Colors.transparent], stops: [0, 0.55, 1]).createShader(r),
-            blendMode: BlendMode.dstIn,
-            child: Image.asset('assets/art/school_bg.jpg', fit: BoxFit.cover, alignment: const Alignment(0.2, -0.6), filterQuality: FilterQuality.medium),
-          )),
+          child: ClipRect(
+            child: Stack(fit: StackFit.expand, children: [
+              Image.asset('assets/art/school_bg.jpg', fit: BoxFit.cover, alignment: const Alignment(0.2, -0.6), filterQuality: FilterQuality.medium),
+              // 아래 끝을 바탕색으로 덮어 녹임 (사진 끝 줄이 남지 않게 — 페이드 효과 대신 덮개)
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [kBg.withValues(alpha: 0), kBg.withValues(alpha: 0), kBg, kBg], stops: const [0, 0.55, 1, 1]),
+                ),
+              ),
+            ]),
+            ),
         ),
         // 글자 쪽(왼쪽)만 옅게 밝혀 읽기 쉽게
         Positioned(

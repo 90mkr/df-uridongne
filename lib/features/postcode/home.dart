@@ -130,12 +130,17 @@ class _PostHomeState extends State<PostHome> {
             right: 0,
             top: 0,
             height: artH,
-            child: ClipRect(child: ShaderMask(
-              // 사진 아래 45%를 투명으로 서서히 → 바탕 그라데이션과 이어짐 (끝 줄에 색이 남지 않게 마지막은 완전 투명)
-              shaderCallback: (r) => const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.white, Colors.white, Color(0x00FFFFFF), Color(0x00FFFFFF)], stops: [0, 0.55, 0.88, 1]).createShader(r),
-              blendMode: BlendMode.dstIn,
-              child: Image.asset('assets/art/parcel_bg.jpg', fit: BoxFit.cover, alignment: w < 600 ? Alignment.bottomCenter : const Alignment(1, 0.3), filterQuality: FilterQuality.medium),
-            )),
+            child: ClipRect(
+            child: Stack(fit: StackFit.expand, children: [
+              Image.asset('assets/art/parcel_bg.jpg', fit: BoxFit.cover, alignment: w < 600 ? Alignment.bottomCenter : const Alignment(1, 0.3), filterQuality: FilterQuality.medium),
+              // 아래 끝을 바탕색으로 덮어 녹임 (사진 끝 줄이 남지 않게 — 페이드 효과 대신 덮개)
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color.lerp(_bgTop, _bgBottom, (artH / MediaQuery.of(context).size.height).clamp(0.0, 1.0))!.withValues(alpha: 0), Color.lerp(_bgTop, _bgBottom, (artH / MediaQuery.of(context).size.height).clamp(0.0, 1.0))!.withValues(alpha: 0), Color.lerp(_bgTop, _bgBottom, (artH / MediaQuery.of(context).size.height).clamp(0.0, 1.0))!, Color.lerp(_bgTop, _bgBottom, (artH / MediaQuery.of(context).size.height).clamp(0.0, 1.0))!], stops: const [0, 0.55, 0.88, 1]),
+                ),
+              ),
+            ]),
+            ),
           ),
           Center(
             child: ConstrainedBox(
