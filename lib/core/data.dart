@@ -105,6 +105,8 @@ class Complex {
   const Complex({required this.id, required this.name, required this.addr, required this.areaId, required this.lat, required this.lng});
   LatLng get pos => LatLng(lat, lng);
   Area? get area => areaById(areaId);
+  // 아파트가 아닌 집(주택·빌라 등, 11-25): 단지 게시판 없이 동네 게시판만
+  bool get isHome => id.startsWith('home_');
 
   // 「송도」 + 「○○아파트」처럼 앞 동네 이름과 단지 이름을 나눠 보여 줄 때
   // 준비된 동네가 아니면 주소의 시·군·구에서 (예: 「부산 해운대구 …」 → 「해운대」)

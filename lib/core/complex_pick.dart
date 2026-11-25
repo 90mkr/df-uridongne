@@ -176,6 +176,8 @@ class _ComplexPickPageState extends State<ComplexPickPage> {
                             const SizedBox(height: 8),
                           ],
                           SizedBox(width: 220, child: Btn('내 위치로 직접 넣기', icon: 'loc', onTap: _manual)),
+                          const SizedBox(height: 8),
+                          SizedBox(width: 220, child: Btn('아파트가 아니에요 (주택·빌라)', icon: 'home', onTap: _house)),
                         ]),
                       );
                     }
@@ -247,6 +249,16 @@ class _ComplexPickPageState extends State<ComplexPickPage> {
     );
     if (ok != true || name.text.trim().isEmpty) return;
     _done(Complex(id: 'my_${DateTime.now().millisecondsSinceEpoch}', name: name.text.trim(), addr: '', areaId: areaIdAt(p), lat: p.latitude, lng: p.longitude));
+  }
+
+  // 주택·빌라·상가 주택 등: 지금 위치를 「우리 집」으로 — 동네 게시판·생활 도구는 그대로 쓰고 단지 게시판만 없음
+  Future<void> _house() async {
+    final p = await myLocation();
+    if (!mounted) return;
+    if (p == null) return toast(context, '위치를 알 수 없어요. 휴대폰 위치 사용을 켜 주세요');
+    final a = areaAt(p);
+    final town = a == null ? '' : a.name.split('/').first;
+    _done(Complex(id: 'home_${DateTime.now().millisecondsSinceEpoch}', name: town.isEmpty ? '우리 집' : '우리 집 ($town)', addr: '', areaId: areaIdAt(p), lat: p.latitude, lng: p.longitude));
   }
 
   void _done(Complex c) {

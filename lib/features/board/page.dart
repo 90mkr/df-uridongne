@@ -16,14 +16,17 @@ import 'data.dart';
 class BoardPage extends StatefulWidget {
   final Complex c;
   final String cat;
-  const BoardPage({super.key, required this.c, this.cat = ''});
+  final bool town; // 처음부터 「우리 동네」 칸
+  const BoardPage({super.key, required this.c, this.cat = '', this.town = false});
   @override
   State<BoardPage> createState() => _BoardPageState();
 }
 
 class _BoardPageState extends State<BoardPage> {
   late String cat = widget.cat; // '' = 전체
+  late bool town = widget.town || widget.c.isHome; // 주택이면 동네 게시판만
   List<Post>? all;
+  String get townName => widget.c.area?.name.split('/').first ?? '우리 동네';
 
   @override
   void initState() {
@@ -41,8 +44,9 @@ class _BoardPageState extends State<BoardPage> {
   }
 
   Future<void> _load() async {
-    final l = await postsOf(widget.c);
-    if (mounted) setState(() => all = l);
+    final t = town;
+    final l = await postsOf(widget.c, town: t);
+    if (mounted && t == town) setState(() => all = l);
   }
 
   Future<void> _write() async {
@@ -51,7 +55,7 @@ class _BoardPageState extends State<BoardPage> {
       await openLogin(context);
       if (me == null || !mounted) return;
     }
-    await Navigator.push(context, MaterialPageRoute(builder: (_) => _WritePage(c: widget.c, cat: cat.isEmpty ? 'free' : cat)));
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => _WritePage(c: widget.c, town: town, cat: cat.isEmpty ? 'free' : cat)));
   }
 
   @override
@@ -65,7 +69,7 @@ class _BoardPageState extends State<BoardPage> {
         elevation: 0,
         titleSpacing: 0,
         title: Text.rich(TextSpan(children: [
-          TextSpan(text: '${widget.c.name} ', style: const TextStyle(fontWeight: FontWeight.w800)),
+          TextSpan(text: '${town ? townName : widget.c.name} ', style: const TextStyle(fontWeight: FontWeight.w800)),
           const TextSpan(text: '이야기', style: TextStyle(fontWeight: FontWeight.w300)),
         ]), style: const TextStyle(fontSize: 16.5, letterSpacing: -0.4), maxLines: 1, overflow: TextOverflow.ellipsis),
       ),
@@ -78,6 +82,36 @@ class _BoardPageState extends State<BoardPage> {
         label: const Text('글쓰기', style: TextStyle(fontWeight: FontWeight.w800)),
       ),
       body: Column(children: [
+        // 우리 단지 · 우리 동네 (주택은 동네만)
+        if (!widget.c.isHome && hasTownBoard(widget.c))
+          Padding(
+            padding: const EdgeInsets.fromLTRB(kPad, 2, kPad, 8),
+            child: Row(children: [
+              for (final (t, label) in [(false, '우리 단지'), (true, '우리 동네 · $townName')]) ...[
+                if (t) const SizedBox(width: 8),
+                InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () {
+                    if (town == t) return;
+                    setState(() {
+                      town = t;
+                      all = null;
+                    });
+                    _load();
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: town == t ? kInk : Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: town == t ? kInk : kLine),
+                    ),
+                    child: Text(label, style: TextStyle(fontSize: 13, fontWeight: town == t ? FontWeight.w800 : FontWeight.w500, color: town == t ? Colors.white : kInk)),
+                  ),
+                ),
+              ],
+            ]),
+          ),
         // 분류: 그누보드식 붙은 칸
         Padding(
           padding: const EdgeInsets.fromLTRB(kPad, 4, kPad, 10),
@@ -109,7 +143,7 @@ class _BoardPageState extends State<BoardPage> {
                   ? Center(
                       child: Padding(
                         padding: const EdgeInsets.all(30),
-                        child: Text(me == null ? '로그인하면 우리 단지 이웃 글을 볼 수 있어요.\n(같은 단지 주민끼리 보는 게시판이에요)' : cat == 'share' ? '아직 나눔 글이 없어요.\n안 쓰는 물건을 이웃과 나눠 보세요.' : '아직 글이 없어요.\n첫 이야기를 남겨 주세요.', textAlign: TextAlign.center, style: const TextStyle(fontSize: 13.5, color: kSub, height: 1.5)),
+                        child: Text(me == null ? (town ? '로그인하면 $townName 이웃 글을 볼 수 있어요.\n(아파트·주택 주민이 함께 보는 동네 게시판이에요)' : '로그인하면 우리 단지 이웃 글을 볼 수 있어요.\n(같은 단지 주민끼리 보는 게시판이에요)') : cat == 'share' ? '아직 나눔 글이 없어요.\n안 쓰는 물건을 이웃과 나눠 보세요.' : '아직 글이 없어요.\n첫 이야기를 남겨 주세요.', textAlign: TextAlign.center, style: const TextStyle(fontSize: 13.5, color: kSub, height: 1.5)),
                       ),
                     )
                   : RefreshIndicator(
@@ -340,8 +374,9 @@ class _PickedPhoto {
 
 class _WritePage extends StatefulWidget {
   final Complex c;
+  final bool town;
   final String cat;
-  const _WritePage({required this.c, required this.cat});
+  const _WritePage({required this.c, this.town = false, required this.cat});
   @override
   State<_WritePage> createState() => _WritePageState();
 }
@@ -381,7 +416,7 @@ class _WritePageState extends State<_WritePage> {
   Future<void> _send() async {
     if (title.text.trim().length < 2) return toast(context, '제목을 적어 주세요');
     setState(() => busy = true);
-    final e = await writePost(c: widget.c, cat: cat, title: title.text.trim(), body: body.text.trim(), photos: [for (final p in photos) p.full], thumbs: [for (final p in photos) p.thumb]);
+    final e = await writePost(c: widget.c, town: widget.town, cat: cat, title: title.text.trim(), body: body.text.trim(), photos: [for (final p in photos) p.full], thumbs: [for (final p in photos) p.thumb]);
     if (!mounted) return;
     setState(() => busy = false);
     if (e != null) return toast(context, e);
@@ -397,7 +432,7 @@ class _WritePageState extends State<_WritePage> {
           surfaceTintColor: Colors.transparent,
           elevation: 0,
           titleSpacing: 0,
-          title: const Text('글쓰기', style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.w800)),
+          title: Text(widget.town ? '글쓰기 · 우리 동네' : '글쓰기 · 우리 단지', style: const TextStyle(fontSize: 16.5, fontWeight: FontWeight.w800)),
           actions: [
             TextButton(onPressed: busy ? null : _send, child: Text(busy ? '올리는 중' : '올리기', style: const TextStyle(color: kBlue, fontWeight: FontWeight.w800, fontSize: 15))),
           ],

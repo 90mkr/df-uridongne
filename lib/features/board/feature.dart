@@ -25,7 +25,7 @@ class BoardFeature extends Feature {
   @override
   int get mainOrder => 1; // 내 차 다음
   @override
-  String get version => '0.1.0';
+  String get version => '0.2.0';
   @override
   bool get ready => true;
 
@@ -60,10 +60,14 @@ class _HomeCardState extends State<_HomeCard> {
     super.dispose();
   }
 
+  // 단지 글 + 동네 글을 함께 최신순 (주택이면 동네 글만) — 단지 글이 없어도 카드가 비지 않게
   Future<void> _load() async {
-    final v = await postsOf(widget.c);
+    final r = await Future.wait([if (!widget.c.isHome) postsOf(widget.c), postsOf(widget.c, town: true)]);
+    final v = [for (final x in r) ...x]..sort((a, b) => b.at.compareTo(a.at));
     if (mounted) setState(() => l = v);
   }
+
+  String get _town => widget.c.area?.name.split('/').first ?? '동네';
 
   void _open([String cat = '']) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => BoardPage(c: widget.c, cat: cat)));
 
@@ -82,7 +86,7 @@ class _HomeCardState extends State<_HomeCard> {
             Row(children: [
               const LineIcon('board', size: 32),
               const SizedBox(width: 10),
-              const Expanded(child: MixTitle('우리 단지', '이야기', size: 15)),
+              Expanded(child: MixTitle(widget.c.isHome ? '우리 동네' : '우리 단지', '이야기', size: 15)),
               Text(v.isEmpty ? '소식·나눔·자유' : '글 ${v.length}', style: const TextStyle(fontSize: 12, color: kSub)),
               const Icon(Icons.chevron_right_rounded, color: kSub, size: 20),
             ]),
@@ -92,13 +96,14 @@ class _HomeCardState extends State<_HomeCard> {
             else if (v.isEmpty)
               Padding(
                 padding: const EdgeInsets.only(bottom: 4),
-                child: Text(me == null ? '로그인하면 ${widget.c.name} 이웃 글을 볼 수 있어요' : '${widget.c.name} 이웃과 나눔·소식을 나눠 보세요. 첫 글을 남겨 주세요!', style: T.small),
+                child: Text(me == null ? '로그인하면 ${widget.c.isHome ? _town : widget.c.name} 이웃 글을 볼 수 있어요' : '${widget.c.isHome ? _town : widget.c.name} 이웃과 나눔·소식을 나눠 보세요. 첫 글을 남겨 주세요!', style: T.small),
               )
             else
               for (final p in v.take(3))
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Row(children: [
+                    if (p.cid.startsWith('a_') && !widget.c.isHome) const Padding(padding: EdgeInsets.only(right: 5), child: Text('동네', style: TextStyle(fontSize: 10.5, color: kBlue, fontWeight: FontWeight.w700))),
                     SizedBox(width: 46, child: Text(catName(p.cat), style: const TextStyle(fontSize: 11, color: kSub, fontWeight: FontWeight.w600))),
                     Expanded(child: Text(p.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, letterSpacing: -0.3))),
                     if (p.comments > 0) Text(' [${p.comments}]', style: const TextStyle(fontSize: 11.5, color: kBlue, fontWeight: FontWeight.w700)),

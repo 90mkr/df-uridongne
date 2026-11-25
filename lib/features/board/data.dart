@@ -70,11 +70,17 @@ String agoText(DateTime t) {
 
 final boardTick = ValueNotifier<int>(0);
 
-Future<List<Post>> postsOf(Complex c) async {
+// 게시판 두 층 (대표님 11-25): 우리 단지(같은 단지끼리) · 우리 동네(동네 id 하나 — 아파트·주택 주민 함께)
+// 동네 글은 cid 를 「a_<동네id>」로 저장한다 (규칙·색인 바꾸지 않고 같은 dn_posts 에)
+String boardKey(Complex c, bool town) => town ? 'a_${c.areaId}' : c.id;
+bool hasTownBoard(Complex c) => c.areaId.isNotEmpty;
+
+Future<List<Post>> postsOf(Complex c, {bool town = false}) async {
   if (!await fbReady()) return const [];
+  if (town && !hasTownBoard(c)) return const [];
   try {
-    // 색인 없이: 단지로만 거르고 시간 순은 앱에서
-    final q = await db.collection('dn_posts').where('cid', isEqualTo: c.id).limit(300).get();
+    // 색인 없이: 단지(또는 동네)로만 거르고 시간 순은 앱에서
+    final q = await db.collection('dn_posts').where('cid', isEqualTo: boardKey(c, town)).limit(300).get();
     final l = [for (final d in q.docs) Post.of(d.id, d.data())]..sort((a, b) => b.at.compareTo(a.at));
     return l;
   } catch (e) {
@@ -83,13 +89,13 @@ Future<List<Post>> postsOf(Complex c) async {
   }
 }
 
-Future<String?> writePost({required Complex c, required String cat, required String title, required String body, required List<Uint8List> photos, required List<Uint8List> thumbs}) async {
+Future<String?> writePost({required Complex c, bool town = false, required String cat, required String title, required String body, required List<Uint8List> photos, required List<Uint8List> thumbs}) async {
   final u = me;
   if (u == null) return '로그인이 필요해요';
   if (!await fbReady()) return '서버에 연결하지 못했어요';
   try {
     await db.collection('dn_posts').add({
-      'cid': c.id,
+      'cid': boardKey(c, town),
       'area': c.areaId,
       'cat': cat,
       't': title,
