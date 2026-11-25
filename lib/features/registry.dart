@@ -18,6 +18,7 @@ import 'postcode/feature.dart';
 import 'roulette/feature.dart';
 import 'school/feature.dart';
 import 'subway/feature.dart';
+import 'toilet/feature.dart';
 import 'trash/feature.dart';
 import 'weather/feature.dart';
 
@@ -31,6 +32,7 @@ final List<Feature> allFeatures = [
   PharmacyFeature(), // 반쪽: 지금 문 연 약국
   PhonebookFeature(), // 묶음: 동네 전화번호부
   DealsFeature(), // 한 줄: 우리 단지 최근 거래
+  ToiletFeature(), // 생활 도구 맨 앞: 가까운 화장실 (급할 때, 11-25)
   GasFeature(), // 생활 도구
   ChargerFeature(),
   ParkingFeature(), // 생활 도구 + 홈: 가까운 공영주차장

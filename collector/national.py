@@ -417,6 +417,74 @@ def add_phones(shops, idx):
     return hit
 
 
+# ---------------- 4) 공중화장실 (행정안전부 공중화장실정보) ----------------
+# 2025-02부터 원천에서 좌표가 빠짐 → 도로명주소를 브이월드로 좌표로 바꾸고(없으면 같은 건물 가게 좌표), 동네별 toilet_<동네>.json
+
+def toilet_all():
+    first, total = None, 0
+    def page(n):
+        calls["toilet"] += 1
+        q = {"serviceKey": KEY, "pageNo": n, "numOfRows": 100, "returnType": "json"}
+        j = get_json("https://apis.data.go.kr/1741000/public_restroom_info_v2/info_v2?" + urllib.parse.urlencode(q), tries=4)
+        body = (((j or {}).get("response") or {}).get("body") or {})
+        items = (body.get("items") or {})
+        items = items.get("item") if isinstance(items, dict) else items
+        return (items if isinstance(items, list) else ([items] if items else [])), int(body.get("totalCount") or 0)
+    first, total = page(1)
+    if not total:
+        print("  화장실 자료 못 받음")
+        return []
+    out = list(first)
+    with ThreadPoolExecutor(6) as ex:
+        for items, _ in ex.map(page, range(2, math.ceil(total / 100) + 1)):
+            out += items
+    print(f"  화장실 {len(out):,}/{total:,}곳")
+    return out
+
+
+def num(v):
+    try:
+        return int(float(v or 0))
+    except Exception:
+        return 0
+
+
+def build_toilets(regions, bld):
+    lst = toilet_all()
+    if not lst:
+        return None
+    todo = sorted({(it.get("LCTN_ROAD_NM_ADDR") or "").strip() for it in lst} - set(GEO) - {""})
+    if VKEY:
+        with ThreadPoolExecutor(6) as ex:
+            list(ex.map(vworld, todo))
+    out = defaultdict(list)
+    miss = 0
+    for it in lst:
+        road = (it.get("LCTN_ROAD_NM_ADDR") or "").strip()
+        yx = GEO.get(road) or bld.get(road_key(road))
+        if not yx:
+            miss += 1
+            continue
+        near = [r for r in regions if r["bbox"][0] <= yx[1] <= r["bbox"][2] and r["bbox"][1] <= yx[0] <= r["bbox"][3]]
+        if not near:
+            continue
+        rid = min(near, key=lambda r: (r["lat"] - yx[0]) ** 2 + (r["lng"] - yx[1]) ** 2)["id"]
+        m = num(it.get("MALE_TOILT_CNT")) + num(it.get("MALE_URNL_CNT"))
+        f = num(it.get("FEMALE_TOILT_CNT"))
+        out[rid].append({
+            "id": it.get("MNG_NO", ""), "n": (it.get("RSTRM_NM") or "").strip(), "k": (it.get("SE_NM") or "").strip(),
+            "a": road or (it.get("LCTN_LOTNO_ADDR") or "").strip(),
+            "h": (it.get("OPN_HR") or "").strip(), "hd": (it.get("OPN_HR_DTL") or "").strip(),
+            "m": m, "f": f,
+            "d": num(it.get("MALE_FRDBL_TOILT_CNT")) + num(it.get("FEMALE_FRDBL_TOILT_CNT")) > 0,
+            "b": (it.get("DIAP_EXCHCON_EN") or "") == "Y", "e": (it.get("EMRGNCBLL_INSTL_YN") or "") == "Y",
+            "c": (it.get("RSTRM_ENTRAN_CCTV_INSTL_EN") or "") == "Y",
+            "o": (it.get("MNG_INST_NM") or "").strip(), "t": (it.get("TELNO") or "").strip(),
+            "y": round(yx[0], 6), "x": round(yx[1], 6),
+        })
+    print(f"  화장실 위치 찾음 {sum(len(v) for v in out.values()):,}곳 (못 찾음 {miss:,})")
+    return out
+
 # ---------------- 저장 ----------------
 # K-apt 기본정보·브이월드 좌표는 공공 자료라 다음 번을 위해 store 에 남겨 둔다 (하루 호출 한도 나눠 쓰기)
 def load_caches():
@@ -451,11 +519,23 @@ def main():
         reg = {"sido": []}
     reg["note"] = "동네 목록 — 전국 시군구(큰 곳은 나눔). 소상공인 상가정보·K-apt·인허가로 만듦(카카오 자료는 저장하지 않음)."
     have = {s["name"]: s for s in reg.get("sido", [])}
-    lic = license_index() if os.environ.get("PHONES", "1") == "1" else {}
+    lic = license_index() if os.environ.get("PHONES", "1") == "1" and os.environ.get("REUSE") != "1" else {}
     load_caches()
     all_regions, bld = [], {}
     done_names = set()
-    for code, sname in SIDO:
+    if os.environ.get("REUSE") == "1":  # 가게는 다시 받지 않고 store 에 있는 것으로 (화장실·아파트만 다시 만들 때)
+        for sd in reg.get("sido", []):
+            for r in sd.get("areas", []):
+                try:
+                    for sh in json.load(open(os.path.join(OUT, f"{r['id']}.json"), encoding="utf-8")).get("shops", []):
+                        k = road_key(sh.get("a", ""))
+                        if k and k not in bld:
+                            bld[k] = (sh["y"], sh["x"])
+                except Exception:
+                    pass
+                all_regions.append({**r, "_ldongs": Counter()})
+        print(f"  다시 쓰기: 동네 {len(all_regions)}곳 · 건물 {len(bld):,}곳")
+    for code, sname in ([] if os.environ.get("REUSE") == "1" else SIDO):
         if want and code not in want:
             continue
         print(f"[{sname} {code}]")
@@ -489,6 +569,11 @@ def main():
             for r in all_regions:
                 al = sorted(apts.get(r["id"], []), key=lambda z: z["n"])
                 dump(f"apt_{r['id']}.json", {"area_id": r["id"], "updated": NOW, "src": "공동주택관리정보시스템(K-apt)", "apts": al})
+    if all_regions and os.environ.get("TOILETS", "1") == "1":
+        tl = build_toilets(all_regions, bld)
+        if tl is not None:
+            for r in all_regions:
+                dump(f"toilet_{r['id']}.json", {"area_id": r["id"], "updated": NOW, "src": "행정안전부 공중화장실정보", "toilets": sorted(tl.get(r["id"], []), key=lambda z: z["n"])})
     save_caches()
     order = [n for _, n in SIDO]
     reg["sido"] = sorted(have.values(), key=lambda s: order.index(s["name"]) if s["name"] in order else 99)

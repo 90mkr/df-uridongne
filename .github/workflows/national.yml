@@ -8,6 +8,14 @@ on:
         description: '시도 코드 (쉼표, 비우면 전국) 예: 50,26,51'
         required: false
         default: ''
+      reuse:
+        description: '가게는 다시 받지 않고 아파트·화장실만 (1)'
+        required: false
+        default: ''
+      apts:
+        description: '아파트 만들기 (1/0)'
+        required: false
+        default: '1'
   schedule:
     - cron: '17 18 * * 0'   # 매주 월요일 새벽 3시 17분(한국) 전국 다시
 concurrency: { group: national, cancel-in-progress: false }
@@ -36,6 +44,8 @@ jobs:
           DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
           VWORLD_KEY: ${{ secrets.VWORLD_KEY }}
           SIDO: ${{ github.event.inputs.sido }}
+          REUSE: ${{ github.event.inputs.reuse }}
+          APTS: ${{ github.event.inputs.apts || '1' }}
           OUT: /tmp/store
       - name: store 가지에 올리기 (기록 없이 한 장)
         run: |

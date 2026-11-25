@@ -1,5 +1,7 @@
 // 화면 틀 (본부 방만 고침): 하단 메뉴 다섯 칸 — 단지 홈 · 전화번호부 · 지도 · 생활 도구 · 내 정보
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:quick_actions/quick_actions.dart';
 
 import '../features/registry.dart';
 import 'complex_pick.dart';
@@ -48,9 +50,25 @@ class _ShellState extends State<Shell> {
     myLocation(ask: false);
     if (!mounted) return;
     setState(() => booting = false);
+    _shortcuts();
     if (complex.value == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => pickComplex(context, first: true));
     }
+  }
+
+  // 앱 아이콘을 길게 누르면 나오는 바로가기 (대표님 11-25: 급할 때 화장실 바로)
+  void _shortcuts() {
+    if (kIsWeb) return;
+    try {
+      const qa = QuickActions();
+      qa.initialize((type) {
+        final c = complex.value;
+        final f = featureById(type);
+        if (c == null || f == null || !mounted) return;
+        Navigator.of(context).push(MaterialPageRoute(builder: (ctx) => f.page(ctx, c)));
+      });
+      qa.setShortcutItems(const [ShortcutItem(type: 'toilet', localizedTitle: '가까운 화장실')]);
+    } catch (_) {}
   }
 
   @override
