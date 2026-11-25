@@ -183,7 +183,7 @@ class _AlarmPageState extends State<AlarmPage> {
                       child: Text.rich(
                         TextSpan(children: [
                           TextSpan(text: '휴대폰 시계 앱에 알람을 넣어 드려요.\n', style: TextStyle(fontWeight: FontWeight.w700, color: kInk)),
-                          TextSpan(text: '잠금·절전 중에도 확실히 울려요. 끄거나 지울 때는 '),
+                          TextSpan(text: '잠금·절전 중에도 확실히 울려요.\n끄거나 지울 때는 '),
                           TextSpan(text: '시계 앱', style: TextStyle(fontWeight: FontWeight.w700, color: kInk)),
                           TextSpan(text: '에서 해 주세요.'),
                         ]),
