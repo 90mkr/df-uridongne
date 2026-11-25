@@ -1,25 +1,22 @@
-# 전국 자료 원천 시험 (본부, 임시) — 키는 찍지 않음
 import os, re, json, urllib.request, urllib.parse, urllib.error
 K = os.environ.get("DATA_GO_KR_KEY", "").strip()
-def get(u, n=700):
+def get(u):
     try:
         req = urllib.request.Request(u, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=40) as r:
-            b = r.read(400000); print("  ->", r.status, len(b)); return b.decode("utf-8", "replace")
-    except urllib.error.HTTPError as e:
-        print("  !!", e.code, e.read(600).decode("utf-8", "replace").replace("\n", " ")); return ""
-    except Exception as e:
-        print("  !!", repr(e)[:200]); return ""
-def T(name, u, n=700):
-    print("==", name); s = get(u.replace("{K}", urllib.parse.quote(K, safe="")))
-    print("  ", s[:n].replace("\n", " ")); return s
-for op in ("getTotalAptList3?", "getSigunguAptList3?sigunguCode=28185&", "getLegaldongAptList3?bjdCode=2818510600&", "getSidoAptList3?sidoCode=28&"):
-    T("kapt "+op, "https://apis.data.go.kr/1613000/AptListService3/"+op+"serviceKey={K}&pageNo=1&numOfRows=3")
-# 인허가 API 페이지에서 요청 주소 뽑기
-for pid in ("15045016", "15154921", "15155058"):
-    print("== page", pid)
-    s = get("https://www.data.go.kr/data/%s/openapi.do" % pid)
-    for m in sorted(set(re.findall(r"https?://apis\.data\.go\.kr/[0-9A-Za-z_/]+", s))): print("   url", m)
-    t = re.sub(r"<[^>]+>", " ", s); t = re.sub(r"\s+", " ", t)
-    i = t.find("요청변수"); print("   ", t[i:i+1500] if i >= 0 else t[:300])
-    i = t.find("출력결과"); print("   ", t[i:i+2500] if i >= 0 else "")
+        with urllib.request.urlopen(req, timeout=40) as r: return r.read(600000).decode("utf-8", "replace")
+    except urllib.error.HTTPError as e: return "!!%s %s" % (e.code, e.read(400).decode("utf-8", "replace"))
+    except Exception as e: return "!!" + repr(e)[:200]
+def txt(s): return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", s))
+# 1) 목록 검색: 단지 목록, 인허가(행정안전부 1741000) 
+for kw in ("공동주택 단지 목록제공", "행정안전부_식품", "행정안전부_건강", "행정안전부_생활", "행정안전부_문화", "행정안전부_동물", "행정안전부_기타", "행정안전부_자원환경", "행정안전부_체육", "행정안전부_인허가"):
+    for page in (1, 2, 3):
+        s = get("https://www.data.go.kr/tcs/dss/selectDataSetList.do?dType=API&keyword=%s&perPage=40&currentPage=%d" % (urllib.parse.quote(kw), page))
+        hits = re.findall(r'href="/data/(\d+)/openapi\.do"[^>]*>\s*(?:<[^>]+>\s*)*([^<]{3,80})', s)
+        if not hits: break
+        for i, t in hits: print("LIST", kw, i, t.strip())
+# 2) 휴게음식점 상세
+s = get("https://www.data.go.kr/data/15154921/openapi.do"); t = txt(s)
+for key in ("serviceKey", "SITETEL", "전화", "좌표"):
+    for m in re.finditer(key, t):
+        print("CTX", key, t[max(0, m.start()-300):m.start()+500]); break
+print("CALL", get("https://apis.data.go.kr/1741000/rest_cafes/info?serviceKey=%s&pageNo=1&numOfRows=2&returnType=json" % urllib.parse.quote(K, safe=""))[:1500])
