@@ -190,11 +190,15 @@ Future<List<Lot>> lotsNear(LatLng p, {double km = 3}) async {
   await Future.wait([
     for (final k in keys)
       if (!_tiles.containsKey(k))
+        // 바다 등 주차장이 없는 칸은 파일이 없음(404) — 그 칸만 빈 칸으로 두고 나머지는 그대로 보여 줌
+        // (예전엔 한 칸이 실패하면 전부 안 보였음 — 송도 더테라스 11-25)
         getJson('${dataBase}parking/t/$k.json').then((j) {
           _tiles[k] = [
             for (final x in (j is Map ? (j['p'] as List? ?? const []) : const []))
               if (x is Map && x['y'] != null && x['x'] != null) Lot.fromJson(x)
           ];
+        }).catchError((_) {
+          _tiles[k] = <Lot>[];
         }),
   ]);
   final out = <Lot>[for (final k in keys) ...?_tiles[k]];
