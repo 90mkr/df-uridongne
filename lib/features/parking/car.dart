@@ -335,7 +335,7 @@ class _NearLotsCardState extends State<NearLotsCard> {
   @override
   void initState() {
     super.initState();
-    lotsNear(widget.c.pos, km: 2).then((l) {
+    lotsNear(widget.c.pos, km: 3).then((l) {
       if (!mounted) return;
       final pub = l.where((x) => x.kind.contains('공영')).toList();
       setState(() => lots = (pub.length >= 3 ? pub : l).take(3).toList());
