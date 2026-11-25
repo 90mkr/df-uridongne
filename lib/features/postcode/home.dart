@@ -117,7 +117,8 @@ class _PostHomeState extends State<PostHome> {
   Widget build(BuildContext context) {
     final top = MediaQuery.of(context).padding.top;
     final w = MediaQuery.of(context).size.width;
-    final artH = (w < 600 ? 168.0 : 240.0) + top;
+    // 폰: 사진을 화면 너비에 맞춰(3:1) 트럭·상자가 제목 오른쪽에 다 보이게 / 넓은 화면: 높이 260 고정
+    final artH = w < 600 ? w / 3 + top * 0.4 : 260.0 + top; // 상태 표시줄 밑까지 사진(하늘)이 깔림 — 띠를 따로 칠하지 않음
     final narrow = w < 380;
     return Scaffold(
       backgroundColor: _bgTop,
@@ -131,9 +132,9 @@ class _PostHomeState extends State<PostHome> {
             height: artH,
             child: ShaderMask(
               // 사진 아래 45%를 투명으로 서서히 → 바탕 그라데이션과 이어짐 (끝 줄에 색이 남지 않게 마지막은 완전 투명)
-              shaderCallback: (r) => const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.white, Colors.white, Color(0x00FFFFFF), Color(0x00FFFFFF)], stops: [0, 0.55, 0.97, 1]).createShader(r),
+              shaderCallback: (r) => const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.white, Colors.white, Color(0x00FFFFFF), Color(0x00FFFFFF)], stops: [0, 0.72, 0.98, 1]).createShader(r),
               blendMode: BlendMode.dstIn,
-              child: Image.asset('assets/art/parcel_bg.jpg', fit: BoxFit.cover, alignment: Alignment(w < 600 ? 0.62 : 1, 0.25), filterQuality: FilterQuality.medium),
+              child: Image.asset('assets/art/parcel_bg.jpg', fit: BoxFit.cover, alignment: w < 600 ? Alignment.bottomCenter : const Alignment(1, 0.3), filterQuality: FilterQuality.medium),
             ),
           ),
           Center(
@@ -143,16 +144,16 @@ class _PostHomeState extends State<PostHome> {
                 Row(children: [
                   IconButton(onPressed: () => Navigator.of(context).maybePop(), icon: const Icon(Icons.arrow_back_rounded, size: 26, color: kInk)),
                   const SizedBox(width: 2),
-                  Image.asset('assets/icons/post.png', width: 34, height: 34),
+                  Image.asset('assets/icons/envelope.png', width: 36, height: 36),
                   const SizedBox(width: 10),
                   const Text('택배·우편', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: -0.7, color: kInk)),
                 ]),
-                SizedBox(height: w < 600 ? 50 : 110),
+                SizedBox(height: w < 600 ? (artH * 0.84 - top - 54).clamp(24.0, 120.0) : 150),
                 _track(),
                 if (parcels.isNotEmpty) ...[const SizedBox(height: 12), _list()],
                 const SizedBox(height: 16),
                 Row(children: [
-                  Expanded(child: _tile('우편번호 찾기', zip == null ? '주소로 찾고 바로 복사' : '우리 단지 ${zip![0]}', 'post', const [Color(0xFFFFF7EC), Color(0xFFFDEBD6)], narrow, () => _go(ZipPage(widget.c)))),
+                  Expanded(child: _tile('우편번호 찾기', zip == null ? '주소로 찾고 바로 복사' : '우리 단지 ${zip![0]}', 'envelope', const [Color(0xFFFFF7EC), Color(0xFFFDEBD6)], narrow, () => _go(ZipPage(widget.c)))),
                   const SizedBox(width: 12),
                   Expanded(child: _tile('영문 주소', '해외직구 간편 복사', 'globe', const [Color(0xFFF1F6FF), Color(0xFFDDE9FD)], narrow, () => _go(EngPage(widget.c)))),
                 ]),
