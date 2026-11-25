@@ -274,8 +274,10 @@ def vworld(addr):
 def road_key(a):
     """도로명주소에서 「시군구 도로명 건물번호」만 (동·호·괄호 빼고)."""
     a = re.sub(r"\(.*?\)", "", a or "")
+    w = a.split()
+    gu = w[1] if len(w) > 1 else ""
     m = re.search(r"(\S+(?:로|길))\s*(\d+(?:-\d+)?)", a)
-    return f"{m.group(1)} {m.group(2)}" if m else ""
+    return f"{gu} {m.group(1)} {m.group(2)}" if m else ""
 
 
 def build_apts(regions, all_shops):
@@ -321,6 +323,81 @@ def build_apts(regions, all_shops):
     return apts
 
 
+# ---------------- 3) 인허가 전화번호 ----------------
+# 공공데이터포털 「행정안전부_○○ 조회서비스」 (업종마다 활용신청). 영업 중인 곳의 전화번호를 상호·도로명주소로 가게에 붙인다.
+LICENSES = ["general_restaurants", "rest_cafes", "bakeries", "instant_food_processors", "livestock_retail",
+            "beauty_salons", "barber_shops", "laundries", "public_baths", "building_sanitation",
+            "pharmacies", "clinics", "hospitals", "optical_shops", "postpartum_care",
+            "animal_hospitals", "pet_grooming", "animal_boarding",
+            "fitness_centers", "martial_arts_dojo", "golf_practice_ranges", "karaoke_rooms", "pc_bangs"]
+
+
+def norm_name(t):
+    t = re.sub(r"\(.*?\)|주식회사|\(주\)|㈜|유한회사", "", t or "")
+    return re.sub(r"[\s·\-_.,&]", "", t).lower()
+
+
+def lic_page(svc, page):
+    calls[svc] += 1
+    q = {"serviceKey": KEY, "pageNo": page, "numOfRows": 100, "returnType": "json"}
+    j = get_json(f"https://apis.data.go.kr/1741000/{svc}/info?" + urllib.parse.urlencode(q), tries=3)
+    if not j:
+        return None, 0
+    body = (j.get("response") or {}).get("body") or {}
+    items = (body.get("items") or {})
+    items = items.get("item") if isinstance(items, dict) else items
+    if isinstance(items, dict):
+        items = [items]
+    return items or [], int(body.get("totalCount") or 0)
+
+
+def license_index():
+    """도로명주소(도로명+번호) → [(상호, 전화)]  (영업 중이고 전화가 있는 곳만)"""
+    idx = defaultdict(list)
+    for svc in LICENSES:
+        first, total = lic_page(svc, 1)
+        if first is None:
+            print(f"  인허가 {svc}: 막힘 (활용신청 필요)")
+            continue
+        pages = math.ceil(total / 100)
+        n = 0
+
+        def take(items):
+            nonlocal n
+            for it in items or []:
+                if (it.get("SALS_STTS_CD") or "") not in ("01", "1", "") and "영업" not in (it.get("SALS_STTS_NM") or ""):
+                    continue
+                tel = re.sub(r"[^0-9-]", "", it.get("TELNO") or "")
+                if len(re.sub(r"\D", "", tel)) < 8:
+                    continue
+                k = road_key(it.get("ROAD_NM_ADDR") or "")
+                if k:
+                    idx[k].append((norm_name(it.get("BPLC_NM")), tel))
+                    n += 1
+        take(first)
+        with ThreadPoolExecutor(8) as ex:
+            for items, _ in ex.map(lambda p: lic_page(svc, p), range(2, pages + 1)):
+                take(items)
+        print(f"  인허가 {svc}: {total:,}건 중 전화 {n:,}")
+    return idx
+
+
+def add_phones(shops, idx):
+    hit = 0
+    for s in shops:
+        cands = idx.get(road_key(s["a"]))
+        if not cands:
+            continue
+        n = norm_name(s["n"])
+        n1 = norm_name(s["n"].split(" ")[0])
+        for nm, tel in cands:
+            if nm and (nm == n or (len(n1) >= 2 and (n1 in nm or nm in n))):
+                s["t"] = tel
+                hit += 1
+                break
+    return hit
+
+
 # ---------------- 저장 ----------------
 
 def dump(name, obj):
@@ -341,6 +418,7 @@ def main():
         reg = {"sido": []}
     reg["note"] = "동네 목록 — 전국 시군구(큰 곳은 나눔). 소상공인 상가정보·K-apt·인허가로 만듦(카카오 자료는 저장하지 않음)."
     have = {s["name"]: s for s in reg.get("sido", [])}
+    lic = license_index() if os.environ.get("PHONES", "1") == "1" else {}
     done_names = set()
     for code, sname in SIDO:
         if want and code not in want:
@@ -350,6 +428,8 @@ def main():
         if not raw:
             continue
         shops = [s for s in (shop_of(it) for it in raw) if s]
+        if lic:
+            print(f"  전화번호 붙임 {add_phones(shops, lic):,}곳")
         regions = build_regions(sname, shops)
         apts = build_apts(regions, shops)
         for r in regions:
