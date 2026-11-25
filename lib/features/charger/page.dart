@@ -1,11 +1,12 @@
 // 충전소 상세 화면 · 충전소 창 · 내 차 · 타이머 · 고장 제보 (이 폴더는 충전소 담당 방만 고침)
+// 디자인 0.3.0 (대표님 시안 11-25): 사진 머리 · 아이콘 고르기 · 파란 사진 요약판 · 그림 칸 카드
 import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
 
 import '../../core/data.dart';
+import '../../core/dnmap.dart';
 import '../../core/icons.dart';
 import '../../core/me.dart' show openLogin;
 import '../../core/nav.dart';
@@ -14,10 +15,13 @@ import '../../core/ui.dart';
 import 'data.dart';
 import 'watch.dart';
 
-// 상태 색: 빈 충전기 있음 초록 · 모두 사용 중 주황 · 고장·점검 회색
+// 상태 색: 빈자리 있음 초록 · 모두 사용 중 주황 · 고장·점검 회색
 const kFree = Color(0xFF1E9E5A);
 const kBusy = Color(0xFFEF7D22);
 const kOff = Color(0xFFA3A7B0);
+const _page = Color(0xFFF4F7FB);
+const _chipLine = Color(0xFFD3DDEB);
+const _yellow = Color(0xFFFFE14A);
 
 enum Mode { all, fast, free }
 
@@ -148,34 +152,126 @@ class _ChargerPageState extends State<ChargerPage> {
       final m = DateTime.now().difference(liveAt!).inMinutes;
       return m < 1 ? '방금 받은 상태' : '$m분 전 기준';
     }
-    return set?.updated.isNotEmpty == true ? '${set!.updated.substring(5)} 모은 자료 기준' : '';
+    return set?.updated.isNotEmpty == true ? '${set!.updated.substring(5)} 기준' : '';
   }
 
   @override
   Widget build(BuildContext context) {
     final list = items;
-    return DetailPage(
-      title: '전기차 충전소',
-      icon: 'charger',
-      white: false,
-      actions: [
-        TextButton(
-          onPressed: () => showMyCar(context),
-          child: const Text('내 차', style: TextStyle(fontSize: 13.5, color: kInk, fontWeight: FontWeight.w600)),
+    final empty = !loading && (set?.all.isEmpty ?? true);
+    return Scaffold(
+      backgroundColor: _page,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: loading
+              ? Column(children: [_head(), const Expanded(child: Center(child: CircularProgressIndicator(strokeWidth: 2)))])
+              : empty
+                  ? Column(children: [_head(), Expanded(child: _empty())])
+                  : mapView
+                      ? Column(children: [_head(), Expanded(child: _map(list))])
+                      : _list(list),
         ),
-        TextButton(
-          onPressed: () => setState(() => mapView = !mapView),
-          child: Text(mapView ? '목록' : '지도', style: const TextStyle(fontSize: 13.5, color: kInk, fontWeight: FontWeight.w600)),
+      ),
+    );
+  }
+
+  // ── 맨 위: 오른쪽 충전소 사진(왼쪽·아래는 바탕에 녹임) + ← 아이콘 제목 + 내 차·지도 + 고르기
+  Widget _head() {
+    final top = MediaQuery.of(context).padding.top;
+    final w = MediaQuery.of(context).size.width.clamp(0, 720).toDouble();
+    final narrow = w < 380;
+    final h = top + 150.0;
+    return SizedBox(
+      height: h,
+      child: Stack(children: [
+        const Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomCenter, colors: [Color(0xFFE4F0FD), _page])),
+          ),
         ),
-      ],
-      body: loading
-          ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
-          : (set?.all.isEmpty ?? true)
-              ? _empty()
-              : Column(children: [
-                  _filters(),
-                  Expanded(child: mapView ? _map(list) : _list(list)),
-                ]),
+        Positioned(
+          right: 0,
+          top: 0,
+          bottom: 0,
+          width: w * 0.68,
+          child: IgnorePointer(
+            child: ShaderMask(
+              shaderCallback: (r) => const LinearGradient(colors: [Color(0x00FFFFFF), Color(0xCCFFFFFF), Colors.white], stops: [0, 0.38, 1]).createShader(r),
+              blendMode: BlendMode.dstIn,
+              child: ShaderMask(
+                shaderCallback: (r) => const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.white, Colors.white, Color(0x00FFFFFF)], stops: [0, 0.72, 1]).createShader(r),
+                blendMode: BlendMode.dstIn,
+                child: Image.asset('assets/art/ev_head.jpg', fit: BoxFit.cover, alignment: const Alignment(0.75, 0.15), filterQuality: FilterQuality.medium),
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          left: 2,
+          right: kPad - 6,
+          top: top + 8,
+          child: Row(children: [
+            IconButton(onPressed: () => Navigator.of(context).maybePop(), icon: const Icon(Icons.arrow_back_rounded, size: 24, color: kInk)),
+            Image.asset('assets/icons/charger.png', width: narrow ? 30 : 34, height: narrow ? 30 : 34),
+            const SizedBox(width: 7),
+            Flexible(
+              child: Text('전기차 충전소',
+                  maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: narrow ? 19 : 21, fontWeight: FontWeight.w800, letterSpacing: -0.7, color: kInk)),
+            ),
+            const Spacer(),
+            _GlassBtn(icon: Image.asset('assets/icons/car.png', width: 20, height: 20), text: '내 차', onTap: () => showMyCar(context)),
+            const SizedBox(width: 6),
+            _GlassBtn(
+              icon: Icon(mapView ? Icons.format_list_bulleted_rounded : Icons.place_rounded, size: 18, color: kInk),
+              text: mapView ? '목록' : '지도',
+              onTap: () => setState(() => mapView = !mapView),
+            ),
+          ]),
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          top: top + 62,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: kPad),
+            child: Row(children: [
+              _Chip('전체', on: mode == Mode.all, onTap: () => setState(() => mode = Mode.all)),
+              const SizedBox(width: 6),
+              _Chip('급속만', icon: Icons.bolt_rounded, on: mode == Mode.fast, onTap: () => setState(() => mode = Mode.fast)),
+              const SizedBox(width: 6),
+              _Chip('지금 빈 곳', icon: Icons.directions_car_filled_outlined, on: mode == Mode.free, onTap: () => setState(() => mode = Mode.free)),
+              const SizedBox(width: 6),
+              _Chip('누구나 이용', icon: Icons.group_outlined, on: openOnly, onTap: () => setState(() => openOnly = !openOnly)),
+            ]),
+          ),
+        ),
+        Positioned(
+          left: kPad,
+          right: kPad,
+          top: top + 110,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => showMyCar(context),
+            child: Row(children: [
+              const Icon(Icons.directions_car_rounded, size: 17, color: kBlue),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  plugs.isEmpty ? '내 차 단자를 고르면 맞는 충전기만 보여 드려요' : '내 차 ${plugs.map(plugName).join('·')} 맞춤으로 보는 중',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 12, color: kSub),
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Text('바꾸기', style: TextStyle(fontSize: 12, color: kBlue, fontWeight: FontWeight.w700)),
+              const Icon(Icons.chevron_right_rounded, size: 17, color: kBlue),
+            ]),
+          ),
+        ),
+      ]),
     );
   }
 
@@ -192,38 +288,14 @@ class _ChargerPageState extends State<ChargerPage> {
         ),
       );
 
-  Widget _filters() => Container(
-        decoration: const BoxDecoration(color: Colors.white, border: Border(bottom: BorderSide(color: kLine))),
-        padding: const EdgeInsets.fromLTRB(kPad, 10, kPad, 10),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(children: [
-              for (final f in const [(Mode.all, '전체'), (Mode.fast, '급속만'), (Mode.free, '지금 빈 곳')]) ...[
-                ChoiceChipBox(f.$2, on: mode == f.$1, onTap: () => setState(() => mode = f.$1)),
-                const SizedBox(width: 6),
-              ],
-              Container(width: 1, height: 18, color: kLine, margin: const EdgeInsets.symmetric(horizontal: 6)),
-              ChoiceChipBox('누구나 이용', on: openOnly, onTap: () => setState(() => openOnly = !openOnly)),
-            ]),
-          ),
-          const SizedBox(height: 8),
-          InkWell(
-            onTap: () => showMyCar(context),
-            child: Row(children: [
-              const LineIcon('car', size: 16),
-              const SizedBox(width: 5),
-              Flexible(
-                child: Text(
-                  plugs.isEmpty ? '내 차 단자를 고르면 맞는 충전기만 보여 드려요' : '내 차 ${plugs.map(plugName).join('·')} 맞춤',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 11.5, color: kSub),
-                ),
-              ),
-              const Text('  바꾸기', style: TextStyle(fontSize: 11.5, color: kBlue, fontWeight: FontWeight.w600)),
-            ]),
-          ),
+  Widget _title(String t, {Widget? trailing}) => Padding(
+        padding: const EdgeInsets.only(left: 2, bottom: 8),
+        child: Row(children: [
+          Container(width: 3, height: 15, decoration: BoxDecoration(color: kFree, borderRadius: BorderRadius.circular(2))),
+          const SizedBox(width: 8),
+          Text(t, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: -0.4)),
+          const Spacer(),
+          if (trailing != null) trailing,
         ]),
       );
 
@@ -233,52 +305,56 @@ class _ChargerPageState extends State<ChargerPage> {
     final cheap = cheapId;
     return RefreshIndicator(
       onRefresh: _live,
-      child: ListView(padding: const EdgeInsets.fromLTRB(kPad, 14, kPad, 30), children: [
-        if (chargeTimer.value != null) ...[_TimerCard(t: chargeTimer.value!), const SizedBox(height: 10)],
-        for (final w in watches.value) ...[_WatchBar(w: w), const SizedBox(height: 8)],
-        _summary(list),
-        const SizedBox(height: 14),
-        if (home != null) ...[
-          const Padding(padding: EdgeInsets.only(left: 2, bottom: 7), child: Text('우리 단지', style: T.title)),
-          _card(home, cheap),
-          const SizedBox(height: 14),
-        ],
+      child: ListView(padding: EdgeInsets.zero, children: [
+        _head(),
         Padding(
-          padding: const EdgeInsets.only(left: 2, bottom: 7),
-          child: Row(children: [
-            Text('가까운 충전소 ${rest.length}곳', style: T.title),
-            const Spacer(),
-            InkWell(
-              onTap: () => setState(() => byFree = !byFree),
-              child: Row(children: [
-                const Icon(Icons.swap_vert_rounded, size: 16, color: kSub),
-                Text(byFree ? '빈자리 많은 순' : '가까운 순', style: const TextStyle(fontSize: 12, color: kSub, fontWeight: FontWeight.w600)),
-              ]),
+          padding: const EdgeInsets.fromLTRB(kPad, 4, kPad, 30),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            if (chargeTimer.value != null) ...[_TimerCard(t: chargeTimer.value!), const SizedBox(height: 10)],
+            for (final w in watches.value) ...[_WatchBar(w: w), const SizedBox(height: 8)],
+            _summary(list),
+            const SizedBox(height: 20),
+            if (home != null) ...[
+              _title('우리 단지'),
+              _card(home, cheap, home: true),
+              const SizedBox(height: 20),
+            ],
+            _title(
+              '가까운 충전소 ${rest.length}곳',
+              trailing: InkWell(
+                onTap: () => setState(() => byFree = !byFree),
+                child: Row(children: [
+                  const Icon(Icons.swap_vert_rounded, size: 16, color: kSub),
+                  const SizedBox(width: 2),
+                  Text(byFree ? '빈자리 많은 순' : '가까운 순', style: const TextStyle(fontSize: 12, color: kSub, fontWeight: FontWeight.w600)),
+                ]),
+              ),
+            ),
+            if (list.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 40),
+                child: Text('조건에 맞는 충전소가 없어요.\n위 고르기를 바꿔 보세요.', textAlign: TextAlign.center, style: T.small),
+              ),
+            for (final s in rest) ...[_card(s, cheap), const SizedBox(height: 10)],
+            const SizedBox(height: 8),
+            const _Legend(),
+            const SizedBox(height: 10),
+            Text(
+              '환경부 전기차 충전소 정보 기준 · 운영기관 사정으로 상태가 늦거나 다를 수 있어요. 요금은 ${prices.source}(${prices.since}~) 기준이며 회원카드에 따라 달라요.'
+              '${canLive ? '' : '\n지금 보이는 상태는 모아 둔 자료예요. 실시간 상태는 휴대폰 앱에서 보여요.'}',
+              style: T.tiny,
             ),
           ]),
-        ),
-        if (list.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 40),
-            child: Text('조건에 맞는 충전소가 없어요.\n위 고르기를 바꿔 보세요.', textAlign: TextAlign.center, style: T.small),
-          ),
-        for (final s in rest) ...[_card(s, cheap), const SizedBox(height: 8)],
-        const SizedBox(height: 10),
-        const _Legend(),
-        const SizedBox(height: 10),
-        Text(
-          '환경부 전기차 충전소 정보 기준 · 운영기관 사정으로 상태가 늦거나 다를 수 있어요. 요금은 ${prices.source}(${prices.since}~) 기준이며 회원카드에 따라 달라요.'
-          '${canLive ? '' : '\n지금 보이는 상태는 모아 둔 자료예요. 실시간 상태는 휴대폰 앱에서 보여요.'}',
-          style: T.tiny,
         ),
       ]),
     );
   }
 
-  Widget _card(Station s, String? cheap) => _StationCard(
+  Widget _card(Station s, String? cheap, {bool home = false}) => _StationCard(
         s: s,
         from: c,
         list: mine(s),
+        home: home,
         cheapest: s.id == cheap,
         onTap: () => _open(s),
         onWatch: () {
@@ -287,6 +363,7 @@ class _ChargerPageState extends State<ChargerPage> {
         },
       );
 
+  // ── 파란 사진 요약판
   Widget _summary(List<Station> list) {
     var fast = 0, slow = 0;
     for (final s in list) {
@@ -296,87 +373,98 @@ class _ChargerPageState extends State<ChargerPage> {
       }
     }
     final near = list.where((s) => freeN(s) > 0).toList()..sort((a, b) => meters(c.pos, a.pos).compareTo(meters(c.pos, b.pos)));
+    final w = MediaQuery.of(context).size.width.clamp(0, 720).toDouble();
+    final narrow = w < 380;
     return Container(
-      decoration: cardBox(r: 16),
-      padding: const EdgeInsets.fromLTRB(16, 15, 16, 14),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          MixTitle('지금', plugs.isEmpty ? '비어 있는 충전기' : '내 차에 맞는 빈 충전기', size: 14),
-          const Spacer(),
-          Text(basis, style: T.tiny),
-        ]),
-        const SizedBox(height: 10),
-        Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          _big('급속', fast),
-          if (mode != Mode.fast) ...[
-            Container(width: 1, height: 30, color: kLine, margin: const EdgeInsets.symmetric(horizontal: 16)),
-            _big('완속', slow),
-          ],
-          const Spacer(),
-          Text('${distText(radius)} 안 ${list.length}곳', style: T.tiny),
-        ]),
-        if (near.isNotEmpty) ...[
-          const SizedBox(height: 11),
-          InkWell(
-            onTap: () => _open(near.first),
-            child: Row(children: [
-              const Text('가장 가까운 빈 곳', style: T.tiny),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text('${near.first.name} · ${distText(meters(c.pos, near.first.pos))}',
-                    maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-              ),
-              const Icon(Icons.chevron_right_rounded, size: 18, color: kMute),
-            ]),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(18), boxShadow: const [BoxShadow(color: Color(0x1A1F4FA0), blurRadius: 18)]),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(children: [
+        const Positioned.fill(
+          child: DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(colors: [Color(0xFF1659C9), Color(0xFF2479E0)]))),
+        ),
+        Positioned(
+          right: 0,
+          top: 0,
+          bottom: 0,
+          width: w * 0.62,
+          child: ShaderMask(
+            shaderCallback: (r) => const LinearGradient(colors: [Color(0x00FFFFFF), Colors.white], stops: [0, 0.45]).createShader(r),
+            blendMode: BlendMode.dstIn,
+            child: Image.asset('assets/art/ev_card.jpg', fit: BoxFit.cover, alignment: const Alignment(0.9, 0), filterQuality: FilterQuality.medium),
           ),
-        ],
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(18, 16, 14, 14),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Expanded(
+                child: Text(plugs.isEmpty ? '지금 비어 있는 충전기' : '내 차에 맞는 빈 충전기',
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: -0.4, color: Colors.white)),
+              ),
+              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                if (basis.isNotEmpty) _GlassTag(basis, line: true),
+                const SizedBox(height: 5),
+                _GlassTag('${distText(radius)} 안 ${list.length}곳', icon: Icons.place_rounded),
+              ]),
+            ]),
+            const SizedBox(height: 2),
+            Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+              _big(Icons.bolt_rounded, '급속', fast, narrow),
+              if (mode != Mode.fast) ...[
+                Container(width: 1, height: 30, color: const Color(0x55FFFFFF), margin: EdgeInsets.symmetric(horizontal: narrow ? 12 : 16)),
+                _big(Icons.power_outlined, '완속', slow, narrow),
+              ],
+            ]),
+            const SizedBox(height: 10),
+            if (near.isNotEmpty)
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => _open(near.first),
+                child: Row(children: [
+                  const Icon(Icons.place_outlined, size: 15, color: Color(0xCCFFFFFF)),
+                  const SizedBox(width: 4),
+                  const Text('가장 가까운 빈 곳', style: TextStyle(fontSize: 11.5, color: Color(0xCCFFFFFF))),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text('${near.first.name} · ${distText(meters(c.pos, near.first.pos))}',
+                        maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Colors.white)),
+                  ),
+                  const Icon(Icons.chevron_right_rounded, size: 18, color: Colors.white),
+                ]),
+              )
+            else
+              const Text('지금은 빈 충전기가 없어요. 충전소를 눌러 「비면 알려 주기」를 걸어 두세요.', style: TextStyle(fontSize: 11.5, color: Color(0xCCFFFFFF))),
+          ]),
+        ),
       ]),
     );
   }
 
-  Widget _big(String label, int n) => Row(crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: kSub, fontWeight: FontWeight.w500)),
-        const SizedBox(width: 7),
-        Text('$n', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: -0.8, color: n > 0 ? kFree : kMute, height: 1)),
-        const SizedBox(width: 2),
-        const Text('대', style: TextStyle(fontSize: 12, color: kSub)),
+  Widget _big(IconData ic, String label, int n, bool narrow) => Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+        Icon(ic, size: 20, color: _yellow),
+        const SizedBox(width: 4),
+        Text(label, style: const TextStyle(fontSize: 13, color: Colors.white, fontWeight: FontWeight.w600)),
+        const SizedBox(width: 8),
+        Text('$n', style: TextStyle(fontSize: narrow ? 30 : 34, fontWeight: FontWeight.w800, letterSpacing: -1, color: n > 0 ? _yellow : const Color(0xAAFFFFFF), height: 1.15)),
+        const SizedBox(width: 3),
+        const Text('대', style: TextStyle(fontSize: 13, color: Colors.white)),
       ]);
 
   Widget _map(List<Station> list) => Stack(children: [
-        FlutterMap(
-          options: MapOptions(
-            initialCenter: c.pos,
-            initialZoom: radius > 2000 ? 13.5 : 14.5,
-            interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
-          ),
-          children: [
-            TileLayer(urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', userAgentPackageName: 'kr.designfeel.dongne'),
-            MarkerLayer(markers: [
-              Marker(
-                point: c.pos,
-                width: 120,
-                height: 46,
-                alignment: Alignment.topCenter,
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                    decoration: BoxDecoration(color: kInk, borderRadius: BorderRadius.circular(14)),
-                    child: Text(c.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white)),
-                  ),
-                  const SizedBox(height: 2),
-                  const LineIcon('apt', size: 20),
-                ]),
+        DnMap(
+          center: c.pos,
+          zoom: radius > 2000 ? 13.5 : 14.5,
+          marks: [
+            for (final s in list.take(150))
+              DnMark(
+                id: s.id,
+                pos: s.pos,
+                key: '${s.id}|${freeN(s)}|${mine(s).length}|${mode.name}|${plugs.join()}',
+                size: const Size(124, 36),
+                z: freeN(s) > 0 ? 2 : 1,
+                child: _Bubble(list: mine(s)),
+                onTap: () => _open(s),
               ),
-              for (final s in list.reversed.take(150))
-                Marker(
-                  point: s.pos,
-                  width: 104,
-                  height: 34,
-                  alignment: Alignment.topCenter,
-                  child: GestureDetector(onTap: () => _open(s), child: _Bubble(list: mine(s))),
-                ),
-            ]),
-            const RichAttributionWidget(attributions: [TextSourceAttribution('OpenStreetMap')]),
           ],
         ),
         Positioned(
@@ -396,7 +484,78 @@ class _ChargerPageState extends State<ChargerPage> {
   }
 }
 
-// 지도 말풍선: 「빈 2/4 · 급속」
+// ── 작은 부품들
+class _GlassBtn extends StatelessWidget {
+  final Widget icon;
+  final String text;
+  final VoidCallback onTap;
+  const _GlassBtn({required this.icon, required this.text, required this.onTap});
+  @override
+  Widget build(BuildContext context) => Material(
+        color: const Color(0xE6FFFFFF),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: const BorderSide(color: Color(0xFFE2E8F1))),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(10, 7, 12, 7),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              icon,
+              const SizedBox(width: 5),
+              Text(text, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: kInk)),
+            ]),
+          ),
+        ),
+      );
+}
+
+class _Chip extends StatelessWidget {
+  final String text;
+  final IconData? icon;
+  final bool on;
+  final VoidCallback onTap;
+  const _Chip(this.text, {this.icon, required this.on, required this.onTap});
+  @override
+  Widget build(BuildContext context) => Material(
+        color: on ? kBlue : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: BorderSide(color: on ? kBlue : _chipLine)),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: onTap,
+          child: Container(
+            height: 36,
+            padding: EdgeInsets.fromLTRB(icon == null ? 18 : 12, 0, 16, 0),
+            alignment: Alignment.center,
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              if (icon != null) ...[Icon(icon, size: 18, color: on ? Colors.white : kBlue), const SizedBox(width: 5)],
+              Text(text, style: TextStyle(fontSize: 13, fontWeight: on ? FontWeight.w800 : FontWeight.w600, color: on ? Colors.white : kInk)),
+            ]),
+          ),
+        ),
+      );
+}
+
+class _GlassTag extends StatelessWidget {
+  final String text;
+  final IconData? icon;
+  final bool line;
+  const _GlassTag(this.text, {this.icon, this.line = false});
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.fromLTRB(10, 4, 11, 4),
+        decoration: BoxDecoration(
+          color: line ? const Color(0x22FFFFFF) : const Color(0x55102A5C),
+          borderRadius: BorderRadius.circular(14),
+          border: line ? Border.all(color: const Color(0x99FFFFFF)) : null,
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          if (icon != null) ...[Icon(icon, size: 13, color: Colors.white), const SizedBox(width: 3)],
+          Text(text, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white)),
+        ]),
+      );
+}
+
+// 지도 말풍선: 「빈곳 2/4 · 급속」
 class _Bubble extends StatelessWidget {
   final List<Charger> list;
   const _Bubble({required this.list});
@@ -405,15 +564,18 @@ class _Bubble extends StatelessWidget {
     final col = stationColor(list);
     final free = list.where((c) => c.use == Use.free).length;
     final fast = list.any((c) => c.fast);
-    return Column(mainAxisSize: MainAxisSize.min, children: [
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(color: col, borderRadius: BorderRadius.circular(20), boxShadow: kShadow),
-        child: Text('빈곳 $free/${list.length} · ${fast ? '급속' : '완속'}',
-            maxLines: 1, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, height: 1.1, color: Colors.white)),
-      ),
-      CustomPaint(size: const Size(8, 5), painter: _Tail(col)),
-    ]);
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+          decoration: BoxDecoration(color: col, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white), boxShadow: kShadow),
+          child: Text('빈곳 $free/${list.length} · ${fast ? '급속' : '완속'}',
+              maxLines: 1, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, height: 1.1, color: Colors.white)),
+        ),
+        CustomPaint(size: const Size(9, 5), painter: _Tail(col)),
+      ]),
+    );
   }
 }
 
@@ -434,14 +596,90 @@ class _Tail extends CustomPainter {
   bool shouldRepaint(_Tail o) => o.c != c;
 }
 
+// 충전기 그림 칸 (옅은 민트 바탕 + 흰 충전기 + 초록 번개)
+class _Thumb extends StatelessWidget {
+  final bool fast;
+  const _Thumb({required this.fast});
+  @override
+  Widget build(BuildContext context) => Container(
+        width: 58,
+        height: 64,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFFEAF8F1), Color(0xFFCDEEDD)]),
+        ),
+        alignment: Alignment.bottomCenter,
+        child: Container(
+          width: fast ? 28 : 24,
+          height: fast ? 50 : 44,
+          margin: const EdgeInsets.only(bottom: 6),
+          padding: const EdgeInsets.fromLTRB(4, 5, 4, 0),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(6),
+            boxShadow: const [BoxShadow(color: Color(0x2A0E4A33), blurRadius: 6)],
+          ),
+          child: Column(children: [
+            Container(
+              height: fast ? 24 : 20,
+              decoration: BoxDecoration(color: const Color(0xFF123A2E), borderRadius: BorderRadius.circular(3)),
+              alignment: Alignment.center,
+              child: const Icon(Icons.bolt_rounded, size: 15, color: Color(0xFF3BE07F)),
+            ),
+            const SizedBox(height: 5),
+            Container(width: 5, height: 5, decoration: const BoxDecoration(color: Color(0xFF7FC7E8), shape: BoxShape.circle)),
+          ]),
+        ),
+      );
+}
+
+// 아이콘 달린 회색 꼬리표
+class _IPill extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final bool blue;
+  const _IPill(this.icon, this.text, {this.blue = false});
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.fromLTRB(9, 5, 12, 5),
+        decoration: BoxDecoration(color: blue ? const Color(0xFFEAF1FF) : const Color(0xFFEFF2F6), borderRadius: BorderRadius.circular(14)),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 14, color: blue ? kBlue : const Color(0xFF5C6270)),
+          const SizedBox(width: 4),
+          Text(text, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: blue ? kBlue : const Color(0xFF4A505C))),
+        ]),
+      );
+}
+
+// 상태 꼬리표: ✓ 빈자리 있음 / ⏱ 모두 사용 중 / 🔧 고장·점검
+class _StatePill extends StatelessWidget {
+  final List<Charger> list;
+  const _StatePill(this.list);
+  @override
+  Widget build(BuildContext context) {
+    final col = stationColor(list);
+    final bg = col == kFree ? const Color(0xFFE3F5EA) : (col == kBusy ? const Color(0xFFFFEFE2) : const Color(0xFFEEF0F3));
+    final ic = col == kFree ? Icons.check_circle_rounded : (col == kBusy ? Icons.schedule_rounded : Icons.build_circle_outlined);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(7, 4, 10, 4),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(14)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(ic, size: 15, color: col),
+        const SizedBox(width: 4),
+        Text(stationWord(list), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: col == kOff ? const Color(0xFF6B707A) : col)),
+      ]),
+    );
+  }
+}
+
 // ---------------- 충전소 카드 ----------------
 class _StationCard extends StatelessWidget {
   final Station s;
   final Complex from;
   final List<Charger> list;
-  final bool cheapest;
+  final bool cheapest, home;
   final VoidCallback onTap, onWatch;
-  const _StationCard({required this.s, required this.from, required this.list, required this.cheapest, required this.onTap, required this.onWatch});
+  const _StationCard({required this.s, required this.from, required this.list, required this.cheapest, required this.onTap, required this.onWatch, this.home = false});
 
   @override
   Widget build(BuildContext context) {
@@ -450,57 +688,72 @@ class _StationCard extends StatelessWidget {
     final price = cheapest_(s, list);
     final fastL = list.where((x) => x.fast).toList(), slowL = list.where((x) => !x.fast).toList();
     final sub = [distText(meters(from.pos, s.pos)), if (s.owner.isNotEmpty) s.owner].join(' · ');
+    final busyAll = free == 0 && list.any((x) => x.use == Use.busy);
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(kRadius),
+        borderRadius: BorderRadius.circular(16),
         onTap: onTap,
         child: Ink(
-          decoration: cardBox(),
-          padding: const EdgeInsets.fromLTRB(14, 13, 14, 12),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(s.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, letterSpacing: -0.3)),
-                  const SizedBox(height: 3),
-                  Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.small),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: home ? const Color(0xFFBFE6CF) : const Color(0xFFE3E7EE)),
+            boxShadow: const [BoxShadow(color: Color(0x0F1A2B4C), blurRadius: 14)],
+          ),
+          padding: const EdgeInsets.fromLTRB(12, 13, 13, 13),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            _Thumb(fast: fastL.isNotEmpty),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(s.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: -0.4)),
+                      const SizedBox(height: 3),
+                      Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: kSub)),
+                    ]),
+                  ),
+                  const SizedBox(width: 8),
+                  Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                    Text.rich(TextSpan(children: [
+                      TextSpan(text: '$free', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800, color: col, height: 1.1)),
+                      TextSpan(text: ' / ${list.length}', style: const TextStyle(fontSize: 13, color: kSub)),
+                    ])),
+                    const SizedBox(height: 4),
+                    _StatePill(list),
+                  ]),
                 ]),
-              ),
-              const SizedBox(width: 10),
-              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                Text.rich(TextSpan(children: [
-                  TextSpan(text: '$free', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: col)),
-                  TextSpan(text: ' / ${list.length}', style: const TextStyle(fontSize: 12, color: kSub)),
-                ])),
-                Text(stationWord(list), style: TextStyle(fontSize: 10.5, color: col, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 9),
+                if (fastL.isNotEmpty) _Row(label: '급속', list: fastL),
+                if (fastL.isNotEmpty && slowL.isNotEmpty) const SizedBox(height: 6),
+                if (slowL.isNotEmpty) _Row(label: '완속', list: slowL),
+                const SizedBox(height: 10),
+                Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                  Expanded(
+                    child: Wrap(spacing: 5, runSpacing: 5, children: [
+                      if (price != null) _IPill(Icons.toll_outlined, 'kWh당 ${wonText(price)}${list.length > 1 ? '~' : ''}', blue: cheapest),
+                      if (price == null) const _IPill(Icons.toll_outlined, '요금 확인 필요'),
+                      if (cheapest) const _IPill(Icons.thumb_up_alt_outlined, '가까운 곳 중 가장 저렴', blue: true),
+                      if (s.limited) _IPill(Icons.person_outline_rounded, _limitShort(s.limit)),
+                      if (s.parkFree) const _IPill(Icons.local_parking_rounded, '주차 무료'),
+                      if (!s.parkFree && s.kind != '공동주택') const _IPill(Icons.local_parking_rounded, '주차비 별도'),
+                    ]),
+                  ),
+                  const SizedBox(width: 8),
+                  Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.end, children: [
+                    if (busyAll) ...[
+                      isWatching(s)
+                          ? _LineBtn('알림 중', icon: Icons.notifications_active_outlined, onTap: () => stopWatch(s))
+                          : _LineBtn('비면 알림', icon: Icons.notifications_none_rounded, onTap: onWatch),
+                      const SizedBox(height: 6),
+                    ],
+                    _LineBtn('길안내', icon: Icons.near_me_outlined, onTap: () => startNav(context, name: s.name, lat: s.pos.latitude, lng: s.pos.longitude)),
+                  ]),
+                ]),
               ]),
-            ]),
-            const SizedBox(height: 9),
-            if (fastL.isNotEmpty) _Row(label: '급속', list: fastL),
-            if (fastL.isNotEmpty && slowL.isNotEmpty) const SizedBox(height: 6),
-            if (slowL.isNotEmpty) _Row(label: '완속', list: slowL),
-            const SizedBox(height: 9),
-            Wrap(spacing: 5, runSpacing: 5, children: [
-              if (price != null) Pill('kWh당 ${wonText(price)}${list.length > 1 ? '~' : ''}', color: cheapest ? kBlue : kSub, bg: cheapest ? const Color(0xFFEEF3FF) : const Color(0xFFF1F3F6)),
-              if (price == null) const Pill('요금 확인 필요'),
-              if (cheapest) const Pill('가까운 곳 중 가장 저렴', color: kBlue, bg: Color(0xFFEEF3FF)),
-              if (s.limited) Pill(_limitShort(s.limit)),
-              if (s.parkFree) const Pill('주차 무료'),
-              if (!s.parkFree && s.kind != '공동주택') const Pill('주차비 별도'),
-            ]),
-            const SizedBox(height: 10),
-            Row(children: [
-              Expanded(child: _SmallBtn('길안내', icon: Icons.near_me_outlined, onTap: () => startNav(context, name: s.name, lat: s.pos.latitude, lng: s.pos.longitude))),
-              if (free == 0 && list.any((x) => x.use == Use.busy)) ...[
-                const SizedBox(width: 8),
-                Expanded(
-                  child: isWatching(s)
-                      ? _SmallBtn('알림 대기 중', icon: Icons.notifications_active_outlined, onTap: () => stopWatch(s))
-                      : _SmallBtn('비면 알려 주기', icon: Icons.notifications_none_rounded, onTap: onWatch),
-                ),
-              ],
-            ]),
+            ),
           ]),
         ),
       ),
@@ -516,29 +769,35 @@ String _limitShort(String l) {
   return '이용 제한';
 }
 
-class _SmallBtn extends StatelessWidget {
+// 파랑 선 버튼 (길안내)
+class _LineBtn extends StatelessWidget {
   final String text;
   final IconData icon;
   final VoidCallback onTap;
-  const _SmallBtn(this.text, {required this.icon, required this.onTap});
+  const _LineBtn(this.text, {required this.icon, required this.onTap});
   @override
-  Widget build(BuildContext context) => InkWell(
-        borderRadius: BorderRadius.circular(9),
-        onTap: onTap,
-        child: Container(
-          height: 34,
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(9), border: Border.all(color: const Color(0xFFD5D9E0))),
-          alignment: Alignment.center,
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(icon, size: 16, color: kInk),
-            const SizedBox(width: 5),
-            Text(text, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
-          ]),
+  Widget build(BuildContext context) => Material(
+        color: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: const BorderSide(color: kBlue)),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: onTap,
+          child: Container(
+            height: 34,
+            constraints: const BoxConstraints(minWidth: 86),
+            padding: const EdgeInsets.fromLTRB(11, 0, 14, 0),
+            alignment: Alignment.center,
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(icon, size: 16, color: kBlue),
+              const SizedBox(width: 5),
+              Text(text, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: kBlue)),
+            ]),
+          ),
         ),
       );
 }
 
-// 「급속 100kW ■■□□」 한 줄
+// 「⚡ 급속 100kW ■■□□」 한 줄
 class _Row extends StatelessWidget {
   final String label;
   final List<Charger> list;
@@ -546,18 +805,20 @@ class _Row extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final kw = list.fold(0, (m, c) => c.kw > m ? c.kw : m);
-    const show = 20;
+    const show = 16;
     return Row(children: [
+      const Icon(Icons.bolt_rounded, size: 15, color: kInk),
+      const SizedBox(width: 2),
       SizedBox(
-        width: 74,
+        width: 72,
         child: Text.rich(TextSpan(children: [
           TextSpan(text: label, style: const TextStyle(fontWeight: FontWeight.w700)),
           if (kw > 0) TextSpan(text: ' ${kw}kW', style: const TextStyle(color: kSub, fontWeight: FontWeight.w400)),
-        ]), style: const TextStyle(fontSize: 11.5)),
+        ]), style: const TextStyle(fontSize: 12)),
       ),
       Expanded(
         child: Wrap(spacing: 3, runSpacing: 3, children: [
-          for (final c in list.take(show)) Dot(c.use),
+          for (final c in list.take(show)) Dot(c.use, size: 12),
           if (list.length > show) Text(' +${list.length - show}', style: T.tiny),
         ]),
       ),
@@ -607,28 +868,40 @@ class _Legend extends StatelessWidget {
 }
 
 // ---------------- 타이머 · 알림 표시 ----------------
+// 충전 중 카드: 밤 충전소 사진 위 흰 글씨
 class _TimerCard extends StatelessWidget {
   final ChargeTimer t;
   const _TimerCard({required this.t});
   @override
   Widget build(BuildContext context) => Container(
-        decoration: cardBox(r: 16),
-        padding: const EdgeInsets.fromLTRB(16, 13, 12, 13),
-        child: Row(children: [
-          const LineIcon('charger', size: 30, fill: kSoftGreen),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text.rich(TextSpan(children: [
-                const TextSpan(text: '충전 중 ', style: TextStyle(fontWeight: FontWeight.w300)),
-                TextSpan(text: '${clockText(t.end)} 완료', style: const TextStyle(fontWeight: FontWeight.w800)),
-              ]), style: const TextStyle(fontSize: 15, letterSpacing: -0.3)),
-              const SizedBox(height: 2),
-              Text('${leftText(t.end)}${t.name.isEmpty ? '' : ' · ${t.name}'}', maxLines: 1, overflow: TextOverflow.ellipsis, style: T.small),
-              if (t.fast) const Text('급속은 1시간 넘으면 과태료 — 끝나면 바로 차를 빼 주세요', style: T.tiny),
+        height: 96,
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(18)),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(children: [
+          Positioned.fill(child: Image.asset('assets/art/ev_night.jpg', fit: BoxFit.cover, alignment: const Alignment(0.8, 0), filterQuality: FilterQuality.medium)),
+          const Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(gradient: LinearGradient(colors: [Color(0xE60A1E44), Color(0x990A1E44), Color(0x000A1E44)], stops: [0, 0.55, 1])),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 14, 8, 12),
+            child: Row(children: [
+              Expanded(
+                child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text.rich(TextSpan(children: [
+                    const TextSpan(text: '충전 중  ', style: TextStyle(fontWeight: FontWeight.w300)),
+                    TextSpan(text: '${clockText(t.end)} 완료', style: const TextStyle(fontWeight: FontWeight.w800)),
+                  ]), style: const TextStyle(fontSize: 17, letterSpacing: -0.4, color: Colors.white)),
+                  const SizedBox(height: 3),
+                  Text('${leftText(t.end)}${t.name.isEmpty ? '' : ' · ${t.name}'}',
+                      maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Color(0xDDFFFFFF))),
+                  if (t.fast) const Text('급속은 1시간 넘으면 과태료 — 끝나면 바로 차를 빼 주세요', style: TextStyle(fontSize: 10.5, color: _yellow)),
+                ]),
+              ),
+              TextButton(onPressed: stopTimer, child: const Text('끝내기', style: TextStyle(fontSize: 12.5, color: Colors.white, fontWeight: FontWeight.w700))),
             ]),
           ),
-          TextButton(onPressed: stopTimer, child: const Text('끝내기', style: TextStyle(fontSize: 12.5, color: kSub))),
         ]),
       );
 }
@@ -641,7 +914,7 @@ class _WatchBar extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(14, 9, 6, 9),
         decoration: cardBox(r: 12),
         child: Row(children: [
-          const Icon(Icons.notifications_active_outlined, size: 18, color: kInk),
+          const Icon(Icons.notifications_active_outlined, size: 18, color: kBusy),
           const SizedBox(width: 8),
           Expanded(
             child: Text('${w.s.name} 비면 알림 · ${clockText(w.until)}까지',

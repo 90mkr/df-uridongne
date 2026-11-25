@@ -6,10 +6,10 @@ import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart' show FieldValue;
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
 import '../../core/data.dart';
+import '../../core/dg.dart';
 import '../../core/fb.dart';
 import '../../core/keys.dart';
 
@@ -194,10 +194,8 @@ Future<StationSet> stationsOf(String areaId) async {
 
 // ---------------- 실시간 상태 ----------------
 const _api = 'https://apis.data.go.kr/B552584/EvCharger/getChargerInfo';
-String get _key => kEvKey.isNotEmpty ? kEvKey : kDataGoKrKey;
-
-// 크롬 미리보기(웹)는 공공데이터 서버가 막혀 있어 부르지 않는다
-bool get canLive => !kIsWeb && _key.isNotEmpty;
+// 공공데이터는 본부 「다리」(dgGet)로 부른다. 웹은 다리가 있을 때만.
+bool get canLive => hasDataKey && (!kIsWeb || kDataProxy.isNotEmpty);
 
 final Map<String, DateTime> _asked = {};
 
@@ -219,10 +217,9 @@ Future<bool> refreshStation(Station s) async {
   if (last != null && DateTime.now().difference(last).inSeconds < 30) return false;
   _asked[s.id] = DateTime.now();
   try {
-    final k = _key.contains('%') ? _key : Uri.encodeQueryComponent(_key);
-    final q = 'serviceKey=$k&pageNo=1&numOfRows=100&dataType=JSON&statId=${Uri.encodeQueryComponent(s.id)}'
+    final q = 'pageNo=1&numOfRows=100&dataType=JSON&statId=${Uri.encodeQueryComponent(s.id)}'
         '${s.zcode.isNotEmpty ? '&zcode=${s.zcode}' : ''}';
-    final r = await http.get(Uri.parse('$_api?$q')).timeout(const Duration(seconds: 12));
+    final r = await dgGet('$_api?$q');
     if (r.statusCode != 200) return false;
     final rows = _items(jsonDecode(utf8.decode(r.bodyBytes)));
     var hit = false;
