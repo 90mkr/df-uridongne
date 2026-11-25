@@ -53,8 +53,8 @@ class _DealsPageState extends State<DealsPage> {
       }
     });
     final k = widget.other != null ? (mm?.apt.kapt ?? '') : kaptOf(widget.c, mm);
-    if (widget.other != null && k.isNotEmpty) {
-      final inf = await aptInfo(k);
+    if (widget.other != null) {
+      final inf = await infoFor(k, mm?.apt);
       if (mounted) setState(() => info = inf);
     }
   }

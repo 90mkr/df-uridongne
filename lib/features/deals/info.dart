@@ -36,7 +36,7 @@ class _DealsInfoCardsState extends State<DealsInfoCards> {
     if (!mounted) return;
     setState(() => m = mm);
     final k = kaptOf(widget.c, mm);
-    final inf = k.isEmpty ? null : await aptInfo(k);
+    final inf = await infoFor(k, mm?.apt);
     if (!mounted) return;
     setState(() {
       info = inf;
@@ -120,6 +120,8 @@ class AptInfoCard extends StatelessWidget {
     if (i != null) {
       final hh = i.n('kaptdaCnt');
       if (hh > 0) cells.add(('세대', '${_comma(hh)}세대'));
+      final ho = i.n('hoCnt');
+      if (hh == 0 && ho > 0) cells.add(('호실', '${_comma(ho)}실'));
       final dong = i.n('kaptDongCnt');
       if (dong > 0) cells.add(('동 수', '$dong개 동'));
       final top = i.n('kaptTopFloor') > 0 ? i.n('kaptTopFloor') : i.n('ktownFlrNo');
@@ -133,7 +135,12 @@ class AptInfoCard extends StatelessWidget {
       final mgr = i.s('codeMgrNm');
       if (mgr.isNotEmpty) cells.add(('관리', mgr));
       final park = i.n('kaptdPcnt') + i.n('kaptdPcntu');
-      if (park > 0) cells.add(('주차', '${_comma(park)}대${hh > 0 ? ' (세대당 ${(park / hh).toStringAsFixed(1)})' : ''}'));
+      final per = hh > 0 ? hh : ho;
+      if (park > 0) cells.add(('주차', '${_comma(park)}대${per > 0 ? ' (${hh > 0 ? '세대' : '호실'}당 ${(park / per).toStringAsFixed(1)})' : ''}'));
+      final useNm = i.s('useNm');
+      if (useNm.isNotEmpty) cells.add(('용도', useNm));
+      final strct = i.s('strctNm');
+      if (strct.isNotEmpty) cells.add(('구조', strct.replaceAll('구조', '')));
       final ev = i.n('kaptdEcnt');
       if (ev > 0) cells.add(('승강기', '$ev대'));
       final cc = i.n('kaptdCccnt');
@@ -186,6 +193,7 @@ class AptInfoCard extends StatelessWidget {
           const SizedBox(height: 10),
           for (final t in access) Padding(padding: const EdgeInsets.only(bottom: 3), child: Text(t, style: T.small)),
         ],
+        if (i != null && i.src != 'K-apt') ...[const SizedBox(height: 8), Text('${i.src} 기준', style: T.tiny)],
         if (tel != null && tel.replaceAll(RegExp(r'[^0-9]'), '').length >= 7) ...[
           const SizedBox(height: 12),
           Btn('관리사무소 전화  $tel', h: 40, onTap: () => callTel(tel!)),

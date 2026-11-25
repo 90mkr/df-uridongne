@@ -23,6 +23,7 @@ class Rent {
 
 class DealApt {
   final String key, name, umd, jibun, road, kapt;
+  String bjd = ''; // 법정동 코드 10자리 (건축물대장 부를 때)
   final int built;
   final bool officetel;
   final List<Sale> sales;
@@ -42,12 +43,14 @@ class DealApt {
         if (x is List && x.length >= 6) Rent(_i(x[0]), _i(x[1]), _i(x[2]), _i(x[3]), _i(x[4]), _i(x[5]) == 1)
     ];
     return DealApt('${a['key'] ?? ''}', '${a['n'] ?? ''}', '${a['u'] ?? ''}', '${a['j'] ?? ''}', '${a['r'] ?? ''}', '${a['k'] ?? ''}', _i(a['b']),
-        a['o'] == 1, s, e);
+        a['o'] == 1, s, e)
+      ..bjd = '${a['d'] ?? ''}';
   }
 
   // 같은 단지가 지번 여러 개로 나뉘어 온 경우 하나로 합침
   DealApt mergeWith(DealApt o) => DealApt(key, name, umd, jibun, road.isNotEmpty ? road : o.road, kapt.isNotEmpty ? kapt : o.kapt,
-      built > 0 ? built : o.built, officetel, [...sales, ...o.sales]..sort((a, b) => b.ymd.compareTo(a.ymd)), [...rents, ...o.rents]..sort((a, b) => b.ymd.compareTo(a.ymd)));
+      built > 0 ? built : o.built, officetel, [...sales, ...o.sales]..sort((a, b) => b.ymd.compareTo(a.ymd)), [...rents, ...o.rents]..sort((a, b) => b.ymd.compareTo(a.ymd)))
+    ..bjd = bjd.isNotEmpty ? bjd : o.bjd;
 }
 
 class SggDeals {
@@ -184,7 +187,8 @@ String monthText(int ymd) => '${(ymd ~/ 100) % 100}월';
 
 class AptInfo {
   final Map<String, dynamic> basis, detail;
-  const AptInfo(this.basis, this.detail);
+  final String src; // 'K-apt' · '건축물대장'
+  const AptInfo(this.basis, this.detail, {this.src = 'K-apt'});
   String s(String k) {
     final v = basis[k] ?? detail[k];
     return v == null ? '' : '$v'.trim();
@@ -219,4 +223,72 @@ Future<AptInfo?> aptInfo(String kapt) async {
 String kaptOf(Complex c, Matched? m) {
   if (RegExp(r'^A\d{6,}$').hasMatch(c.id)) return c.id;
   return m?.apt.kapt ?? '';
+}
+
+// ---------------- 건축물대장 (K-apt 에 없는 오피스텔·작은 단지) ----------------
+// 표제부를 동마다 받아 단지 하나로 묶는다: 세대(호)·동 수·최고 층·사용승인·승강기·주차·주용도·구조
+final Map<String, AptInfo?> _bld = {};
+
+Future<AptInfo?> bldInfo(String bjd, String jibun) async {
+  if (bjd.length != 10 || jibun.isEmpty) return null;
+  final k = '$bjd|$jibun';
+  if (_bld[k] != null) return _bld[k];
+  final san = jibun.startsWith('산');
+  final p = jibun.replaceAll('산', '').trim().split('-');
+  final bun = (int.tryParse(p[0]) ?? 0).toString().padLeft(4, '0');
+  final ji = (p.length > 1 ? int.tryParse(p[1]) ?? 0 : 0).toString().padLeft(4, '0');
+  try {
+    final r = await dgGet(
+        'https://apis.data.go.kr/1613000/BldRgstHubService/getBrTitleInfo?sigunguCd=${bjd.substring(0, 5)}&bjdongCd=${bjd.substring(5)}&platGbCd=${san ? 1 : 0}&bun=$bun&ji=$ji&numOfRows=100&pageNo=1&_type=json',
+        cache: 43200);
+    if (r.statusCode != 200) return null;
+    final j = jsonDecode(utf8.decode(r.bodyBytes));
+    final raw = ((((j is Map ? j['response'] : null) ?? const {})['body'] ?? const {})['items'] ?? const {});
+    final it = raw is Map ? raw['item'] : null;
+    final items = <Map>[if (it is List) ...it.whereType<Map>() else if (it is Map) it];
+    final main = items.where((x) => '${x['mainAtchGbCd']}' == '0').toList();
+    if (main.isEmpty) return null;
+    int n(Map x, String f) => x[f] is num ? (x[f] as num).toInt() : int.tryParse('${x[f] ?? ''}'.trim()) ?? 0;
+    var hh = 0, ho = 0, top = 0, ev = 0, park = 0;
+    var use = '';
+    final purps = <String, int>{}, strct = <String, int>{};
+    for (final x in main) {
+      hh += n(x, 'hhldCnt');
+      ho += n(x, 'hoCnt');
+      if (n(x, 'grndFlrCnt') > top) top = n(x, 'grndFlrCnt');
+      ev += n(x, 'rideUseElvtCnt') + n(x, 'emgenUseElvtCnt');
+      final u = '${x['useAprDay'] ?? ''}'.trim();
+      if (u.length >= 8 && (use.isEmpty || u.compareTo(use) < 0)) use = u;
+      final pp = '${x['etcPurps'] ?? ''}'.contains('오피스텔') ? '오피스텔' : '${x['mainPurpsCdNm'] ?? ''}'.trim();
+      if (pp.isNotEmpty) purps[pp] = (purps[pp] ?? 0) + 1;
+      final st = '${x['strctCdNm'] ?? ''}'.trim();
+      if (st.isNotEmpty) strct[st] = (strct[st] ?? 0) + 1;
+    }
+    for (final x in items) {
+      park += n(x, 'indrMechUtcnt') + n(x, 'oudrMechUtcnt') + n(x, 'indrAutoUtcnt') + n(x, 'oudrAutoUtcnt');
+    }
+    String most(Map<String, int> m) => m.isEmpty ? '' : (m.entries.toList()..sort((a, b) => b.value.compareTo(a.value))).first.key;
+    final basis = <String, dynamic>{
+      if (hh > 0) 'kaptdaCnt': hh,
+      if (hh == 0 && ho > 0) 'hoCnt': ho,
+      'kaptDongCnt': main.length,
+      if (top > 0) 'kaptTopFloor': top,
+      if (use.isNotEmpty) 'kaptUsedate': use,
+      if (ev > 0) 'kaptdEcnt': ev,
+      if (park > 0) 'kaptdPcnt': park,
+      if (most(purps).isNotEmpty) 'useNm': most(purps),
+      if (most(strct).isNotEmpty) 'strctNm': most(strct),
+    };
+    return _bld[k] = AptInfo(basis, const {}, src: '건축물대장');
+  } catch (_) {
+    return null;
+  }
+}
+
+// 단지 정보: K-apt 먼저, 없으면 건축물대장
+Future<AptInfo?> infoFor(String kapt, DealApt? a) async {
+  final k = kapt.isEmpty ? null : await aptInfo(kapt);
+  if (k != null) return k;
+  if (a == null) return null;
+  return bldInfo(a.bjd, a.jibun);
 }
