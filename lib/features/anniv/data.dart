@@ -82,7 +82,9 @@ Future<List<Anniv>> loadAnnivs() async {
     final s = await prefGet('anniv.list');
     if (s != null && s.isNotEmpty) annivs.value = [for (final j in jsonDecode(s) as List) Anniv.fromJson(j as Map)];
   } catch (_) {}
-  await rescheduleAnnivs();
+  try {
+    await rescheduleAnnivs(); // 알림 다시 맞추기가 실패해도 목록은 보여야 함
+  } catch (_) {}
   return annivs.value;
 }
 

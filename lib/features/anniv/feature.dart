@@ -66,7 +66,7 @@ class _UpcomingState extends State<_Upcoming> {
   @override
   void initState() {
     super.initState();
-    loadAnnivs().then((_) {
+    loadAnnivs().whenComplete(() {
       if (mounted) setState(() {});
     });
   }
@@ -113,7 +113,7 @@ class _AnnivPageState extends State<AnnivPage> {
   @override
   void initState() {
     super.initState();
-    loadAnnivs().then((_) {
+    loadAnnivs().whenComplete(() {
       if (mounted) setState(() {});
     });
   }
@@ -187,7 +187,7 @@ class _AnnivPageState extends State<AnnivPage> {
             top: 0,
             height: artH,
             child: ShaderMask(
-              shaderCallback: (r) => const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.white, Colors.white, Color(0x00FFFFFF), Color(0x00FFFFFF)], stops: [0, 0.72, 0.98, 1]).createShader(r),
+              shaderCallback: (r) => const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.white, Colors.white, Color(0x00FFFFFF), Color(0x00FFFFFF)], stops: [0, 0.55, 0.88, 1]).createShader(r),
               blendMode: BlendMode.dstIn,
               child: Image.asset('assets/art/anniv_bg.jpg', fit: BoxFit.cover, alignment: w < 600 ? Alignment.bottomCenter : const Alignment(1, 0.3), filterQuality: FilterQuality.medium),
             ),
@@ -199,7 +199,7 @@ class _AnnivPageState extends State<AnnivPage> {
                 Row(children: [
                   IconButton(onPressed: () => Navigator.of(context).maybePop(), icon: const Icon(Icons.arrow_back_rounded, size: 26, color: kInk)),
                   const SizedBox(width: 2),
-                  const LineIcon('anniv', size: 30),
+                  const Icon(Icons.calendar_month_outlined, size: 30, color: kInk),
                   const SizedBox(width: 10),
                   const Text('기념일', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: -0.7, color: kInk)),
                 ]),
