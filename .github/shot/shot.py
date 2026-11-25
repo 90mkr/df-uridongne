@@ -18,6 +18,7 @@ def session(b, tag, W, H, steps):
     ctx.add_init_script(
         "localStorage.setItem('flutter.complex', %s);" % json.dumps(json.dumps(json.dumps(CPX, ensure_ascii=False)))
         + "localStorage.setItem('flutter.school.mine', %s);" % json.dumps(json.dumps(json.dumps(["7341308"])))
+        + "localStorage.setItem('flutter.anniv.list', %s);" % json.dumps(json.dumps(json.dumps(ANNIV, ensure_ascii=False)))
     )
     pg = ctx.new_page()
     pg.on("console", lambda m: log.append(f"[{tag} 콘솔] {m.text}"[:300]) if m.type == "error" else None)
@@ -139,6 +140,15 @@ def trash(shot, tap, drag, sem, W, H):
     shot("쓰레기_아래")
 
 
+ANNIV = [{'id': 'a1', 't': '기타', 'k': '기타', 'm': 11, 'd': 25, 'l': False, 'r': [0, 1]}, {'id': 'a2', 't': '성하 생일', 'k': '생일', 'm': 6, 'd': 16, 'l': False, 'y': 1990, 'r': [0, 1]}, {'id': 'a3', 't': '엄마 제사', 'k': '제사', 'm': 6, 'd': 25, 'l': True, 'r': [0, 1]}, {'id': 'a4', 't': '결혼기념일', 'k': '기념일', 'm': 11, 'd': 24, 'l': False, 'y': 2010, 'r': [0, 1]}]
+
+
+def anniv(shot, tap, drag, sem, W, H):
+    tap_has("생활 도구", wait=4)
+    tap_has("기념일", wait=8)
+    shot("기념일")
+
+
 def tablet(shot, tap, drag, sem, W, H):
     shot("홈")
     for i in range(4):
@@ -151,7 +161,7 @@ def tablet(shot, tap, drag, sem, W, H):
 
 with sync_playwright() as p:
     b = p.chromium.launch(args=["--use-gl=swiftshader", "--enable-unsafe-swiftshader"])
-    for tag, W, H, f in [("폰작은", 360, 740, phone), ("폰큰", 430, 932, phone), ("폰택배", 430, 932, parcel), ("폰작은택배", 360, 740, parcel), ("폰쓰레기", 430, 932, trash), ("폰작은쓰레기", 360, 740, trash), ("탭", 1180, 820, tablet), ("탭세로", 820, 1180, tablet)]:
+    for tag, W, H, f in [("폰작은", 360, 740, phone), ("폰큰", 430, 932, phone), ("폰택배", 430, 932, parcel), ("폰작은택배", 360, 740, parcel), ("폰쓰레기", 430, 932, trash), ("폰작은쓰레기", 360, 740, trash), ("폰기념일", 430, 932, anniv), ("폰작은기념일", 360, 740, anniv), ("탭", 1180, 820, tablet), ("탭세로", 820, 1180, tablet)]:
         try:
             session(b, tag, W, H, f)
         except Exception as e:

@@ -23,7 +23,7 @@ class AnnivFeature extends Feature {
   @override
   int get order => 60;
   @override
-  String get version => '0.1.0';
+  String get version => '0.2.0';
   @override
   bool get ready => true;
   @override
@@ -143,53 +143,127 @@ class _AnnivPageState extends State<AnnivPage> {
     if (mounted) setState(() {});
   }
 
+  static const _bgTop = Color(0xFFF3F7FE), _bgBottom = Color(0xFFE2EDFC);
+
+  // 대표님 시안(11-25): 위 달력·선물 그림(아래 끝은 바탕에 녹임) · 종류별 옅은 빛 칸 · 가장 가까운 날은 파란 테두리 + 「D-DAY」 알약
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
     final up = upcoming(now);
+    final top = MediaQuery.of(context).padding.top;
+    final w = MediaQuery.of(context).size.width;
+    final artH = w < 600 ? w / 3 + top * 0.4 : 260.0 + top;
     return Scaffold(
-      backgroundColor: kBg,
-      appBar: AppBar(
-        backgroundColor: kBg,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        titleSpacing: 0,
-        title: const Text('기념일', style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.w800, letterSpacing: -0.4)),
+      backgroundColor: _bgTop,
+      floatingActionButton: Container(
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(28), boxShadow: const [BoxShadow(color: Color(0x400B52CF), blurRadius: 16)]),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => _edit(),
+            borderRadius: BorderRadius.circular(28),
+            child: Ink(
+              height: 56,
+              padding: const EdgeInsets.fromLTRB(20, 0, 26, 0),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF2C7BEF), Color(0xFF0B4FC9)]),
+                borderRadius: BorderRadius.circular(28),
+              ),
+              child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.add_rounded, color: Colors.white, size: 26),
+                SizedBox(width: 8),
+                Text('기념일 등록', style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.3)),
+              ]),
+            ),
+          ),
+        ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _edit(),
-        backgroundColor: kBlue,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('기념일 등록', style: TextStyle(fontWeight: FontWeight.w700)),
-      ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 720),
-          child: up.isEmpty
-              ? const Center(
-                  child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    LineIcon('anniv', size: 56),
-                    SizedBox(height: 12),
-                    MixTitle('챙길 날을', '등록해 보세요', size: 17),
-                    SizedBox(height: 6),
-                    Text('음력도 해마다 양력 날짜로 바꿔서 알려 드려요', style: T.small),
-                  ]),
-                )
-              : ListView(padding: const EdgeInsets.fromLTRB(kPad, 6, kPad, 96), children: [
-                  if (!canNotify) const Padding(padding: EdgeInsets.only(bottom: 10), child: Text('알림은 휴대폰 앱에서만 울려요', style: T.small)),
+      body: DecoratedBox(
+        decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [_bgTop, _bgBottom])),
+        child: Stack(children: [
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            height: artH,
+            child: ShaderMask(
+              shaderCallback: (r) => const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.white, Colors.white, Color(0x00FFFFFF), Color(0x00FFFFFF)], stops: [0, 0.72, 0.98, 1]).createShader(r),
+              blendMode: BlendMode.dstIn,
+              child: Image.asset('assets/art/anniv_bg.jpg', fit: BoxFit.cover, alignment: w < 600 ? Alignment.bottomCenter : const Alignment(1, 0.3), filterQuality: FilterQuality.medium),
+            ),
+          ),
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 720),
+              child: ListView(padding: EdgeInsets.fromLTRB(kPad, top + 6, kPad, 100), children: [
+                Row(children: [
+                  IconButton(onPressed: () => Navigator.of(context).maybePop(), icon: const Icon(Icons.arrow_back_rounded, size: 26, color: kInk)),
+                  const SizedBox(width: 2),
+                  const LineIcon('anniv', size: 30),
+                  const SizedBox(width: 10),
+                  const Text('기념일', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: -0.7, color: kInk)),
+                ]),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 4, 0, 0),
+                  child: Text(canNotify ? '챙길 날을 미리 알려 드려요.' : '알림은 휴대폰 앱에서만 울려요.', style: const TextStyle(fontSize: 12.5, color: Color(0xFF3F4756))),
+                ),
+                SizedBox(height: w < 600 ? (artH * 0.9 - top - 80).clamp(14.0, 100.0) : 120),
+                if (up.isEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: const [BoxShadow(color: Color(0x140B2A5B), blurRadius: 14)]),
+                    child: const Column(children: [
+                      LineIcon('anniv', size: 56),
+                      SizedBox(height: 12),
+                      MixTitle('챙길 날을', '등록해 보세요', size: 17),
+                      SizedBox(height: 6),
+                      Text('음력도 해마다 양력 날짜로 바꿔서 알려 드려요', style: T.small, textAlign: TextAlign.center),
+                    ]),
+                  )
+                else
                   for (var i = 0; i < up.length; i++) ...[
                     _Item(a: up[i].$1, d: up[i].$2, now: now, first: i == 0, onTap: () => _edit(up[i].$1)),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                   ],
-                  const SizedBox(height: 4),
-                  const Text('알림은 이 휴대폰에만 저장돼요. 휴대폰을 바꾸면 다시 등록해 주세요.', style: T.tiny),
-                ]),
-        ),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 16, 12),
+                  decoration: BoxDecoration(color: const Color(0xFFE3ECFA), borderRadius: BorderRadius.circular(18)),
+                  child: Row(children: [
+                    Container(
+                      width: 34,
+                      height: 34,
+                      decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                      child: const Icon(Icons.info_rounded, size: 20, color: kBlue),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text.rich(
+                        TextSpan(children: [
+                          TextSpan(text: '알림은 이 휴대폰에만 저장돼요.\n', style: TextStyle(fontWeight: FontWeight.w700, color: kInk)),
+                          TextSpan(text: '휴대폰을 바꾸면 다시 등록해 주세요.', style: TextStyle(color: Color(0xFF5A6475))),
+                        ]),
+                        style: TextStyle(fontSize: 12.5, height: 1.45),
+                      ),
+                    ),
+                  ]),
+                ),
+              ]),
+            ),
+          ),
+        ]),
       ),
     );
   }
 }
+
+// 종류별 그림·빛 (대표님 시안에서 오려 낸 그림)
+const _kindLook = {
+  '기타': ('star', [Color(0xFFF4F8FF), Color(0xFFE6EFFD)], Color(0xFFDCE8FD), Color(0xFF1E5FC7)),
+  '생일': ('cake', [Color(0xFFFFF7F8), Color(0xFFFDE9EC)], Color(0xFFFCDDE2), Color(0xFFC6283E)),
+  '제사': ('bowl', [Color(0xFFF4FBF7), Color(0xFFE2F4EA)], Color(0xFFD6EFE1), Color(0xFF1C8A5A)),
+  '기념일': ('rings', [Color(0xFFFFFBF2), Color(0xFFFDF1DC)], Color(0xFFFCE7C4), Color(0xFFB0581A)),
+};
 
 class _Item extends StatelessWidget {
   final Anniv a;
@@ -202,31 +276,72 @@ class _Item extends StatelessWidget {
     final n = dday(d, now);
     final nth = a.nth(d);
     const wd = ['월', '화', '수', '목', '금', '토', '일'];
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(kRadius),
-        onTap: onTap,
-        child: Ink(
-          decoration: cardBox(),
-          padding: const EdgeInsets.fromLTRB(14, 13, 14, 13),
-          child: Row(children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-              decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(7)),
-              child: Text(a.kind, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: kSub)),
+    final look = _kindLook[a.kind] ?? _kindLook['기타']!;
+    final narrow = MediaQuery.of(context).size.width < 380;
+    final hot = first; // 가장 가까운 날
+    final dd = ddayText(n);
+    return Container(
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), boxShadow: [BoxShadow(color: hot ? const Color(0x260B52CF) : const Color(0x120B2A5B), blurRadius: 16)]),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(22),
+          onTap: onTap,
+          child: Ink(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: look.$2),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: hot ? const Color(0xFF8DB6F5) : Colors.white),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                Text('${a.title}${nth != null && nth > 0 ? ' · ${a.kind == '생일' ? '$nth번째' : '$nth주년'}' : ''}',
-                    maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: -0.4)),
-                const SizedBox(height: 2),
-                Text('${d.year}.${d.month}.${d.day} (${wd[d.weekday - 1]})${a.lunar ? ' · 음력 ${a.month}월 ${a.day}일' : ''}', style: T.tiny),
+            padding: EdgeInsets.fromLTRB(12, 12, narrow ? 10 : 14, 12),
+            child: Row(children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(18),
+                child: Image.asset('assets/art/an_${look.$1}.png', width: narrow ? 52 : 60, height: narrow ? 52 : 60, fit: BoxFit.cover, filterQuality: FilterQuality.medium),
+              ),
+              SizedBox(width: narrow ? 10 : 14),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(9, 2, 9, 3),
+                    decoration: BoxDecoration(color: look.$3, borderRadius: BorderRadius.circular(12)),
+                    child: Text(a.kind, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: look.$4)),
+                  ),
+                  const SizedBox(height: 4),
+                  Text('${a.title}${nth != null && nth > 0 ? ' · ${a.kind == '생일' ? '$nth번째' : '$nth주년'}' : ''}',
+                      maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: narrow ? 16.5 : 18.5, fontWeight: FontWeight.w800, letterSpacing: -0.6, color: kInk)),
+                  const SizedBox(height: 2),
+                  Text('${d.year}.${d.month}.${d.day} (${wd[d.weekday - 1]})${a.lunar ? ' · 음력 ${a.month}월 ${a.day}일' : ''}',
+                      maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: narrow ? 12 : 13, color: const Color(0xFF5A6475))),
+                ]),
+              ),
+              const SizedBox(width: 6),
+              Stack(clipBehavior: Clip.none, children: [
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: narrow ? 12 : 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    gradient: hot ? const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF2C7BEF), Color(0xFF0B52CF)]) : null,
+                    color: hot ? null : look.$3,
+                    borderRadius: BorderRadius.circular(22),
+                  ),
+                  child: Text(dd, style: TextStyle(fontSize: narrow ? 16 : 19, fontWeight: FontWeight.w800, color: hot ? Colors.white : kInk, letterSpacing: -0.3)),
+                ),
+                // 가장 가까운 날: 오른쪽 위 반짝 선 세 개
+                if (hot)
+                  Positioned(
+                    right: -6,
+                    top: -16,
+                    child: Transform.rotate(
+                      angle: 0.5,
+                      child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                        for (final h in [8.0, 12.0, 8.0])
+                          Container(width: 2.5, height: h, margin: const EdgeInsets.symmetric(horizontal: 2), decoration: BoxDecoration(color: kBlue, borderRadius: BorderRadius.circular(2))),
+                      ]),
+                    ),
+                  ),
               ]),
-            ),
-            Text(ddayText(n), style: TextStyle(fontSize: first ? 19 : 16, fontWeight: FontWeight.w800, color: first ? kBlue : kInk, letterSpacing: -0.4)),
-          ]),
+            ]),
+          ),
         ),
       ),
     );
