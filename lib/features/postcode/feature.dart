@@ -21,7 +21,7 @@ class PostcodeFeature extends Feature {
   @override
   int get order => 40;
   @override
-  String get version => '0.3.0';
+  String get version => '0.4.0';
   @override
   bool get ready => true;
   @override

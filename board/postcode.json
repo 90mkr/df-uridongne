@@ -2,10 +2,10 @@
  "id": "postcode",
  "name": "택배·우편",
  "folder": "lib/features/postcode",
- "room": "우편번호 방",
- "state": "완료",
- "doing": "택배·우편 0.3.0 · 다음: 택배 조회 서비스 결정 뒤 단계 표시·알림 연결 (requests/postcode-1123 참고), 우체통 자료 찾기",
+ "room": "본부 방(대표님 지시)",
+ "state": "작업 중",
+ "doing": "0.4.0 대표님 시안: 택배 사진 머리 · 파란 택배 조회 판 · 입체 아이콘 2×2 칸",
  "version": "0.3.0",
- "updated": "2026-11-23 22:45",
+ "updated": "2026-11-25 15:20",
  "order": 9
 }
