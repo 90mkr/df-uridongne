@@ -169,7 +169,7 @@ class _PageState extends State<_Page> {
           height: top + 250,
           child: ClipRect(
             child: Stack(fit: StackFit.expand, children: [
-              Image.asset('assets/art/school_bg.jpg', fit: BoxFit.cover, alignment: const Alignment(0.2, -0.6), filterQuality: FilterQuality.medium),
+              Positioned(left: 0, right: 0, top: 0, bottom: 2, child: Image.asset('assets/art/school_bg.jpg', fit: BoxFit.cover, alignment: const Alignment(0.2, -0.6), filterQuality: FilterQuality.medium)),
               // 아래 끝을 바탕색으로 덮어 녹임 (사진 끝 줄이 남지 않게 — 페이드 효과 대신 덮개)
               DecoratedBox(
                 decoration: BoxDecoration(
