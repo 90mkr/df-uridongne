@@ -195,6 +195,11 @@ def load(sgg):
 def save(sgg, apts, months):
     os.makedirs(OUT, exist_ok=True)
     lo = int(months[-1]) * 100
+    # 오피스텔 자료엔 법정동 코드가 없어, 같은 동 이름의 아파트 코드로 채움 (건축물대장 부를 때 씀)
+    umd_code = {a.get("u"): a["d"] for a in apts.values() if a.get("d")}
+    for a in apts.values():
+        if not a.get("d") and umd_code.get(a.get("u")):
+            a["d"] = umd_code[a.get("u")]
     out = []
     for a in apts.values():
         a["s"] = sorted([x for x in a.get("s", []) if x[0] >= lo], key=lambda x: -x[0])
