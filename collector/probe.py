@@ -1,6 +1,10 @@
 import os, json, urllib.request, urllib.parse
+from collections import Counter
 K = urllib.parse.quote(os.environ.get("DATA_GO_KR_KEY", "").strip(), safe="")
-for nm, x, y in (("광주", 126.8526, 35.1596), ("목포", 126.3922, 34.8118), ("순천", 127.4872, 34.9507)):
-    u = "https://apis.data.go.kr/B553077/api/open/sdsc2/storeListInRadius?serviceKey=%s&radius=500&cx=%s&cy=%s&numOfRows=2&pageNo=1&type=json" % (K, x, y)
-    j = json.loads(urllib.request.urlopen(u, timeout=60).read().decode())
-    it = j["body"]["items"][0]; print("SIDO", nm, it["ctprvnCd"], it["ctprvnNm"], it["signguCd"], it["signguNm"])
+u = "https://apis.data.go.kr/1741000/public_restroom_info_v2/info_v2?serviceKey=%s&pageNo=7&numOfRows=100&returnType=json" % K
+j = json.loads(urllib.request.urlopen(u, timeout=60).read().decode())
+it = j["response"]["body"]["items"]["item"]
+print("KEYS", sorted(it[0].keys()))
+c = Counter(k for x in it for k, v in x.items() if str(v).strip())
+print("FILLED", c.most_common())
+print("EX", json.dumps(it[3], ensure_ascii=False)[:1500])
