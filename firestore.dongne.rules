@@ -94,6 +94,8 @@
       allow update: if isAdmin()
         || (request.auth != null && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['n'])
             && (request.resource.data.n == resource.data.n + 1 || request.resource.data.n == resource.data.n - 1))
+        || (request.auth != null && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['n', 'ca'])
+            && request.resource.data.n == resource.data.n + 1 && request.resource.data.ca == request.time)
         || (request.auth != null && resource.data.uid == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['done']));
       allow delete: if (request.auth != null && resource.data.uid == request.auth.uid) || isAdmin();
       match /cm/{c} {

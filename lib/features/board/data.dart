@@ -174,7 +174,12 @@ Future<String?> addComment(Post p, String body) async {
   try {
     final ref = db.collection('dn_posts').doc(p.id);
     await ref.collection('cm').add({'b': body, 'uid': u.uid, 'name': myName, 'at': fs.FieldValue.serverTimestamp()});
-    await ref.update({'n': fs.FieldValue.increment(1)});
+    try {
+      // ca: 마지막 댓글 시각 — 서버가 「내 글 댓글」 알림을 찾을 때 씀
+      await ref.update({'n': fs.FieldValue.increment(1), 'ca': fs.FieldValue.serverTimestamp()});
+    } catch (_) {
+      await ref.update({'n': fs.FieldValue.increment(1)});
+    }
     boardTick.value++;
     return null;
   } catch (_) {

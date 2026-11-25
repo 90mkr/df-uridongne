@@ -30,9 +30,9 @@ def call(url, tok, body=None):
         return json.loads(r.read().decode() or "{}")
 
 
-def query(project, tok, coll, since, all_desc=False):
+def query(project, tok, coll, since, all_desc=False, field="at"):
     body = {"structuredQuery": {"from": [{"collectionId": coll, "allDescendants": all_desc}],
-                                "where": {"fieldFilter": {"field": {"fieldPath": "at"}, "op": "GREATER_THAN", "value": {"timestampValue": since}}},
+                                "where": {"fieldFilter": {"field": {"fieldPath": field}, "op": "GREATER_THAN", "value": {"timestampValue": since}}},
                                 "limit": 200}}
     url = f"https://firestore.googleapis.com/v1/projects/{project}/databases/(default)/documents:runQuery"
     out = []
@@ -76,16 +76,21 @@ def main():
         cid, cat, t = sv(d, "cid"), sv(d, "cat"), sv(d, "t")
         where = "우리 동네" if cid.startswith("a_") else "우리 단지"
         n += send(project, tok, safe(f"dn_b_{cid}_{cat}"), f"[{where} {NAMES.get(cat, '게시판')}] 새 글", t[:60], {"open": "board", "cid": cid, "cat": cat})
-    for d in query(project, tok, "cm", since, all_desc=True):
-        parent = d["name"].rsplit("/cm/", 1)[0]
+    # 새 댓글: 글의 ca(마지막 댓글 시각)로 찾고, 그 글의 댓글 중 새것만 (색인 추가 없이)
+    try:
+        hot = query(project, tok, "dn_posts", since, field="ca")
+    except Exception as e:
+        print("댓글 찾기 실패", repr(e)[:120]); hot = []
+    for p in hot:
+        uid = sv(p, "uid")
         try:
-            p = call(f"https://firestore.googleapis.com/v1/{parent}", tok)
+            cms = call(f"https://firestore.googleapis.com/v1/{p['name']}/cm?pageSize=300", tok).get("documents", [])
         except Exception:
             continue
-        uid = sv(p, "uid")
-        if not uid or uid == sv(d, "uid"):
-            continue
-        n += send(project, tok, safe(f"dn_u_{uid}"), "내 글에 댓글이 달렸어요", f"「{sv(p, 't')[:30]}」 {sv(d, 'b')[:40]}", {"open": "board", "cid": sv(p, "cid")})
+        for d in cms:
+            if sv(d, "at") <= since or not uid or uid == sv(d, "uid"):
+                continue
+            n += send(project, tok, safe(f"dn_u_{uid}"), "내 글에 댓글이 달렸어요", f"「{sv(p, 't')[:30]}」 {sv(d, 'b')[:40]}", {"open": "board", "cid": sv(p, "cid")})
     os.makedirs(os.path.dirname(STATE), exist_ok=True)
     open(STATE, "w").write(now.strftime("%Y-%m-%dT%H:%M:%SZ"))
     print(f"보낸 알림 {n}건 (기준 {since})")
