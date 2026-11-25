@@ -1,14 +1,38 @@
 // 주유소 상세 화면 (주유소 담당 방만 고침)
-// 위: 기름 고르기 · 반경 · 「가장 싼 곳」 요약   아래: 싼 순 목록  ↔  「지도로 보기」(말풍선에 가격)
+// 디자인 0.2.0 (대표님 시안 11-25): 사진 머리(아래·왼쪽은 바탕에 녹임) · 아이콘 기름 고르기 · 반경 알약
+//   · 파란 그림 요약판(주유기) · 1위 강조 카드 + 싼 순 목록 · 「지도 보기」는 공용 지도(DnMap)에 가격 말풍선
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
 
 import '../../core/data.dart';
+import '../../core/dnmap.dart';
 import '../../core/icons.dart';
 import '../../core/nav.dart';
 import '../../core/theme.dart';
 import '../../core/ui.dart';
 import 'data.dart';
+
+const _page = Color(0xFFF4F7FB);
+const _chipLine = Color(0xFFD3DDEB);
+const _rowLine = Color(0xFFEEF1F5);
+const _gold = Color(0xFFF2B01E);
+
+IconData fuelIcon(String code) => switch (code) {
+      'D047' => Icons.local_shipping_outlined,
+      'K015' => Icons.propane_tank_outlined,
+      'B034' => Icons.diamond_outlined,
+      _ => Icons.local_gas_station_outlined,
+    };
+
+// 정유사 짧은 표시 (상표 그림이 아니라 글자)
+String brandShort(String code) => switch (code) {
+      'SKE' || 'SKG' => 'SK',
+      'GSC' => 'GS',
+      'HDO' => 'HD',
+      'SOL' => 'S-OIL',
+      'RTE' || 'RTX' || 'NHO' || 'RTO' => '알뜰',
+      'E1G' => 'E1',
+      _ => '자가',
+    };
 
 class GasPage extends StatefulWidget {
   final Complex c;
@@ -24,7 +48,9 @@ class _GasPageState extends State<GasPage> {
   bool loading = true;
   GasData? data;
   String? sel;
-  final map = MapController();
+  final ctl = DnMapCtl();
+
+  Complex get c => widget.c;
 
   @override
   void initState() {
@@ -35,7 +61,7 @@ class _GasPageState extends State<GasPage> {
   Future<void> _start() async {
     final f = await prefGet('gas.fuel');
     final r = int.tryParse(await prefGet('gas.radius') ?? '');
-    final d = await loadGas(widget.c.areaId);
+    final d = await loadGas(c.areaId);
     if (!mounted) return;
     setState(() {
       if (f != null && kFuels.any((x) => x.$1 == f)) fuel = f;
@@ -61,222 +87,277 @@ class _GasPageState extends State<GasPage> {
       sel = null;
     });
     prefSet('gas.radius', '$r');
-    if (showMap) {
-      try {
-        map.move(widget.c.pos, zoom);
-      } catch (_) {}
-    }
+    if (showMap) ctl.move(c.pos, zoom);
   }
 
   @override
   Widget build(BuildContext context) {
     final d = data;
-    final list = d == null ? <GasStation>[] : d.around(widget.c.pos, fuel, radius);
-    return DetailPage(
-      title: '주유소',
-      icon: 'gas',
-      actions: [
-        if (d != null && d.stations.isNotEmpty)
-          TextButton.icon(
-            onPressed: () => setState(() {
-              showMap = !showMap;
-              sel = null;
-            }),
-            icon: LineIcon(showMap ? 'list' : 'map', size: 18),
-            label: Text(showMap ? '목록으로 보기' : '지도로 보기', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: kInk)),
-          ),
-      ],
+    final list = d == null ? <GasStation>[] : d.around(c.pos, fuel, radius);
+    Widget inner(Widget w) => Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 720), child: w));
+    return Scaffold(
+      backgroundColor: _page,
       body: loading
-          ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+          ? Column(children: [_head(false), const Expanded(child: Center(child: CircularProgressIndicator(strokeWidth: 2)))])
           : d == null || d.stations.isEmpty
-              ? const _Empty()
-              : Column(children: [
-                  _controls(),
-                  _summary(d, list),
-                  Container(height: 1, color: kLine),
-                  Expanded(child: showMap ? _map(d, list) : _list(d, list)),
-                ]),
+              ? Column(children: [_head(false), const Expanded(child: _Empty())])
+              : showMap
+                  ? Column(children: [_head(true), _pickers(inner, compact: true), Expanded(child: _map(d, list))])
+                  : ListView(padding: EdgeInsets.zero, children: [
+                      _head(true),
+                      _pickers(inner),
+                      inner(Padding(
+                        padding: const EdgeInsets.fromLTRB(kPad, 14, kPad, 30),
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                          _summary(d, list),
+                          const SizedBox(height: 10),
+                          _basis(d, list),
+                          const SizedBox(height: 14),
+                          ..._list(d, list),
+                        ]),
+                      )),
+                    ]),
     );
   }
 
-  // 기름 · 반경
-  Widget _controls() => Padding(
-        padding: const EdgeInsets.fromLTRB(kPad, 12, kPad, 0),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(children: [
-              for (final f in kFuels) ...[
-                ChoiceChipBox(f.$2, on: fuel == f.$1, onTap: () => _fuel(f.$1)),
-                const SizedBox(width: 6),
-              ],
-            ]),
+  // ── 맨 위: 오른쪽 주유소 사진(왼쪽·아래는 바탕색으로 녹아 들어감) + ← 아이콘 제목 + 지도 보기 + 큰 제목
+  Widget _head(bool canMap) {
+    final top = MediaQuery.of(context).padding.top;
+    final full = MediaQuery.of(context).size.width;
+    final w = full.clamp(0, 720).toDouble();
+    final narrow = w < 380;
+    final side = (full - w) / 2;
+    final h = top + (showMap ? 64.0 : 168.0);
+    return SizedBox(
+      height: h,
+      child: Stack(children: [
+        // 바탕: 위는 하늘색, 아래로 갈수록 화면 바탕색 — 사진 아래 끝이 여기에 녹아 경계선이 없다
+        const Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFFDDEDFC), _page])),
           ),
-          const SizedBox(height: 8),
-          Row(children: [
-            const Text('단지에서', style: T.small),
-            const SizedBox(width: 6),
-            for (final r in kRadii)
-              InkWell(
-                borderRadius: BorderRadius.circular(6),
-                onTap: () => _radius(r),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-                  child: Text('${r ~/ 1000}km',
-                      style: TextStyle(fontSize: 12.5, fontWeight: radius == r ? FontWeight.w700 : FontWeight.w400, color: radius == r ? kInk : kMute)),
+        ),
+        if (!showMap)
+          Positioned(
+            right: 0,
+            top: 0,
+            bottom: 0,
+            width: (full * 0.74).clamp(0.0, 820.0),
+            child: IgnorePointer(
+              child: ShaderMask(
+                // 왼쪽: 투명 → 불투명
+                shaderCallback: (r) => const LinearGradient(colors: [Color(0x00FFFFFF), Color(0xCCFFFFFF), Colors.white], stops: [0, 0.35, 1]).createShader(r),
+                blendMode: BlendMode.dstIn,
+                child: ShaderMask(
+                  // 아래: 절반부터 서서히 투명 → 맨 아래는 완전히 바탕색
+                  shaderCallback: (r) => const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.white, Colors.white, Color(0x66FFFFFF), Color(0x00FFFFFF)],
+                    stops: [0, 0.5, 0.8, 1],
+                  ).createShader(r),
+                  blendMode: BlendMode.dstIn,
+                  child: Image.asset('assets/art/gas_head.jpg', fit: BoxFit.cover, alignment: const Alignment(0.55, -0.2), filterQuality: FilterQuality.medium),
                 ),
               ),
+            ),
+          ),
+        Positioned(
+          left: side + 2,
+          right: side + kPad - 6,
+          top: top + 8,
+          child: Row(children: [
+            IconButton(onPressed: () => Navigator.of(context).maybePop(), icon: const Icon(Icons.arrow_back_rounded, size: 24, color: kInk)),
+            Image.asset('assets/icons/gas.png', width: narrow ? 28 : 32, height: narrow ? 28 : 32),
+            const SizedBox(width: 7),
+            Flexible(
+              child: Text('가격 싼 주유소 찾기',
+                  maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: narrow ? 18 : 20, fontWeight: FontWeight.w800, letterSpacing: -0.7, color: kInk)),
+            ),
+            const Spacer(),
+            if (canMap)
+              _GlassBtn(
+                icon: Icon(showMap ? Icons.format_list_bulleted_rounded : Icons.map_outlined, size: 17, color: kInk),
+                text: showMap ? '목록 보기' : '지도 보기',
+                onTap: () => setState(() {
+                  showMap = !showMap;
+                  sel = null;
+                }),
+              ),
           ]),
-        ]),
-      );
-
-  // 가장 싼 곳 · 시도 평균
-  Widget _summary(GasData d, List<GasStation> list) {
-    final best = list.isEmpty ? null : list.first;
-    final avg = d.avg[fuel];
-    final bp = best?.price(fuel);
-    final gap = (avg != null && bp != null) ? (avg - bp).round() : null;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(kPad, 10, kPad, 12),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Expanded(
+        ),
+        if (!showMap)
+          Positioned(
+            left: side + kPad,
+            top: top + 66,
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('반경 ${radius ~/ 1000}km 가장 싼 ${fuelName(fuel)}', style: T.small),
-              const SizedBox(height: 2),
-              if (best != null && bp != null) ...[
-                Text.rich(TextSpan(children: [
-                  TextSpan(text: won(bp), style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: kBlue, letterSpacing: -0.8, height: 1.1)),
-                  const TextSpan(text: ' 원', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w300, color: kInk)),
-                ])),
-                const SizedBox(height: 2),
-                Text('${best.name} · ${distText(best.dist)}', maxLines: 1, overflow: TextOverflow.ellipsis, style: T.tiny),
-              ] else
-                const Text('이 반경엔 파는 곳이 없어요', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, height: 1.6)),
+              const Text('내 주변', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w300, color: kInk, height: 1.2, letterSpacing: -0.3)),
+              Text('가격 싼 주유소',
+                  style: TextStyle(fontSize: narrow ? 23 : 26, fontWeight: FontWeight.w800, color: kBlue, height: 1.2, letterSpacing: -0.9)),
+              const SizedBox(height: 6),
+              const Text('휘발유 · 경유 · LPG · 고급휘발유\n단지에서 가장 싼 곳을 찾아 드려요',
+                  style: TextStyle(fontSize: 11.5, color: kSub, height: 1.4, letterSpacing: -0.2)),
             ]),
           ),
-          if (avg != null)
-            Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              Text('${d.sido} 평균', style: T.tiny),
-              Text('${won(avg)}원', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, height: 1.35)),
-              if (gap != null && gap > 0) Text('$gap원 싸요', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: kInk)),
-            ]),
-        ]),
-        const SizedBox(height: 8),
-        Text('오피넷 ${whenText(d.updated)} 기준 · 실제 가격은 주유소에서 다를 수 있어요', style: const TextStyle(fontSize: 10.5, color: kMute)),
       ]),
     );
   }
 
-  // 싼 순 목록
-  Widget _list(GasData d, List<GasStation> list) {
+  // ── 기름 고르기 · 반경
+  Widget _pickers(Widget Function(Widget) inner, {bool compact = false}) => inner(Padding(
+        padding: EdgeInsets.fromLTRB(0, compact ? 2 : 4, 0, compact ? 10 : 0),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: kPad),
+            child: Row(children: [
+              for (final f in kFuels) ...[
+                _Chip(f.$2, icon: fuelIcon(f.$1), on: fuel == f.$1, onTap: () => _fuel(f.$1)),
+                const SizedBox(width: 6),
+              ],
+            ]),
+          ),
+          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: kPad),
+            child: Row(children: [
+              const Text('단지에서', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: kSub)),
+              const SizedBox(width: 8),
+              for (final r in kRadii) ...[
+                _Chip('${r ~/ 1000}km', small: true, on: radius == r, onTap: () => _radius(r)),
+                const SizedBox(width: 6),
+              ],
+            ]),
+          ),
+        ]),
+      ));
+
+  // ── 파란 주유기 그림 요약판: 반경 최저가 | 시도 평균 · 얼마 싼지
+  Widget _summary(GasData d, List<GasStation> list) {
+    final best = list.isEmpty ? null : list.first;
+    final bp = best?.price(fuel);
+    final avg = d.avg[fuel];
+    final gap = (avg != null && bp != null) ? (avg - bp).round() : null;
+    return LayoutBuilder(builder: (ctx, box) {
+      final w = box.maxWidth;
+      final h = w * 515 / 1600; // 그림 비율 그대로
+      // 그림 안 파란 판: 위 20.5% ~ 아래 82.5%, 왼쪽 주유기 그림 끝 17%, 오른쪽 노즐 시작 71%
+      final top = h * 0.205, bottom = h * (1 - 0.825);
+      final narrow = w < 360;
+      return SizedBox(
+        height: h,
+        child: Stack(children: [
+          Positioned.fill(child: Image.asset('assets/art/gas_card.png', fit: BoxFit.fill, filterQuality: FilterQuality.medium)),
+          Positioned(
+            left: w * 0.175,
+            right: w * 0.30,
+            top: top,
+            bottom: bottom,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+                Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('반경 ${radius ~/ 1000}km 최저가', style: const TextStyle(fontSize: 11.5, color: Color(0xDDFFFFFF), fontWeight: FontWeight.w600)),
+                  Text.rich(TextSpan(children: [
+                    TextSpan(
+                        text: bp == null ? '없음' : won(bp),
+                        style: TextStyle(fontSize: narrow ? 24 : 28, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -1, height: 1.15)),
+                    if (bp != null) const TextSpan(text: '원', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white)),
+                  ])),
+                ]),
+                if (avg != null) ...[
+                  Container(width: 1, height: 34, color: const Color(0x55FFFFFF), margin: EdgeInsets.symmetric(horizontal: narrow ? 10 : 16)),
+                  Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('${d.sido} 평균', style: const TextStyle(fontSize: 11, color: Color(0xCCFFFFFF))),
+                    Text('${won(avg)}원', style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700, color: Colors.white, height: 1.25)),
+                    if (gap != null && gap > 0) ...[
+                      const SizedBox(height: 3),
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(8, 2, 9, 2),
+                        decoration: BoxDecoration(color: const Color(0xFF19A463), borderRadius: BorderRadius.circular(10)),
+                        child: Text('▼ $gap원 저렴', style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Colors.white)),
+                      ),
+                    ],
+                  ]),
+                ],
+              ]),
+            ),
+          ),
+        ]),
+      );
+    });
+  }
+
+  Widget _basis(GasData d, List<GasStation> list) => Row(children: [
+        const Icon(Icons.place_outlined, size: 14, color: kSub),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(
+            '단지에서 ${radius ~/ 1000}km 안 ${list.length}곳 · 오피넷 ${whenText(d.updated)} 기준',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 11.5, color: kSub),
+          ),
+        ),
+      ]);
+
+  // ── 1위 강조 카드 + 나머지 싼 순 목록
+  List<Widget> _list(GasData d, List<GasStation> list) {
     if (list.isEmpty) {
-      return ListView(padding: const EdgeInsets.all(kPad), children: [
-        const SizedBox(height: 20),
+      return [
+        const SizedBox(height: 24),
         Text('단지에서 ${radius ~/ 1000}km 안에 ${fuelName(fuel)}을 파는 곳이 없어요', textAlign: TextAlign.center, style: T.small),
         if (radius < kRadii.last) ...[
           const SizedBox(height: 14),
           Center(child: SizedBox(width: 180, child: Btn('${kRadii.last ~/ 1000}km까지 보기', h: 40, onTap: () => _radius(kRadii.last)))),
         ],
-      ]);
+      ];
     }
     final avg = d.avg[fuel];
-    return ListView.separated(
-      padding: const EdgeInsets.only(bottom: 24),
-      itemCount: list.length,
-      separatorBuilder: (_, __) => const Divider(height: 1, thickness: 1, color: Color(0xFFF0F1F4), indent: kPad, endIndent: kPad),
-      itemBuilder: (ctx, i) {
-        final s = list[i];
-        final p = s.price(fuel)!;
-        final diff = avg == null ? null : (p - avg).round();
-        final cheapest = p == list.first.price(fuel);
-        return InkWell(
-          onTap: () => showStation(ctx, s, fuel, d),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: kPad, vertical: 11),
-            child: Row(children: [
-              SizedBox(width: 24, child: Text('${i + 1}', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: i == 0 ? kInk : kMute))),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(s.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, height: 1.3)),
-                  const SizedBox(height: 1),
-                  Text([brandName(s.brand), distText(s.dist), if (s.self) '셀프'].where((x) => x.isNotEmpty).join(' · '), style: T.tiny),
-                ]),
-              ),
-              const SizedBox(width: 10),
-              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                Text.rich(TextSpan(children: [
-                  TextSpan(text: won(p), style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800, letterSpacing: -0.4, color: cheapest ? kBlue : kInk)),
-                  const TextSpan(text: '원', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w300)),
-                ])),
-                if (diff != null) Text(diff == 0 ? '평균과 같아요' : (diff < 0 ? '평균보다 ${-diff}원↓' : '평균보다 $diff원↑'), style: const TextStyle(fontSize: 10.5, color: kMute)),
-              ]),
-            ]),
-          ),
-        );
-      },
-    );
+    final minP = list.first.price(fuel);
+    final first = [for (final s in list) if (s.price(fuel) == minP) s];
+    final rest = list.skip(first.length).toList();
+    return [
+      for (var i = 0; i < first.length; i++) ...[_TopCard(s: first[i], fuel: fuel, avg: avg, onTap: () => showStation(context, first[i], fuel, d)), const SizedBox(height: 8)],
+      if (rest.isNotEmpty)
+        Container(
+          decoration: cardBox(),
+          clipBehavior: Clip.antiAlias,
+          child: Column(children: [
+            for (var i = 0; i < rest.length; i++) ...[
+              if (i > 0) const Divider(height: 1, thickness: 1, color: _rowLine, indent: 14, endIndent: 14),
+              _Row(rank: first.length + i + 1, s: rest[i], fuel: fuel, avg: avg, onTap: () => showStation(context, rest[i], fuel, d)),
+            ],
+          ]),
+        ),
+      const SizedBox(height: 12),
+      const Text('한국석유공사 오피넷 가격 기준 · 주유소가 알린 가격이라 실제와 다를 수 있어요.', style: T.tiny),
+    ];
   }
 
-  // 지도: 주유소마다 말풍선에 가격, 가장 싼 곳은 파랑
+  // ── 지도: 공용 지도(DnMap) 위 가격 말풍선, 가장 싼 곳은 파랑
   Widget _map(GasData d, List<GasStation> list) {
-    final c = widget.c;
-    final minP = list.isEmpty ? null : list.first.price(fuel); // 같은 최저가가 여럿이면 모두 파랑
+    final minP = list.isEmpty ? null : list.first.price(fuel);
     final picked = list.where((s) => s.id == sel).firstOrNull;
-    // 고른 것이 맨 위에 오게
-    final order = [...list.reversed.where((s) => s.id != sel), if (picked != null) picked];
     return Stack(children: [
-      FlutterMap(
-        mapController: map,
-        options: MapOptions(
-          initialCenter: c.pos,
-          initialZoom: zoom,
-          interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
-          onTap: (_, __) => setState(() => sel = null),
-        ),
-        children: [
-          TileLayer(urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', userAgentPackageName: 'kr.designfeel.dongne'),
-          CircleLayer(circles: [
-            CircleMarker(
-              point: c.pos,
-              radius: radius.toDouble(),
-              useRadiusInMeter: true,
-              color: kBlue.withValues(alpha: 0.035),
-              borderColor: kBlue.withValues(alpha: 0.3),
-              borderStrokeWidth: 1,
+      DnMap(
+        center: c.pos,
+        zoom: zoom,
+        ctl: ctl,
+        circles: [DnCircle(c.pos, radius.toDouble(), fill: kBlue.withValues(alpha: 0.035), line: kBlue.withValues(alpha: 0.3))],
+        onMapTap: () => setState(() => sel = null),
+        marks: [
+          for (final s in list)
+            DnMark(
+              id: s.id,
+              pos: s.pos,
+              key: '${s.id}|${s.price(fuel)}|${s.price(fuel) == minP}|${s.id == sel}',
+              size: const Size(70, 30),
+              z: s.id == sel ? 3 : (s.price(fuel) == minP ? 2 : 1),
+              child: _Bubble(price: s.price(fuel)!, best: s.price(fuel) == minP, on: s.id == sel, onTap: () => setState(() => sel = s.id)),
+              onTap: () => setState(() => sel = s.id),
             ),
-          ]),
-          MarkerLayer(markers: [
-            Marker(
-              point: c.pos,
-              width: 130,
-              height: 46,
-              alignment: Alignment.topCenter,
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                  decoration: BoxDecoration(color: kInk, borderRadius: BorderRadius.circular(14)),
-                  child: Text(c.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white)),
-                ),
-                const SizedBox(height: 2),
-                const LineIcon('apt', size: 20),
-              ]),
-            ),
-            for (final s in order)
-              Marker(
-                point: s.pos,
-                width: 70,
-                height: 30,
-                alignment: Alignment.topCenter,
-                child: _Bubble(
-                  price: s.price(fuel)!,
-                  best: s.price(fuel) == minP,
-                  on: s.id == sel,
-                  onTap: () => setState(() => sel = s.id),
-                ),
-              ),
-          ]),
-          const RichAttributionWidget(attributions: [TextSourceAttribution('OpenStreetMap')]),
         ],
       ),
       Positioned(
@@ -294,6 +375,216 @@ class _GasPageState extends State<GasPage> {
               ),
       ),
     ]);
+  }
+}
+
+// ── 작은 부품들
+class _GlassBtn extends StatelessWidget {
+  final Widget icon;
+  final String text;
+  final VoidCallback onTap;
+  const _GlassBtn({required this.icon, required this.text, required this.onTap});
+  @override
+  Widget build(BuildContext context) => Material(
+        color: const Color(0xE6FFFFFF),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: const BorderSide(color: Color(0xFFE2E8F1))),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(10, 7, 12, 7),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              icon,
+              const SizedBox(width: 5),
+              Text(text, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: kInk)),
+            ]),
+          ),
+        ),
+      );
+}
+
+class _Chip extends StatelessWidget {
+  final String text;
+  final IconData? icon;
+  final bool on, small;
+  final VoidCallback onTap;
+  const _Chip(this.text, {this.icon, this.small = false, required this.on, required this.onTap});
+  @override
+  Widget build(BuildContext context) => Material(
+        color: on ? kBlue : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: BorderSide(color: on ? kBlue : _chipLine)),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: onTap,
+          child: Container(
+            height: small ? 30 : 36,
+            padding: EdgeInsets.fromLTRB(icon == null ? (small ? 14 : 18) : 12, 0, small ? 14 : 16, 0),
+            alignment: Alignment.center,
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              if (icon != null) ...[Icon(icon, size: 17, color: on ? Colors.white : kBlue), const SizedBox(width: 5)],
+              Text(text, style: TextStyle(fontSize: small ? 12 : 13, fontWeight: on ? FontWeight.w800 : FontWeight.w600, color: on ? Colors.white : kInk)),
+            ]),
+          ),
+        ),
+      );
+}
+
+// 정유사 글자 동그라미 (상표 그림 대신)
+class _Brand extends StatelessWidget {
+  final String code;
+  const _Brand(this.code);
+  @override
+  Widget build(BuildContext context) {
+    final t = brandShort(code);
+    return Container(
+      width: 32,
+      height: 32,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(color: const Color(0xFFF2F4F8), shape: BoxShape.circle, border: Border.all(color: const Color(0xFFE3E7EE))),
+      child: Text(t, style: TextStyle(fontSize: t.length > 3 ? 8.5 : (t.length > 2 ? 9.5 : 11), fontWeight: FontWeight.w800, color: const Color(0xFF4A5363), letterSpacing: -0.3)),
+    );
+  }
+}
+
+class _NavBtn extends StatelessWidget {
+  final GasStation s;
+  const _NavBtn(this.s);
+  @override
+  Widget build(BuildContext context) => InkWell(
+        customBorder: const CircleBorder(),
+        onTap: () => startNav(context, name: s.name, lat: s.lat, lng: s.lng),
+        child: Container(
+          width: 32,
+          height: 32,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, border: Border.all(color: const Color(0xFFDCE2EA))),
+          child: const Icon(Icons.near_me_outlined, size: 16, color: Color(0xFF55607A)),
+        ),
+      );
+}
+
+String _diffText(int p, double? avg) {
+  if (avg == null) return '';
+  final d = (p - avg).round();
+  if (d == 0) return '평균과 같아요';
+  return d < 0 ? '평균 대비 ${-d}원↓' : '평균 대비 $d원↑';
+}
+
+// 1위: 노란 바탕 강조 카드 (같은 최저가가 여럿이면 모두)
+class _TopCard extends StatelessWidget {
+  final GasStation s;
+  final String fuel;
+  final double? avg;
+  final VoidCallback onTap;
+  const _TopCard({required this.s, required this.fuel, required this.avg, required this.onTap});
+  @override
+  Widget build(BuildContext context) {
+    final p = s.price(fuel)!;
+    return Material(
+      color: const Color(0xFFFFFAEB),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kRadius), side: const BorderSide(color: Color(0xFFF5E2A8))),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(10, 10, 12, 10),
+          child: Row(children: [
+            Stack(clipBehavior: Clip.none, children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(9),
+                child: Image.asset('assets/art/gas_thumb.jpg', width: 62, height: 44, fit: BoxFit.cover, filterQuality: FilterQuality.medium),
+              ),
+              Positioned(
+                left: -5,
+                top: -5,
+                child: Container(
+                  width: 20,
+                  height: 20,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(color: _gold, shape: BoxShape.circle, border: Border.all(color: Colors.white)),
+                  child: const Text('1', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.white)),
+                ),
+              ),
+            ]),
+            const SizedBox(width: 11),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  const Text('최저가', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: Color(0xFFB7800A))),
+                  const SizedBox(width: 6),
+                  Flexible(child: Text(s.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, height: 1.3))),
+                ]),
+                const SizedBox(height: 2),
+                Text([brandName(s.brand), distText(s.dist), if (s.self) '셀프'].where((x) => x.isNotEmpty).join(' · '), style: T.tiny),
+              ]),
+            ),
+            const SizedBox(width: 8),
+            Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              Text.rich(TextSpan(children: [
+                TextSpan(text: won(p), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: -0.6, color: kBlue)),
+                const TextSpan(text: '원', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: kBlue)),
+              ])),
+              Text(_diffText(p, avg), style: const TextStyle(fontSize: 10.5, color: kSub)),
+            ]),
+            const SizedBox(width: 10),
+            _NavBtn(s),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+// 나머지 줄: 순위 · 정유사 · 이름 · 가격 · 길안내
+class _Row extends StatelessWidget {
+  final int rank;
+  final GasStation s;
+  final String fuel;
+  final double? avg;
+  final VoidCallback onTap;
+  const _Row({required this.rank, required this.s, required this.fuel, required this.avg, required this.onTap});
+  @override
+  Widget build(BuildContext context) {
+    final p = s.price(fuel)!;
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
+        child: Row(children: [
+          SizedBox(width: 20, child: Text('$rank', textAlign: TextAlign.center, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: kSub))),
+          const SizedBox(width: 8),
+          _Brand(s.brand),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(s.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, height: 1.3)),
+              const SizedBox(height: 1),
+              Row(children: [
+                Flexible(child: Text('${brandName(s.brand).isEmpty ? '' : '${brandName(s.brand)} · '}${distText(s.dist)}', maxLines: 1, overflow: TextOverflow.ellipsis, style: T.tiny)),
+                if (s.self) ...[
+                  const SizedBox(width: 5),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+                    decoration: BoxDecoration(color: const Color(0xFFF0F2F6), borderRadius: BorderRadius.circular(8)),
+                    child: const Text('셀프', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: Color(0xFF5A6475))),
+                  ),
+                ],
+              ]),
+            ]),
+          ),
+          const SizedBox(width: 8),
+          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            Text.rich(TextSpan(children: [
+              TextSpan(text: won(p), style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800, letterSpacing: -0.4, color: kInk)),
+              const TextSpan(text: '원', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w300)),
+            ])),
+            Text(_diffText(p, avg), style: const TextStyle(fontSize: 10.5, color: kSub)),
+          ]),
+          const SizedBox(width: 10),
+          _NavBtn(s),
+        ]),
+      ),
+    );
   }
 }
 

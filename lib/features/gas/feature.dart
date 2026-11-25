@@ -22,7 +22,7 @@ class GasFeature extends Feature {
   @override
   int get order => 10;
   @override
-  String get version => '0.1.2';
+  String get version => '0.2.0';
   @override
   bool get ready => true;
   @override
