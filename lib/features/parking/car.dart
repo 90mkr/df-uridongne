@@ -14,6 +14,7 @@ import '../../core/nav.dart';
 import '../../core/theme.dart';
 import '../../core/ui.dart';
 import 'data.dart';
+import 'page.dart';
 
 class MyCar {
   final double lat, lng;
@@ -306,7 +307,14 @@ class _CarMainCardState extends State<CarMainCard> {
   @override
   Widget build(BuildContext context) => ValueListenableBuilder<MyCar?>(
         valueListenable: myCar,
-        builder: (_, car, __) {
+        builder: (_, car, __) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          _carPart(car),
+          const SizedBox(height: 12),
+          NearLotsCard(c: widget.c),
+        ]),
+      );
+
+  Widget _carPart(MyCar? car) {
           if (car != null) return CarCard(car: car);
           return MainRowCard(
             icon: 'car',
@@ -315,8 +323,94 @@ class _CarMainCardState extends State<CarMainCard> {
             sub: '세운 곳을 남겨 두면 찾아가기와 예상 요금을 알려 드려요',
             trailing: SizedBox(width: 104, child: Btn(busy ? '확인 중' : '여기 세웠어요', primary: true, h: 40, onTap: _park)),
           );
-        },
-      );
+  }
+}
+
+// 단지 홈: 가까운 공영주차장 3곳 (이름 · 거리 · 요금, 지금 무료면 초록) — 누르면 주차장 화면 (대표님 11-25)
+class NearLotsCard extends StatefulWidget {
+  final Complex c;
+  const NearLotsCard({super.key, required this.c});
+  @override
+  State<NearLotsCard> createState() => _NearLotsCardState();
+}
+
+class _NearLotsCardState extends State<NearLotsCard> {
+  List<Lot>? lots;
+  @override
+  void initState() {
+    super.initState();
+    lotsNear(widget.c.pos, km: 2).then((l) {
+      if (!mounted) return;
+      final pub = l.where((x) => x.kind.contains('공영')).toList();
+      setState(() => lots = (pub.length >= 3 ? pub : l).take(3).toList());
+    }).catchError((_) {
+      if (mounted) setState(() => lots = const []);
+    });
+  }
+
+  void _open() => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ParkingPage(complex: widget.c)));
+
+  @override
+  Widget build(BuildContext context) {
+    final l = lots;
+    if (l != null && l.isEmpty) return const SizedBox.shrink();
+    final now = DateTime.now();
+    return Container(
+      decoration: cardBox(r: 20),
+      padding: const EdgeInsets.fromLTRB(16, 14, 10, 8),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          const LineIcon('parking', size: 28),
+          const SizedBox(width: 8),
+          const Expanded(child: MixTitle('가까운', '공영주차장', size: 16)),
+          InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: _open,
+            child: const Padding(
+              padding: EdgeInsets.fromLTRB(8, 6, 4, 6),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Text('전체 보기', style: TextStyle(fontSize: 12.5, color: kSub)),
+                Icon(Icons.chevron_right_rounded, size: 18, color: kSub),
+              ]),
+            ),
+          ),
+        ]),
+        const SizedBox(height: 6),
+        if (l == null)
+          const Padding(padding: EdgeInsets.symmetric(vertical: 18), child: Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))))
+        else
+          for (final (i, x) in l.indexed) ...[
+            if (i > 0) const Divider(height: 1, thickness: 1, color: Color(0xFFEFF2F6)),
+            InkWell(
+              onTap: _open,
+              child: SizedBox(
+                height: 50,
+                child: Row(children: [
+                  Expanded(
+                    child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(x.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, letterSpacing: -0.3)),
+                      Text([distText(meters(widget.c.pos, x.pos)), if (x.label.isNotEmpty) x.label, if (x.spaces > 0) '${x.spaces}면'].join(' · '),
+                          maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11.5, color: kSub)),
+                    ]),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(10, 4, 10, 4),
+                    decoration: BoxDecoration(
+                      color: x.freeAt(now) ? const Color(0xFFE3F5EB) : const Color(0xFFEEF4FF),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(x.freeAt(now) ? '지금 무료' : x.feeShort,
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: x.freeAt(now) ? const Color(0xFF1C8A5A) : kBlue)),
+                  ),
+                  const SizedBox(width: 4),
+                ]),
+              ),
+            ),
+          ],
+      ]),
+    );
+  }
 }
 
 // 「여기 세웠어요」: 지금 위치 + 가장 가까운 주차장 자동 고르기 + 층·구역 메모 + 받은 무료 시간

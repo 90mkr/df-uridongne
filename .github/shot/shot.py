@@ -167,6 +167,14 @@ def alarm(shot, tap, drag, sem, W, H):
     shot("알람")
 
 
+def parking(shot, tap, drag, sem, W, H):
+    for i in range(3):
+        pg_wheel(700)
+    shot("홈_주차")
+    pg_wheel(500)
+    shot("홈_주차2")
+
+
 def tablet(shot, tap, drag, sem, W, H):
     shot("홈")
     for i in range(4):
@@ -179,7 +187,7 @@ def tablet(shot, tap, drag, sem, W, H):
 
 with sync_playwright() as p:
     b = p.chromium.launch(args=["--use-gl=swiftshader", "--enable-unsafe-swiftshader"])
-    for tag, W, H, f in [("폰작은", 360, 740, phone), ("폰큰", 430, 932, phone), ("폰택배", 430, 932, parcel), ("폰작은택배", 360, 740, parcel), ("폰쓰레기", 430, 932, trash), ("폰작은쓰레기", 360, 740, trash), ("폰알람", 430, 932, alarm), ("폰작은알람", 360, 740, alarm), ("탭알람", 1180, 820, alarm), ("폰주유소", 430, 932, gas), ("폰작은주유소", 360, 740, gas), ("탭", 1180, 820, tablet), ("탭세로", 820, 1180, tablet)]:
+    for tag, W, H, f in [("폰작은", 360, 740, phone), ("폰큰", 430, 932, phone), ("폰택배", 430, 932, parcel), ("폰작은택배", 360, 740, parcel), ("폰쓰레기", 430, 932, trash), ("폰작은쓰레기", 360, 740, trash), ("폰주차", 430, 932, parking), ("폰알람", 430, 932, alarm), ("폰작은알람", 360, 740, alarm), ("탭알람", 1180, 820, alarm), ("폰주유소", 430, 932, gas), ("폰작은주유소", 360, 740, gas), ("탭", 1180, 820, tablet), ("탭세로", 820, 1180, tablet)]:
         try:
             session(b, tag, W, H, f)
         except Exception as e:
