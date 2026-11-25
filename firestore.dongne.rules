@@ -86,7 +86,7 @@
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.at == request.time
         && request.resource.data.n == 0
-        && request.resource.data.cat in ['news', 'share', 'free', 'rec']
+        && request.resource.data.cat in ['news', 'share', 'free', 'rec', 'lost']
         && request.resource.data.t is string && request.resource.data.t.size() >= 2 && request.resource.data.t.size() <= 60
         && request.resource.data.b is string && request.resource.data.b.size() <= 1000
         && request.resource.data.ph is list && request.resource.data.ph.size() <= 3

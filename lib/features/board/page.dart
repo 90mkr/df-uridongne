@@ -8,6 +8,9 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../core/data.dart';
 import '../../core/fb.dart';
+import '../../core/feature.dart';
+import '../../core/icons.dart';
+import '../../features/registry.dart' show featureById;
 import '../../core/me.dart' show openLogin;
 import '../../core/theme.dart';
 import '../../core/ui.dart';
@@ -42,6 +45,8 @@ class _BoardPageState extends State<BoardPage> {
     authTick.removeListener(_load);
     super.dispose();
   }
+
+  void _pick(String id) => setState(() => cat = id);
 
   Future<void> _load() async {
     final t = town;
@@ -120,7 +125,7 @@ class _BoardPageState extends State<BoardPage> {
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: kLine)),
             clipBehavior: Clip.antiAlias,
             child: Row(children: [
-              for (final (i, t) in [('', '전체'), ...kBoardCats].indexed) ...[
+              for (final (i, t) in [('', '모아 보기'), ...kBoardCats].indexed) ...[
                 if (i > 0) const VerticalDivider(width: 1, color: kLine),
                 Expanded(
                   child: InkWell(
@@ -139,6 +144,8 @@ class _BoardPageState extends State<BoardPage> {
         Expanded(
           child: all == null
               ? const Center(child: CircularProgressIndicator(color: kBlue))
+              : cat.isEmpty
+                  ? _portal()
               : l.isEmpty
                   ? Center(
                       child: Padding(
@@ -166,6 +173,175 @@ class _BoardPageState extends State<BoardPage> {
                       ),
                     ),
         ),
+      ]),
+    );
+  }
+}
+
+extension on _BoardPageState {
+  // 모아 보기 (대표님 11-25): 단체 홈페이지 첫 화면처럼 게시판마다 최근 글 몇 줄 → 「더보기」로 그 게시판
+  Widget _portal() {
+    final posts = all ?? const <Post>[];
+    final benefits = featureById('benefits');
+    void openRead(Post p) => Navigator.push(context, MaterialPageRoute(builder: (_) => _ReadPage(p: p)));
+    Widget section(String id) {
+      final v = posts.where((p) => p.cat == id).take(4).toList();
+      return Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: cardBox(),
+        clipBehavior: Clip.antiAlias,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          InkWell(
+            onTap: () => _pick(id),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 10, 8),
+              child: Row(children: [
+                Text(boardName(id), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: -0.4)),
+                const SizedBox(width: 6),
+                if (v.isNotEmpty) Text('${posts.where((p) => p.cat == id).length}', style: const TextStyle(fontSize: 12, color: kSub, fontWeight: FontWeight.w600)),
+                const Spacer(),
+                const Text('더보기', style: TextStyle(fontSize: 12, color: kSub)),
+                const Icon(Icons.chevron_right_rounded, size: 18, color: kSub),
+              ]),
+            ),
+          ),
+          const Divider(height: 1, color: Color(0xFFF0F2F5)),
+          if (v.isEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 13),
+              child: Text(id == 'lost' ? '잃어버린 물건·주운 물건을 알려 주세요' : '아직 글이 없어요', style: const TextStyle(fontSize: 13, color: kMute)),
+            )
+          else
+            for (final (i, p) in v.indexed) ...[
+              if (i > 0) const Divider(height: 1, color: Color(0xFFF5F6F8)),
+              _Row(p: p, showCat: false, onTap: () => openRead(p)),
+            ],
+        ]),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(kPad, 0, kPad, 90),
+        children: [
+          if (me == null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Text(town ? '로그인하면 $townName 이웃 글을 볼 수 있어요' : '로그인하면 우리 단지 이웃 글을 볼 수 있어요', style: T.small),
+            ),
+          // 우리 동네 지원금·혜택 (지원금 방이 만든 기능이 있으면 카드로 연결)
+          if (benefits != null) _BenefitCard(f: benefits, c: widget.c),
+          for (final b in kBoards) section(b.$1),
+          _JobSection(c: widget.c),
+          const Padding(padding: EdgeInsets.only(top: 4), child: Text('광고·비방 글은 신고해 주세요. 여러 번 신고된 글은 가려져요.', style: T.tiny, textAlign: TextAlign.center)),
+        ],
+      ),
+    );
+  }
+}
+
+// 지원금·혜택 큰 카드 (첫 화면 배너처럼) → 누르면 그 기능 화면
+class _BenefitCard extends StatelessWidget {
+  final Feature f;
+  final Complex c;
+  const _BenefitCard({required this.f, required this.c});
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Material(
+          color: const Color(0xFF1E4FD8),
+          borderRadius: BorderRadius.circular(kRadius),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(kRadius),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (ctx) => f.page(ctx, c))),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+              child: Row(children: [
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('${c.area?.gu ?? '우리 동네'} 지원금·혜택', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.4)),
+                    const SizedBox(height: 3),
+                    const Text('몰라서 못 받는 혜택, 우리 구 것만 모아 봤어요', style: TextStyle(fontSize: 12, color: Color(0xFFDCE6FF))),
+                  ]),
+                ),
+                LineIcon(f.icon, size: 40),
+                const Icon(Icons.chevron_right_rounded, color: Colors.white),
+              ]),
+            ),
+          ),
+        ),
+      );
+}
+
+// 일자리 마당 — 우리 구 채용 공고 제목만 쭉 (고용24)
+class _JobSection extends StatefulWidget {
+  final Complex c;
+  const _JobSection({required this.c});
+  @override
+  State<_JobSection> createState() => _JobSectionState();
+}
+
+class _JobSectionState extends State<_JobSection> {
+  List<Job>? jobs;
+  bool loaded = false;
+  bool more = false;
+  @override
+  void initState() {
+    super.initState();
+    jobsOf(widget.c).then((v) {
+      if (mounted) setState(() {
+        jobs = v;
+        loaded = true;
+      });
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final v = jobs ?? const <Job>[];
+    final show = more ? v.take(30).toList() : v.take(5).toList();
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: cardBox(),
+      clipBehavior: Clip.antiAlias,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 12, 8),
+          child: Row(children: [
+            const Text('일자리 마당', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: -0.4)),
+            const SizedBox(width: 6),
+            Text(widget.c.area?.gu ?? '', style: const TextStyle(fontSize: 12, color: kSub)),
+            const Spacer(),
+            if (v.length > 5) GestureDetector(onTap: () => setState(() => more = !more), child: Text(more ? '접기' : '더보기', style: const TextStyle(fontSize: 12, color: kSub))),
+          ]),
+        ),
+        const Divider(height: 1, color: Color(0xFFF0F2F5)),
+        if (!loaded)
+          const Padding(padding: EdgeInsets.all(14), child: Text('불러오는 중…', style: T.small))
+        else if (jobs == null)
+          const Padding(padding: EdgeInsets.fromLTRB(14, 12, 14, 13), child: Text('우리 구 채용 공고가 곧 매일 올라와요 (고용24 연결 준비 중)', style: TextStyle(fontSize: 13, color: kMute)))
+        else if (v.isEmpty)
+          const Padding(padding: EdgeInsets.fromLTRB(14, 12, 14, 13), child: Text('지금 올라온 공고가 없어요', style: TextStyle(fontSize: 13, color: kMute)))
+        else
+          for (final (i, j) in show.indexed) ...[
+            if (i > 0) const Divider(height: 1, color: Color(0xFFF5F6F8)),
+            InkWell(
+              onTap: j.url.isEmpty ? null : () => openUrl(j.url),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 11, 12, 11),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(j.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: -0.3)),
+                  const SizedBox(height: 4),
+                  Row(children: [
+                    Expanded(child: Text([j.company, j.place].where((s) => s.isNotEmpty).join(' · '), maxLines: 1, overflow: TextOverflow.ellipsis, style: T.small)),
+                    if (j.pay.isNotEmpty) ...[const SizedBox(width: 6), Pill(j.pay)],
+                    if (j.until.isNotEmpty) ...[const SizedBox(width: 6), Pill(j.until, color: kBlue, bg: const Color(0xFFEEF3FF))],
+                  ]),
+                ]),
+              ),
+            ),
+          ],
       ]),
     );
   }
