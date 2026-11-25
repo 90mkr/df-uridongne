@@ -12,6 +12,7 @@ import 'kids.dart';
 import 'kids_page.dart';
 import 'places.dart';
 import 'trip.dart';
+import 'walk.dart';
 
 class PetHub extends StatefulWidget {
   final Complex complex;
@@ -25,6 +26,7 @@ class _PetHubState extends State<PetHub> {
   (PetPlace, double)? nearHosp, nearNight;
   List<Map> promos = const [];
   bool loaded = false;
+  WalkDay? walk; // 오늘의 산책 (11-26)
 
   @override
   void initState() {
@@ -47,6 +49,11 @@ class _PetHubState extends State<PetHub> {
       promos = [for (final x in (p is Map ? (p['items'] as List? ?? const []) : const [])) if (x is Map && x['on'] != false) x];
       loaded = true;
     });
+    // 산책 지수는 날씨 자료라 따로 (늦어도 칸 목록은 먼저 뜨게)
+    final w = await Future.wait([walkProfile(), walkData(widget.complex)]);
+    final wd = w[1] as WalkData?;
+    if (!mounted || wd == null) return;
+    setState(() => walk = walkDay(wd, w[0] as WalkProfile));
   }
 
   void _go(Widget page) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => page)).then((_) {
@@ -57,7 +64,9 @@ class _PetHubState extends State<PetHub> {
   Widget build(BuildContext context) {
     final c = widget.complex;
     String cnt(PetKind k) => !loaded ? '' : '${count[k] ?? 0}곳';
+    final wl = walk?.nowJudge?.level;
     final tiles = <(String, String, String, Widget Function())>[
+      ('weather', '오늘의 산책', wl == null ? '산책 지수' : kWalkShort[wl], () => PetWalkPage(complex: c)),
       ('hosp', '동물병원', cnt(PetKind.hosp), () => PetPlacesPage(complex: c, kind: PetKind.hosp)),
       ('hair', '미용', cnt(PetKind.groom), () => PetPlacesPage(complex: c, kind: PetKind.groom)),
       ('home', '호텔·돌봄', cnt(PetKind.hotel), () => PetPlacesPage(complex: c, kind: PetKind.hotel)),
@@ -73,7 +82,15 @@ class _PetHubState extends State<PetHub> {
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(padding: const EdgeInsets.fromLTRB(kPad, 16, kPad, 30), children: [
-          _Now(complex: c, nearHosp: nearHosp, nearNight: nearNight, loaded: loaded, onEmergency: () => _go(PetEmergencyPage(complex: c)), onKids: () => _go(const PetKidsPage())),
+          _Now(
+              complex: c,
+              nearHosp: nearHosp,
+              nearNight: nearNight,
+              loaded: loaded,
+              walk: walk,
+              onEmergency: () => _go(PetEmergencyPage(complex: c)),
+              onKids: () => _go(const PetKidsPage()),
+              onWalk: () => _go(PetWalkPage(complex: c))),
           const SizedBox(height: 22),
           const MixTitle('반려동물', '생활', size: 15),
           const SizedBox(height: 10),
@@ -118,8 +135,17 @@ class _Now extends StatelessWidget {
   final Complex complex;
   final (PetPlace, double)? nearHosp, nearNight;
   final bool loaded;
-  final VoidCallback onEmergency, onKids;
-  const _Now({required this.complex, required this.nearHosp, required this.nearNight, required this.loaded, required this.onEmergency, required this.onKids});
+  final WalkDay? walk;
+  final VoidCallback onEmergency, onKids, onWalk;
+  const _Now(
+      {required this.complex,
+      required this.nearHosp,
+      required this.nearNight,
+      required this.loaded,
+      this.walk,
+      required this.onEmergency,
+      required this.onKids,
+      required this.onWalk});
 
   @override
   Widget build(BuildContext context) {
@@ -178,6 +204,20 @@ class _Now extends StatelessWidget {
         btn: '응급·24시 병원 보기',
         onTap: onEmergency,
         icon: 'night',
+      );
+    }
+    // 낮에는 오늘의 산책 (매일 열어 볼 까닭 — 대표님 11-26)
+    final w = walk;
+    final wj = w?.nowJudge;
+    if (w != null && wj != null && !onlyCats) {
+      final b = w.best;
+      return card(
+        kicker: '오늘의 산책',
+        big: '지금 산책 ${kWalkShort[wj.level]}\n${b == null ? '내일을 미리 볼까요' : '추천 ${runText(b)}'}',
+        sub: wj.why.isEmpty ? (w.tips.isEmpty ? '' : w.tips.first.$2) : wj.why.take(2).join(' · '),
+        btn: '시간별·팁 보기',
+        onTap: onWalk,
+        icon: 'weather',
       );
     }
     final h = nearHosp;

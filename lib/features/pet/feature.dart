@@ -12,6 +12,7 @@ import 'data.dart';
 import 'hub.dart';
 import 'kids.dart';
 import 'places.dart';
+import 'walk.dart';
 
 class PetFeature extends Feature {
   @override
@@ -25,7 +26,7 @@ class PetFeature extends Feature {
   @override
   int get order => 5;
   @override
-  String get version => '0.1.0';
+  String get version => '0.2.0';
   @override
   bool get ready => true;
   @override
@@ -63,6 +64,24 @@ class PetFeature extends Feature {
         rest: n == 0 ? ' 오늘이에요' : (n > 0 ? ' $n일 남았어요' : ' ${-n}일 지났어요'),
         sub: '${care.next.month}월 ${care.next.day}일',
         score: n <= 0 ? 80 : (n == 1 ? 70 : 50),
+      );
+    }
+    // 강아지 키우는 집: 아침·저녁 산책 무렵 오늘의 산책 (11-26)
+    final hr = now.hour;
+    if (kids.value.any((k) => k.kind == '강아지') && ((hr >= 7 && hr <= 9) || (hr >= 16 && hr <= 19))) {
+      final d = await walkData(c);
+      if (d == null) return null;
+      final w = walkDay(d, await walkProfile());
+      final j = w.nowJudge;
+      if (j == null) return null;
+      final b = w.best;
+      return Brief(
+        icon: 'pet',
+        kicker: '오늘의 산책',
+        bold: '지금 산책 ',
+        hot: kWalkShort[j.level],
+        sub: b == null ? (j.why.isEmpty ? '' : j.why.take(2).join(' · ')) : '추천 ${runText(b)}${j.why.isEmpty ? '' : ' · ${j.why.first}'}',
+        score: j.level >= 2 ? 45 : 35,
       );
     }
     return null;
