@@ -3,9 +3,9 @@
   "name": "우리 동네 반려동물 (테마 방)",
   "folder": "lib/features/pet · collector/features/pet.py · web/data/pet",
   "room": "반려동물 테마 방",
-  "state": "작업 중",
-  "doing": "반려 생활 가이드(서버 글 web/data/pet/guide.json + 우리 아이 맞춤 추천 화면) 만드는 중",
-  "version": "0.2.0",
-  "updated": "2026-11-26 08:45",
+  "state": "대기",
+  "doing": "0.3.0 올림(코드 점검 통과) — 반려 생활 가이드 31편(web/data/pet/guide.json, 앱 업데이트 없이 글 추가·수정, reviewed 에 id 넣으면 「수의사 감수」 표시), 우리 아이 종·나이 맞춤 추천·찾기·분류. 0.2.0 오늘의 산책 지수. 기다리는 것: 수의사 감수처, 휴대폰 설치 파일로 화면 확인. 다음: 사료량·물 계산기, 호텔 보강, 2차(실종·구조동물·장례·추모 배너)",
+  "version": "0.3.0",
+  "updated": "2026-11-26 08:55",
   "order": 30
 }
