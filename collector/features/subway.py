@@ -147,13 +147,16 @@ def norm(n):
 I1 = ["계양", "귤현", "박촌", "임학", "계산", "경인교대입구", "작전", "갈산", "부평구청", "부평시장", "부평", "동수", "부평삼거리", "간석오거리",
       "인천시청", "예술회관", "인천터미널", "문학경기장", "선학", "신연수", "원인재", "동춘", "동막", "캠퍼스타운", "테크노파크", "지식정보단지",
       "인천대입구", "센트럴파크", "국제업무지구", "송도달빛축제공원"]
+# 수인분당선 인천 쪽 (오이도 K258 ~ 인천) — 역 번호는 K+숫자, 호선 K1 (11-25 시험: K258 오이도 177줄)
+SU = ["오이도", "달월", "월곶", "소래포구", "인천논현", "호구포", "남동인더스파크", "원인재", "연수", "송도", "인하대", "숭의", "신포", "인천"]
 ROUTES = {
-    "인천1호선": ("IC", "I1", [(str(110 + k), n) for k, n in enumerate(I1)]),  # 역 번호는 숫자만 (인천대입구 = 136, 11-25 시험으로 확인)
+    "인천1호선": ("IC", "I1", [(str(110 + k), n) for k, n in enumerate(I1)], "계양", "송도달빛축제공원"),  # 역 번호는 숫자만 (인천대입구 = 136)
+    "수인분당선": ("KR", "K1", [(f"K{258 + k}", n) for k, n in enumerate(SU)], "왕십리", "인천"),
 }
 
 
 def route_stations(line):
-    opr, ln, lst = ROUTES[line]
+    opr, ln, lst, _, _ = ROUTES[line]
     return opr, ln, [(k, code, n) for k, (code, n) in enumerate(lst)]
 
 
@@ -176,18 +179,12 @@ def fill_kric(st):
     skipped = sorted({x.get("l") for x in st if not x.get("tt") and x.get("l") not in ROUTES})
     if skipped:
         print("  KRIC 역 번호가 아직 없는 호선:", skipped)
-    if "수인분당선" in skipped and os.environ.get("KRIC_PROBE"):
-        for l_ in ("K1", "K2", "K4", "KS", "SU", "K5", "B1", "S1"):
-            for c_ in ("249", "K249", "258", "K258", "1859"):
-                pr = kric("trainUseInfo/subwayTimetable", {"railOprIsttCd": "KR", "dayCd": "8", "lnCd": l_, "stinCd": c_})
-                if pr:
-                    print(f"  수인분당 시험 KR/{l_}/{c_} → {len(pr)}줄", pr[0])
-    if not want:
-        return
     ok = 0
     for line in sorted({x["l"] for x in want}):
         opr, ln, route = route_stations(line)
-        first, last = route[0][2], route[-1][2]
+        first, last = ROUTES[line][3], ROUTES[line][4]  # 방면 이름 (번호 작은 쪽 / 큰 쪽 끝)
+        if os.environ.get("KRIC_PROBE"):
+            print(f"  {line} 역별 평일 열차 수:", [(r[2], len(times(opr, ln, r[1], "8"))) for r in route[-8:]])
         idx = {r[2]: i for i, r in enumerate(route)}
         for x in want:
             if x["l"] != line:
