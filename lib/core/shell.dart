@@ -12,6 +12,7 @@ import 'map_tab.dart';
 import 'me.dart';
 import 'theme.dart';
 import 'tools_tab.dart';
+import 'remote.dart';
 
 class Shell extends StatefulWidget {
   const Shell({super.key});
@@ -161,7 +162,7 @@ class _Splash extends StatelessWidget {
             // 넓은 화면(폴드)에서도 한가운데 · 높이에 맞춰 크기 제한 (대표님 11-24: 폴드7에서 왼쪽으로 쏠림)
             LayoutBuilder(builder: (ctx, box) {
               final w = [box.maxWidth * 0.78, MediaQuery.of(ctx).size.height * 0.42, 420.0].reduce((a, b) => a < b ? a : b);
-              return SizedBox(width: box.maxWidth, child: Center(child: Image.asset('assets/art/splash_home.png', width: w, height: w, fit: BoxFit.contain)));
+              return SizedBox(width: box.maxWidth, child: Center(child: artImage('assets/art/splash_home.png', width: w, height: w, fit: BoxFit.contain)));
             }),
             const Spacer(flex: 2),
           ]),

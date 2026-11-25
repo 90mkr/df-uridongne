@@ -10,6 +10,7 @@ import '../../core/notify.dart';
 import '../../core/theme.dart';
 import '../../core/ui.dart';
 import 'data.dart';
+import '../../core/remote.dart';
 
 class AnnivFeature extends Feature {
   @override
@@ -188,7 +189,7 @@ class _AnnivPageState extends State<AnnivPage> {
             height: artH,
             child: ClipRect(
             child: Stack(fit: StackFit.expand, children: [
-              Positioned(left: 0, right: 0, top: 0, bottom: 2, child: Image.asset('assets/art/anniv_bg.jpg', fit: BoxFit.cover, alignment: w < 600 ? Alignment.bottomCenter : const Alignment(1, 0.3), filterQuality: FilterQuality.medium)),
+              Positioned(left: 0, right: 0, top: 0, bottom: 2, child: artImage('assets/art/anniv_bg.jpg', fit: BoxFit.cover, alignment: w < 600 ? Alignment.bottomCenter : const Alignment(1, 0.3), filterQuality: FilterQuality.medium)),
               // 아래 끝을 바탕색으로 덮어 녹임 (사진 끝 줄이 남지 않게 — 페이드 효과 대신 덮개)
               DecoratedBox(
                 decoration: BoxDecoration(
@@ -303,7 +304,7 @@ class _Item extends StatelessWidget {
             child: Row(children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(18),
-                child: Image.asset('assets/art/an_${look.$1}.png', width: narrow ? 52 : 60, height: narrow ? 52 : 60, fit: BoxFit.cover, filterQuality: FilterQuality.medium),
+                child: artImage('assets/art/an_${look.$1}.png', width: narrow ? 52 : 60, height: narrow ? 52 : 60, fit: BoxFit.cover, filterQuality: FilterQuality.medium),
               ),
               SizedBox(width: narrow ? 10 : 14),
               Expanded(

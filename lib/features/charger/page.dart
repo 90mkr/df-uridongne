@@ -14,6 +14,7 @@ import '../../core/theme.dart';
 import '../../core/ui.dart';
 import 'data.dart';
 import 'watch.dart';
+import '../../core/remote.dart';
 
 // 상태 색: 빈자리 있음 초록 · 모두 사용 중 주황 · 고장·점검 회색
 const kFree = Color(0xFF1E9E5A);
@@ -202,7 +203,7 @@ class _ChargerPageState extends State<ChargerPage> {
               child: ShaderMask(
                 shaderCallback: (r) => const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.white, Colors.white, Color(0x00FFFFFF)], stops: [0, 0.72, 1]).createShader(r),
                 blendMode: BlendMode.dstIn,
-                child: Image.asset('assets/art/ev_head.jpg', fit: BoxFit.cover, alignment: const Alignment(0.75, 0.15), filterQuality: FilterQuality.medium),
+                child: artImage('assets/art/ev_head.jpg', fit: BoxFit.cover, alignment: const Alignment(0.75, 0.15), filterQuality: FilterQuality.medium),
               ),
             ),
           ),
@@ -390,7 +391,7 @@ class _ChargerPageState extends State<ChargerPage> {
           child: ShaderMask(
             shaderCallback: (r) => const LinearGradient(colors: [Color(0x00FFFFFF), Colors.white], stops: [0, 0.45]).createShader(r),
             blendMode: BlendMode.dstIn,
-            child: Image.asset('assets/art/ev_card.jpg', fit: BoxFit.cover, alignment: const Alignment(0.9, 0), filterQuality: FilterQuality.medium),
+            child: artImage('assets/art/ev_card.jpg', fit: BoxFit.cover, alignment: const Alignment(0.9, 0), filterQuality: FilterQuality.medium),
           ),
         ),
         Padding(
@@ -874,7 +875,7 @@ class _TimerCard extends StatelessWidget {
         decoration: BoxDecoration(borderRadius: BorderRadius.circular(18)),
         clipBehavior: Clip.antiAlias,
         child: Stack(children: [
-          Positioned.fill(child: Image.asset('assets/art/ev_night.jpg', fit: BoxFit.cover, alignment: const Alignment(0.8, 0), filterQuality: FilterQuality.medium)),
+          Positioned.fill(child: artImage('assets/art/ev_night.jpg', fit: BoxFit.cover, alignment: const Alignment(0.8, 0), filterQuality: FilterQuality.medium)),
           const Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(gradient: LinearGradient(colors: [Color(0xE60A1E44), Color(0x990A1E44), Color(0x000A1E44)], stops: [0, 0.55, 1])),

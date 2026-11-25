@@ -10,6 +10,7 @@ import '../../core/nav.dart';
 import '../../core/theme.dart';
 import '../../core/ui.dart';
 import 'data.dart';
+import '../../core/remote.dart';
 
 const _page = Color(0xFFF4F7FB);
 const _chipLine = Color(0xFFD3DDEB);
@@ -157,7 +158,7 @@ class _GasPageState extends State<GasPage> {
                     stops: [0, 0.5, 0.8, 1],
                   ).createShader(r),
                   blendMode: BlendMode.dstIn,
-                  child: Image.asset('assets/art/gas_head.jpg', fit: BoxFit.cover, alignment: const Alignment(0.55, -0.2), filterQuality: FilterQuality.medium),
+                  child: artImage('assets/art/gas_head.jpg', fit: BoxFit.cover, alignment: const Alignment(0.55, -0.2), filterQuality: FilterQuality.medium),
                 ),
               ),
             ),
@@ -247,7 +248,7 @@ class _GasPageState extends State<GasPage> {
       return SizedBox(
         height: h,
         child: Stack(children: [
-          Positioned.fill(child: Image.asset('assets/art/gas_card.png', fit: BoxFit.fill, filterQuality: FilterQuality.medium)),
+          Positioned.fill(child: artImage('assets/art/gas_card.png', fit: BoxFit.fill, filterQuality: FilterQuality.medium)),
           Positioned(
             left: w * 0.175,
             right: w * 0.30,
@@ -492,7 +493,7 @@ class _TopCard extends StatelessWidget {
             Stack(clipBehavior: Clip.none, children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(9),
-                child: Image.asset('assets/art/gas_thumb.jpg', width: 62, height: 44, fit: BoxFit.cover, filterQuality: FilterQuality.medium),
+                child: artImage('assets/art/gas_thumb.jpg', width: 62, height: 44, fit: BoxFit.cover, filterQuality: FilterQuality.medium),
               ),
               Positioned(
                 left: -5,

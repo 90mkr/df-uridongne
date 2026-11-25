@@ -1,6 +1,7 @@
 // 기능 등록부 (본부 방만 고침)
 // 기능 방이 새 기능을 만들면 본부 방에 「등록 요청」을 남기고, 본부 방이 여기에 한 줄 넣는다.
 import '../core/feature.dart';
+import '../core/remote.dart';
 import 'alarm/feature.dart';
 import 'anniv/feature.dart';
 import 'board/feature.dart';
@@ -20,7 +21,8 @@ import 'subway/feature.dart';
 import 'trash/feature.dart';
 import 'weather/feature.dart';
 
-final List<Feature> features = [
+// 전체 기능 — 실제로 쓰는 목록은 아래 features (서버 app.json 「off」로 급히 숨긴 기능은 빠짐)
+final List<Feature> allFeatures = [
   WeatherFeature(), // 머리 줄: 날씨·미세먼지
   TrashFeature(), // 맨 위: 오늘의 단지 소식
   BusFeature(), // 맨 아래 큰 카드: 단지 앞 버스
@@ -41,5 +43,7 @@ final List<Feature> features = [
   EventsFeature(), // 생활 도구 + 홈 사진 카드: 주변 행사·축제 (주말엔 「지금 우리 단지」)
   SchoolFeature(), // 생활 도구 + 홈 한 줄(등록한 집만): 우리 아이 학교 급식·쉬는 날
 ];
+
+List<Feature> get features => [for (final f in allFeatures) if (!remoteOff(f.id)) f];
 
 Feature? featureById(String id) => features.where((f) => f.id == id).firstOrNull;

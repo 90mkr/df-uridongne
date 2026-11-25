@@ -11,6 +11,7 @@ import '../../core/icons.dart';
 import '../../core/notify.dart';
 import '../../core/theme.dart';
 import '../../core/ui.dart';
+import '../../core/remote.dart';
 
 class AlarmFeature extends Feature {
   @override
@@ -149,7 +150,7 @@ class _AlarmPageState extends State<AlarmPage> {
           height: artH,
           child: ClipRect(
             child: Stack(fit: StackFit.expand, children: [
-              Positioned(left: 0, right: 0, top: 0, bottom: 2, child: Image.asset('assets/art/alarm_bg.jpg', fit: BoxFit.cover, alignment: Alignment.topRight, filterQuality: FilterQuality.medium)),
+              Positioned(left: 0, right: 0, top: 0, bottom: 2, child: artImage('assets/art/alarm_bg.jpg', fit: BoxFit.cover, alignment: Alignment.topRight, filterQuality: FilterQuality.medium)),
               DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [_bg.withValues(alpha: 0), _bg.withValues(alpha: 0), _bg, _bg], stops: const [0, 0.55, 0.85, 1]),

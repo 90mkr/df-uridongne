@@ -13,6 +13,7 @@ import '../../core/icons.dart';
 import '../../core/theme.dart';
 import 'data.dart';
 import 'page.dart';
+import '../../core/remote.dart';
 
 class BusFeature extends Feature {
   @override
@@ -193,7 +194,7 @@ class _HomeCardState extends State<_HomeCard> {
                 decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFF0A6CF0), Color(0xFF2A8CFB)])),
                 child: Stack(children: [
                   // 대표님 사진(11-24) 깔고, 글자 쪽(왼쪽)만 색 필터
-                  Positioned.fill(child: Image.asset('assets/art/bus_bg.jpg', fit: BoxFit.cover, alignment: const Alignment(0.7, 0.1), filterQuality: FilterQuality.medium)),
+                  Positioned.fill(child: artImage('assets/art/bus_bg.jpg', fit: BoxFit.cover, alignment: const Alignment(0.7, 0.1), filterQuality: FilterQuality.medium)),
                   const Positioned.fill(child: DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(colors: [Color(0xF20A5FE0), Color(0xCC1570EA), Color(0x2E1570EA)], stops: [0, 0.45, 0.8])))),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(14, 0, 12, 16),

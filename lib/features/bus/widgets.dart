@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/icons.dart';
 import '../../core/theme.dart';
+import '../../core/remote.dart';
 
 const kBusBlue2 = Color(0xFF1D4ED8);
 const kBusTint = Color(0xFFEEF3FF);
@@ -26,7 +27,7 @@ class BusHeader extends StatelessWidget {
       ),
       child: Stack(children: [
         // 홈 카드와 같은 사진 머리띠 (대표님 사진 11-24) — 글자 쪽만 파랑 필터
-        if (art) Positioned.fill(child: IgnorePointer(child: Image.asset('assets/art/bus_bg.jpg', fit: BoxFit.cover, alignment: const Alignment(0.7, 0.1)))),
+        if (art) Positioned.fill(child: IgnorePointer(child: artImage('assets/art/bus_bg.jpg', fit: BoxFit.cover, alignment: const Alignment(0.7, 0.1)))),
         if (art)
           const Positioned.fill(
             child: IgnorePointer(

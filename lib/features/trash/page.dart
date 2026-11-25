@@ -10,6 +10,7 @@ import 'data.dart';
 import 'art.dart';
 import 'guide.dart';
 import 'trash_icons.dart';
+import '../../core/remote.dart';
 
 const _week = '월화수목금토일';
 
@@ -146,7 +147,7 @@ class _TrashPageState extends State<TrashPage> {
             child: ShaderMask(
               shaderCallback: (r) => const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0x00FFFFFF), Colors.white, Colors.white, Color(0x00FFFFFF)], stops: [0, 0.18, 0.86, 1]).createShader(r),
               blendMode: BlendMode.dstIn,
-              child: Image.asset('assets/art/trash_head.png', fit: BoxFit.cover, alignment: Alignment.centerRight, filterQuality: FilterQuality.medium),
+              child: artImage('assets/art/trash_head.png', fit: BoxFit.cover, alignment: Alignment.centerRight, filterQuality: FilterQuality.medium),
             ),
           )),
         ),

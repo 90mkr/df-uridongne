@@ -12,6 +12,7 @@ import '../../core/ui.dart';
 import 'check_page.dart';
 import 'data.dart';
 import 'widgets.dart';
+import '../../core/remote.dart';
 
 const kNear = 3000.0; // 「단지 근처」 = 3km 안
 const kLottoBg = Color(0xFFF4F7FB); // 그림 머리 아래 끝과 같은 바탕색 (경계선 없게)
@@ -122,7 +123,7 @@ class _LottoPageState extends State<LottoPage> {
               stops: [0, 0.45, 0.78, 1],
             ).createShader(r),
             blendMode: BlendMode.dstIn,
-            child: Image.asset('assets/art/lotto_head.png', fit: BoxFit.cover, alignment: Alignment.topRight, filterQuality: FilterQuality.medium),
+            child: artImage('assets/art/lotto_head.png', fit: BoxFit.cover, alignment: Alignment.topRight, filterQuality: FilterQuality.medium),
           ),
         ),
       ),

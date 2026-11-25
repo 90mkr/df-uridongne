@@ -6,6 +6,7 @@ import '../features/registry.dart';
 import 'feature.dart';
 import 'icons.dart';
 import 'theme.dart';
+import 'remote.dart';
 
 // 아이콘 뒤 옅은 빛 (칸마다 조금씩 다른 색)
 // 칸이 좁아 이름은 짧게 (낱말 중간에서 줄 바뀜 없게)
@@ -30,7 +31,7 @@ class ToolsTab extends StatelessWidget {
           height: top + 300,
           child: ClipRect(
             child: Stack(fit: StackFit.expand, children: [
-              Positioned(left: 0, right: 0, top: 0, bottom: 2, child: Image.asset('assets/art/tools_bg.jpg', fit: BoxFit.cover, alignment: Alignment.topRight, filterQuality: FilterQuality.medium)),
+              Positioned(left: 0, right: 0, top: 0, bottom: 2, child: artImage('assets/art/tools_bg.jpg', fit: BoxFit.cover, alignment: Alignment.topRight, filterQuality: FilterQuality.medium)),
               // 아래 끝을 바탕색으로 덮어 녹임 (사진 끝 줄이 남지 않게 — 페이드 효과 대신 덮개)
               DecoratedBox(
                 decoration: BoxDecoration(

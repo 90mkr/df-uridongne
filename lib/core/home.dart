@@ -14,6 +14,7 @@ import 'icons.dart';
 import 'banners.dart';
 import 'theme.dart';
 import 'ui.dart';
+import 'remote.dart';
 
 // 내 정보 탭 등 홈 밖에서 「홈 편집」 열기: 홈 탭으로 넘어가 그 자리에서 편집 모드
 void openHomeEditFor(BuildContext context, Complex c) => homeEditAsk.value++;
@@ -412,7 +413,7 @@ class _TodayHeroState extends State<TodayHero> {
       clipBehavior: Clip.antiAlias,
       child: Stack(children: [
         // 사진은 카드 전체, 파랑 필터는 글자 쪽 왼편만 좁게 (대표님 11-24)
-        Positioned.fill(child: ColorFiltered(colorFilter: const ColorFilter.mode(Color(0x2E06163F), BlendMode.multiply), child: Image.asset('assets/art/hero.jpg', fit: BoxFit.cover, alignment: const Alignment(0.6, 0), filterQuality: FilterQuality.medium))),
+        Positioned.fill(child: ColorFiltered(colorFilter: const ColorFilter.mode(Color(0x2E06163F), BlendMode.multiply), child: artImage('assets/art/hero.jpg', fit: BoxFit.cover, alignment: const Alignment(0.6, 0), filterQuality: FilterQuality.medium))),
         const Positioned.fill(
           child: DecoratedBox(
             decoration: BoxDecoration(

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme.dart';
 import 'trash_icons.dart';
+import '../../core/remote.dart';
 
 // 낱말 가운데서 줄이 갈리지 않게 (대표님 규칙): 낱말 안 글자 사이를 붙이고 띄어쓰기에서만 줄바꿈
 String keepWords(String s) => s.split(' ').map((w) => w.split('').join('\u2060')).join(' ');
@@ -154,7 +155,7 @@ class _GuideBoxState extends State<GuideBox> {
                   width: 68,
                   height: 58,
                   child: art != null
-                      ? Image.asset('assets/art/tg_${art.$1}.png', fit: BoxFit.cover, filterQuality: FilterQuality.medium)
+                      ? artImage('assets/art/tg_${art.$1}.png', fit: BoxFit.cover, filterQuality: FilterQuality.medium)
                       : ColoredBox(color: kt.$1, child: Center(child: TrashIcon(g.kind, size: 30, line: kt.$2))),
                 ),
               ),

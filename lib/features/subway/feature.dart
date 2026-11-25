@@ -11,6 +11,7 @@ import '../../core/icons.dart';
 import '../../core/theme.dart';
 import '../../core/ui.dart';
 import 'data.dart';
+import '../../core/remote.dart';
 
 const _ink = Color(0xFF5B4BD6);
 
@@ -103,7 +104,7 @@ class _HomeCardState extends State<_HomeCard> {
                 decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFF7E6BE7), Color(0xFF8571EE)])),
                 child: Stack(children: [
                   // 대표님 사진(11-24) 깔고, 글자 쪽(왼쪽)만 색 필터
-                  Positioned.fill(child: Image.asset('assets/art/subway_bg.jpg', fit: BoxFit.cover, alignment: const Alignment(0.7, 0.1), filterQuality: FilterQuality.medium)),
+                  Positioned.fill(child: artImage('assets/art/subway_bg.jpg', fit: BoxFit.cover, alignment: const Alignment(0.7, 0.1), filterQuality: FilterQuality.medium)),
                   const Positioned.fill(child: DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(colors: [Color(0xF26A55DC), Color(0xC27E6BE7), Color(0x2E7E6BE7)], stops: [0, 0.45, 0.8])))),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(14, 0, 12, 16),
@@ -364,7 +365,7 @@ class _Page extends StatelessWidget {
         SizedBox(
           height: top + 120,
           child: Stack(children: [
-            Positioned.fill(child: Image.asset('assets/art/subway_bg.jpg', fit: BoxFit.cover, alignment: const Alignment(0.7, 0.1))),
+            Positioned.fill(child: artImage('assets/art/subway_bg.jpg', fit: BoxFit.cover, alignment: const Alignment(0.7, 0.1))),
             const Positioned.fill(
               child: DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(colors: [Color(0xF26A55DC), Color(0xC27E6BE7), Color(0x2E7E6BE7)], stops: [0, 0.45, 0.8]))),
             ),
