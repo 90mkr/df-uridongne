@@ -1,4 +1,5 @@
 // 길안내 (본부 방만 고침): 카카오맵 · 네이버 · 티맵 중 골라 목적지로 바로. 모든 기능이 이걸 쓴다.
+// walk: 걸어서 찾아가기(주차한 내 차 등) — 자동차 전용 티맵은 빼고, 카카오·네이버를 도보 길안내로 연다 (대표님 11-25)
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -7,10 +8,12 @@ import 'data.dart';
 import 'theme.dart';
 import 'ui.dart';
 
-Future<void> startNav(BuildContext context, {required String name, required double lat, required double lng}) async {
-  final saved = await prefGet('core.navApp') ?? '';
+Future<void> startNav(BuildContext context, {required String name, required double lat, required double lng, bool walk = false}) async {
+  final key = walk ? 'core.navAppWalk' : 'core.navApp';
+  final saved = await prefGet(key) ?? '';
   if (!context.mounted) return;
-  if (saved.isNotEmpty) return _launch(saved, name, lat, lng);
+  if (saved.isNotEmpty && (!walk || saved != 'tmap')) return _launch(saved, name, lat, lng, walk: walk);
+  final apps = walk ? _apps.where((a) => a.id != 'tmap').toList() : _apps;
   var keep = false;
   await showSheet(
     context,
@@ -18,18 +21,18 @@ Future<void> startNav(BuildContext context, {required String name, required doub
       builder: (ctx, set) => Padding(
         padding: const EdgeInsets.fromLTRB(kPad, 18, kPad, 14),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('어느 앱으로 길안내할까요?', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, letterSpacing: -0.4)),
+          Text(walk ? '어느 앱으로 걸어서 찾아갈까요?' : '어느 앱으로 길안내할까요?', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, letterSpacing: -0.4)),
           const SizedBox(height: 3),
           Text('도착: $name', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, color: kSub)),
           const SizedBox(height: 16),
           Row(children: [
-            for (final (i, a) in _apps.indexed) ...[
+            for (final (i, a) in apps.indexed) ...[
               if (i > 0) const SizedBox(width: 10),
               Expanded(
-                child: _AppTile(a, onTap: () {
-                  if (keep) prefSet('core.navApp', a.id);
+                child: _AppTile(a, walk: walk, onTap: () {
+                  if (keep) prefSet(key, a.id);
                   Navigator.pop(ctx);
-                  _launch(a.id, name, lat, lng);
+                  _launch(a.id, name, lat, lng, walk: walk);
                 }),
               ),
             ],
@@ -68,7 +71,8 @@ const _apps = [
 class _AppTile extends StatefulWidget {
   final _NavApp a;
   final VoidCallback onTap;
-  const _AppTile(this.a, {required this.onTap});
+  final bool walk;
+  const _AppTile(this.a, {required this.onTap, this.walk = false});
   @override
   State<_AppTile> createState() => _AppTileState();
 }
@@ -104,7 +108,7 @@ class _AppTileState extends State<_AppTile> {
             const SizedBox(height: 8),
             Text(a.name, maxLines: 1, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: -0.3)),
             const SizedBox(height: 1),
-            const Text('길안내', style: TextStyle(fontSize: 11, color: kSub)),
+            Text(widget.walk ? '도보 길안내' : '길안내', style: const TextStyle(fontSize: 11, color: kSub)),
           ]),
         ),
       ),
@@ -170,13 +174,13 @@ class _Glyph extends CustomPainter {
   bool shouldRepaint(covariant _Glyph o) => o.kind != kind || o.c != c;
 }
 
-Future<void> _launch(String app, String name, double lat, double lng) async {
+Future<void> _launch(String app, String name, double lat, double lng, {bool walk = false}) async {
   final n = Uri.encodeComponent(name);
   final web = app == 'naver' ? 'https://map.naver.com/p/search/$n' : 'https://map.kakao.com/link/to/$n,$lat,$lng';
   if (kIsWeb) return openUrl(web);
   final scheme = switch (app) {
-    'kakao' => 'kakaomap://route?ep=$lat,$lng&by=CAR',
-    'naver' => 'nmap://route/car?dlat=$lat&dlng=$lng&dname=$n&appname=kr.designfeel.dongne',
+    'kakao' => 'kakaomap://route?ep=$lat,$lng&by=${walk ? 'FOOT' : 'CAR'}',
+    'naver' => 'nmap://route/${walk ? 'walk' : 'car'}?dlat=$lat&dlng=$lng&dname=$n&appname=kr.designfeel.dongne',
     _ => 'tmap://route?goalname=$n&goalx=$lng&goaly=$lat',
   };
   try {

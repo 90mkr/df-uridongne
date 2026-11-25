@@ -223,7 +223,7 @@ class CarCard extends StatelessWidget {
             ),
             if (!small) ...[
               const SizedBox(width: 8),
-              SizedBox(width: 92, child: Btn('찾아가기', icon: 'route', primary: true, h: 40, onTap: () => startNav(context, name: '내 차', lat: car.lat, lng: car.lng))),
+              SizedBox(width: 92, child: Btn('찾아가기', icon: 'route', primary: true, h: 40, onTap: () => startNav(context, name: '내 차', lat: car.lat, lng: car.lng, walk: true))),
             ] else
               const Icon(Icons.chevron_right_rounded, color: kMute),
           ]),
@@ -440,7 +440,7 @@ Future<void> openCar(BuildContext context) => showSheet(context, (ctx) {
             toast(context, '출차 완료. 저장한 위치를 지웠어요');
           })),
           const SizedBox(width: 10),
-          Expanded(child: Btn('찾아가기', icon: 'route', primary: true, onTap: () => startNav(ctx, name: '내 차', lat: c.lat, lng: c.lng))),
+          Expanded(child: Btn('찾아가기', icon: 'route', primary: true, onTap: () => startNav(ctx, name: '내 차', lat: c.lat, lng: c.lng, walk: true))),
         ]),
       ]);
     });
