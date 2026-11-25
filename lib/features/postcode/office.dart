@@ -9,6 +9,7 @@ import '../../core/nav.dart';
 import '../../core/theme.dart';
 import '../../core/ui.dart';
 import 'data.dart';
+import 'look.dart';
 
 class OfficePage extends StatefulWidget {
   final Complex c;
@@ -39,28 +40,34 @@ class _OfficePageState extends State<OfficePage> {
         .toList()
       ..sort((a, b) => meters(from, a.pos).compareTo(meters(from, b.pos)));
     final h = MediaQuery.of(context).size.height;
-    return DetailPage(
+    return PostPage(
       title: '우체국·택배 접수',
+      art: 'postbox',
+      sub: '가까운 우체국과 택배 받는 편의점이에요',
       body: Column(children: [
-        SizedBox(
-          height: h * 0.32,
-          child: all == null
-              ? Container(color: kBg)
-              : DongneMap(
-                  key: ValueKey(kind),
-                  center: from,
-                  zoom: 14.6,
-                  pinFill: kSoftOrange,
-                  points: [
-                    for (final p in l.take(150))
-                      MapPoint(id: p.id, name: p.name, sub: p.label, badge: p.isPo ? '우체국' : '', pos: p.pos, onTap: (ctx) => showPlace(ctx, p, widget.c)),
-                  ],
-                ),
+        Container(
+          height: h * 0.3,
+          margin: const EdgeInsets.symmetric(horizontal: kPad),
+          decoration: postBox(),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(19),
+            child: all == null
+                ? Container(color: Colors.white)
+                : DongneMap(
+                    key: ValueKey(kind),
+                    center: from,
+                    zoom: 14.6,
+                    pinFill: kSoftOrange,
+                    points: [
+                      for (final p in l.take(150))
+                        MapPoint(id: p.id, name: p.name, sub: p.label, badge: p.isPo ? '우체국' : '', pos: p.pos, onTap: (ctx) => showPlace(ctx, p, widget.c)),
+                    ],
+                  ),
+          ),
         ),
-        Container(height: 1, color: kLine),
         SizedBox(
-          height: 48,
-          child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.fromLTRB(kPad, 10, kPad, 0), children: [
+          height: 52,
+          child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.fromLTRB(kPad, 12, kPad, 4), children: [
             for (final k in const ['전체', '우체국', '편의점 택배']) _chip(k, kind == k, () => setState(() => kind = k)),
           ]),
         ),
@@ -69,11 +76,17 @@ class _OfficePageState extends State<OfficePage> {
               ? const Center(child: CircularProgressIndicator(strokeWidth: 1.6))
               : all!.isEmpty
                   ? _empty()
-                  : ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(kPad, 4, kPad, 30),
-                      itemCount: l.length + 1,
-                      itemBuilder: (_, i) => i == l.length ? _foot() : _row(l[i], meters(from, l[i].pos), now),
-                    ),
+                  : ListView(padding: const EdgeInsets.fromLTRB(kPad, 6, kPad, 30), children: [
+                      if (l.isNotEmpty)
+                        Container(
+                          decoration: postBox(),
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Column(children: [
+                            for (var i = 0; i < l.length; i++) _row(l[i], meters(from, l[i].pos), now, first: i == 0),
+                          ]),
+                        ),
+                      _foot(),
+                    ]),
         ),
       ]),
     );
@@ -83,26 +96,26 @@ class _OfficePageState extends State<OfficePage> {
         padding: const EdgeInsets.only(right: 6),
         child: InkWell(
           onTap: f,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(18),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 13),
+            padding: const EdgeInsets.symmetric(horizontal: 15),
             alignment: Alignment.center,
-            decoration: BoxDecoration(color: on ? kInk : Colors.white, borderRadius: BorderRadius.circular(8), border: Border.all(color: on ? kInk : kLine)),
+            decoration: BoxDecoration(color: on ? kBlue : Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: on ? kBlue : kPostLine)),
             child: Text(t, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: on ? Colors.white : kInk)),
           ),
         ),
       );
 
-  Widget _row(PostPlace p, double m, DateTime now) {
+  Widget _row(PostPlace p, double m, DateTime now, {bool first = false}) {
     final open = p.openAt(now);
     return InkWell(
       onTap: () => showPlace(context, p, widget.c),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 11),
-        decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: kLine))),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(border: first ? null : const Border(top: BorderSide(color: kPostLine))),
         child: Row(children: [
-          p.isPo ? const PostIcon('postbox', size: 26, fill: kSoftOrange) : const LineIcon('mart', size: 26),
-          const SizedBox(width: 10),
+          p.isPo ? postArt('postbox', 34) : const LineIcon('mart', size: 30),
+          const SizedBox(width: 11),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.title),
@@ -111,14 +124,14 @@ class _OfficePageState extends State<OfficePage> {
             ]),
           ),
           const SizedBox(width: 8),
-          Text(open ? '영업 중' : '문 닫음', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: open ? kInk : kMute)),
+          Pill(open ? '영업 중' : '문 닫음', color: open ? kInk : kMute, bg: open ? const Color(0xFFEDF2FA) : const Color(0xFFF3F4F6)),
         ]),
       ),
     );
   }
 
   Widget _foot() => const Padding(
-        padding: EdgeInsets.only(top: 14),
+        padding: EdgeInsets.fromLTRB(4, 14, 4, 0),
         child: Text('우체국 시간은 창구 기본 시간이에요. 우체국마다 다르고 공휴일엔 쉬니 방문 전 전화로 확인해 주세요. '
             '편의점 택배는 CU·GS25 대부분에서 접수하지만 안 되는 매장도 있어요.', style: T.tiny),
       );
@@ -127,7 +140,7 @@ class _OfficePageState extends State<OfficePage> {
         padding: const EdgeInsets.all(kPad),
         child: Column(children: [
           const SizedBox(height: 20),
-          const PostIcon('postbox', size: 44, fill: kSoftOrange),
+          postArt('postbox', 60),
           const SizedBox(height: 10),
           const Text('이 동네 우체국 자료를 아직 모으지 못했어요', style: T.title),
           const SizedBox(height: 4),

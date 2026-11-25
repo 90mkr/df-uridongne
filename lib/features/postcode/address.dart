@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/data.dart';
-import '../../core/icons.dart';
 import '../../core/theme.dart';
 import '../../core/ui.dart';
 import 'data.dart';
+import 'look.dart';
 
 void _copy(BuildContext context, String text, String what) {
   Clipboard.setData(ClipboardData(text: text));
@@ -90,11 +90,11 @@ class _ZipPageState extends State<ZipPage> {
   }
 
   @override
-  Widget build(BuildContext context) => DetailPage(
+  Widget build(BuildContext context) => PostPage(
         title: '우편번호 찾기',
-        icon: 'post',
-        white: false,
-        body: ListView(padding: const EdgeInsets.fromLTRB(kPad, 16, kPad, 30), children: [
+        art: 'envelope',
+        sub: '동·호까지 넣어 택배 주소를 한 번에 복사하세요',
+        body: ListView(padding: const EdgeInsets.fromLTRB(kPad, 4, kPad, 30), children: [
           if (a == null) const SizedBox(height: 160, child: Center(child: CircularProgressIndicator(strokeWidth: 1.6))) else _complexCard(a!),
           const SizedBox(height: 22),
           const MixTitle('다른 주소', '우편번호 찾기', size: 14.5),
@@ -116,8 +116,8 @@ class _ZipPageState extends State<ZipPage> {
           const MixTitle('주소 쓸 때', '알아 두면 좋아요', size: 14.5),
           const SizedBox(height: 8),
           Container(
-            decoration: cardBox(),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            decoration: postBox(),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
             child: Column(children: [
               _tip('우편번호는 다섯 자리', '2015년부터 다섯 자리 국가기초구역번호를 써요. 여섯 자리 옛 번호는 쓰지 않아요.'),
               _line(),
@@ -130,13 +130,13 @@ class _ZipPageState extends State<ZipPage> {
       );
 
   Widget _complexCard(Addr v) => Container(
-        decoration: cardBox(),
-        padding: const EdgeInsets.fromLTRB(16, 15, 16, 16),
+        decoration: postBox(grad: kGlowYellow),
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            const LineIcon('post', size: 19, fill: kSoftYellow),
-            const SizedBox(width: 6),
-            Expanded(child: Text('우리 단지 · ${widget.c.name}', maxLines: 1, overflow: TextOverflow.ellipsis, style: T.title)),
+            const Pill('우리 단지', color: Color(0xFFB45309), bg: Color(0xFFFDE9CF)),
+            const SizedBox(width: 8),
+            Expanded(child: Text(widget.c.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.title)),
           ]),
           const SizedBox(height: 12),
           if (v.zip.isEmpty)
@@ -169,7 +169,7 @@ class _ZipPageState extends State<ZipPage> {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFF1E4D0))),
             child: Text(v.fullKo, style: const TextStyle(fontSize: 13, height: 1.4)),
           ),
           const SizedBox(height: 10),
@@ -371,20 +371,17 @@ class _EngPageState extends State<EngPage> with WidgetsBindingObserver, _ClipCat
   }
 
   @override
-  Widget build(BuildContext context) => DetailPage(
+  Widget build(BuildContext context) => PostPage(
         title: '영문 주소',
-        white: false,
-        body: ListView(padding: const EdgeInsets.fromLTRB(kPad, 16, kPad, 30), children: [
+        art: 'globe',
+        sub: '해외직구 주소 칸에 하나씩 붙여 넣으세요',
+        body: ListView(padding: const EdgeInsets.fromLTRB(kPad, 4, kPad, 30), children: [
           Container(
-            decoration: cardBox(),
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+            decoration: postBox(grad: kGlowBlue),
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Row(children: [
-                PostIcon('globe', size: 30),
-                SizedBox(width: 10),
-                Expanded(child: MixTitle('해외직구', '영문 주소', size: 16)),
-              ]),
-              const SizedBox(height: 8),
+              const MixTitle('해외직구', '영문 주소', size: 16),
+              const SizedBox(height: 6),
               const Text('주소를 찾아 고르면 영문 주소가 나오고, 「요기콕에 저장」을 누른 뒤 돌아오면 Address1·City·State·ZIP 을 한 칸씩 복사할 수 있어요.', style: T.small),
               const SizedBox(height: 12),
               Btn('우리 단지 영문 주소 찾기', primary: true, h: 42, onTap: _mine),
@@ -407,8 +404,8 @@ class _EngPageState extends State<EngPage> with WidgetsBindingObserver, _ClipCat
           for (final a in list) ...[
             const SizedBox(height: 12),
             Container(
-              decoration: cardBox(),
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+              decoration: postBox(),
+              padding: const EdgeInsets.fromLTRB(18, 15, 18, 12),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
                   Expanded(child: Text(a.name.isEmpty ? a.road : a.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.title)),
@@ -485,36 +482,35 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver, _Cli
   @override
   Widget build(BuildContext context) {
     final l = list;
-    return DetailPage(
+    return PostPage(
       title: '저장 주소',
-      white: false,
-      body: ListView(padding: const EdgeInsets.fromLTRB(kPad, 16, kPad, 30), children: [
+      art: 'housestar',
+      sub: '누르면 우편번호와 주소가 한 번에 복사돼요',
+      body: ListView(padding: const EdgeInsets.fromLTRB(kPad, 4, kPad, 30), children: [
         Row(children: [
           Expanded(child: Btn('주소 찾아서 저장', primary: true, h: 44, onTap: () => openUrl(postcodeUrl(save: true), inApp: true))),
           const SizedBox(width: 10),
           Expanded(child: Btn('우리 단지 저장', h: 44, onTap: _addMine)),
         ]),
-        const SizedBox(height: 8),
-        const Text('주소는 이 휴대폰 안에만 저장돼요. 누르면 우편번호와 주소가 한 번에 복사돼요.', style: T.tiny),
         const SizedBox(height: 14),
         if (l == null)
           const SizedBox(height: 120, child: Center(child: CircularProgressIndicator(strokeWidth: 1.6)))
         else if (l.isEmpty)
           Container(
-            decoration: cardBox(),
+            decoration: postBox(grad: kGlowMint),
             padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
-            child: const Column(children: [
-              PostIcon('saved', size: 44, fill: kSoftGreen),
-              SizedBox(height: 10),
-              Text('아직 저장한 주소가 없어요', style: T.title),
-              SizedBox(height: 4),
-              Text('부모님 댁, 회사처럼 자주 보내는 주소를 담아 두세요', style: T.small, textAlign: TextAlign.center),
+            child: Column(children: [
+              postArt('housestar', 60),
+              const SizedBox(height: 10),
+              const Text('아직 저장한 주소가 없어요', style: T.title),
+              const SizedBox(height: 4),
+              const Text('부모님 댁, 회사처럼 자주 보내는 주소를 담아 두세요', style: T.small, textAlign: TextAlign.center),
             ]),
           )
         else
           Container(
-            decoration: cardBox(),
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: postBox(),
+            padding: const EdgeInsets.symmetric(horizontal: 18),
             child: Column(children: [
               for (var i = 0; i < l.length; i++) ...[
                 if (i > 0) _line(),
