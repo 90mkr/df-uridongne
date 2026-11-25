@@ -374,7 +374,7 @@ class _TrashPageState extends State<TrashPage> {
           const SizedBox(height: 8),
           Text(kKindName[k]!, maxLines: 1, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: -0.5)),
           const SizedBox(height: 4),
-          Text(z.method[k]!, maxLines: 4, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11.5, color: Color(0xFF454A55), height: 1.4, letterSpacing: -0.3)),
+          Text(keepWords(z.method[k]!), maxLines: 4, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11.5, color: Color(0xFF454A55), height: 1.4, letterSpacing: -0.3)),
           const Spacer(),
           const SizedBox(height: 8),
           Align(
@@ -449,7 +449,7 @@ class _TrashPageState extends State<TrashPage> {
                           child: Text(title, maxLines: 1, style: TextStyle(fontSize: narrow ? 13.5 : 15, fontWeight: FontWeight.w800, letterSpacing: -0.5, color: kInk)),
                         ),
                         const SizedBox(height: 4),
-                        Text(sub, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: narrow ? 11 : 12, color: const Color(0xFF5A6475), height: 1.35)),
+                        Text(keepWords(sub), maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: narrow ? 11 : 12, color: const Color(0xFF5A6475), height: 1.35)),
                       ]),
                     ),
                     Icon(Icons.chevron_right_rounded, size: 20, color: onTap == null ? Colors.transparent : kInk),
@@ -496,7 +496,7 @@ class _TrashPageState extends State<TrashPage> {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(title, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700)),
               const SizedBox(height: 2),
-              Text(text, style: const TextStyle(fontSize: 12.5, color: kSub, height: 1.4)),
+              Text(keepWords(text), style: const TextStyle(fontSize: 12.5, color: kSub, height: 1.4)),
             ]),
           ),
         ]),

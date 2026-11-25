@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 import '../../core/theme.dart';
 import 'trash_icons.dart';
 
+// 낱말 가운데서 줄이 갈리지 않게 (대표님 규칙): 낱말 안 글자 사이를 붙이고 띄어쓰기에서만 줄바꿈
+String keepWords(String s) => s.split(' ').map((w) => w.split('').join('\u2060')).join(' ');
+
 class GuideItem {
   final String name, where, how, kind;
   final List<String> also; // 찾을 때 쓰는 다른 이름
@@ -167,7 +170,7 @@ class _GuideBoxState extends State<GuideBox> {
                     ),
                   ]),
                   const SizedBox(height: 4),
-                  Text(g.how, maxLines: isOpen ? null : 2, overflow: isOpen ? null : TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, color: Color(0xFF3F4756), height: 1.4)),
+                  Text(keepWords(g.how), maxLines: isOpen ? null : 2, overflow: isOpen ? null : TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, color: Color(0xFF3F4756), height: 1.4)),
                 ]),
               ),
               Icon(isOpen ? Icons.expand_less_rounded : Icons.chevron_right_rounded, size: 22, color: const Color(0xFF8A95A8)),
