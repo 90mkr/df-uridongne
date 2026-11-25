@@ -141,31 +141,18 @@ def norm(n):
     return n[:-1] if n.endswith("역") and len(n) > 2 else n
 
 
-# 우리 역 호선 이름 → KRIC (운영기관, 호선) 후보
-LINES = {
-    "인천1호선": [("IC", "I1"), ("IC", "1")],
-    "인천2호선": [("IC", "I2"), ("IC", "2")],
-    "수인분당선": [("KR", "K1"), ("KR", "K2"), ("KR", "SB")],
+# 역 순서·역 번호 (KRIC 「도시철도 전체노선정보」는 이 키로 안 열려서 직접 적어 둠 — 공식 역 번호)
+I1 = ["계양", "귤현", "박촌", "임학", "계산", "경인교대입구", "작전", "갈산", "부평구청", "부평시장", "부평", "동수", "부평삼거리", "간석오거리",
+      "인천시청", "예술회관", "인천터미널", "문학경기장", "선학", "신연수", "원인재", "동춘", "동막", "캠퍼스타운", "테크노파크", "지식정보단지",
+      "인천대입구", "센트럴파크", "국제업무지구", "송도달빛축제공원"]
+ROUTES = {
+    "인천1호선": ("IC", "I1", [(f"I{110 + k}", n) for k, n in enumerate(I1)]),
 }
 
 
-def route_stations(opr, ln):
-    """노선 역 순서 [(순서, stinCd, 역이름)] — 도시철도 전체노선정보 (안 되면 빈 목록)"""
-    for params in ({"mreaWideCd": "01", "lnCd": ln}, {"railOprIsttCd": opr, "lnCd": ln}):
-        rows = kric("trainUseInfo/subwayRouteInfo", params)
-        if rows:
-            out = []
-            for r in rows:
-                if str(r.get("railOprIsttCd", opr)) != opr and r.get("railOprIsttCd"):
-                    continue
-                try:
-                    out.append((int(float(r.get("stinConsOrdr") or 0)), str(r.get("stinCd", "")), norm(r.get("stinNm"))))
-                except Exception:  # noqa: BLE001
-                    continue
-            out = sorted({o[1]: o for o in out if o[1]}.values())
-            if out:
-                return out
-    return []
+def route_stations(line):
+    opr, ln, lst = ROUTES[line]
+    return opr, ln, [(k, code, n) for k, (code, n) in enumerate(lst)]
 
 
 def times(opr, ln, stin, day):
@@ -183,20 +170,18 @@ def fill_kric(st):
     if not RKEY:
         print("  KRIC_KEY 가 없어 KRIC 시간표는 건너뜀")
         return
-    want = [x for x in st if not x.get("tt") and x.get("l") in LINES]
+    want = [x for x in st if not x.get("tt") and x.get("l") in ROUTES]
+    skipped = sorted({x.get("l") for x in st if not x.get("tt") and x.get("l") not in ROUTES})
+    if skipped:
+        print("  KRIC 역 번호가 아직 없는 호선:", skipped)
     if not want:
         return
     ok = 0
     for line in sorted({x["l"] for x in want}):
-        route, opr, ln = [], "", ""
-        for opr, ln in LINES[line]:
-            route = route_stations(opr, ln)
-            if route:
-                break
-        if not route:
-            print(f"  {line}: KRIC 노선 역 목록을 못 받음 (서비스키에 「도시철도 전체노선정보」 활용신청이 필요할 수 있음)")
-            continue
-        print(f"  {line}: KRIC {opr}/{ln} 역 {len(route)}곳 · {route[0][2]} ~ {route[-1][2]}")
+        opr, ln, route = route_stations(line)
+        # 시험 삼아 한 번: 응답 모양 기록 (키·자료 확인용)
+        probe = kric("trainUseInfo/subwayTimetable", {"railOprIsttCd": opr, "dayCd": "8", "lnCd": ln, "stinCd": route[len(route) // 2][1]})
+        print(f"  {line}: 시험 {route[len(route) // 2][2]} → {len(probe or [])}줄", (probe or [None])[0])
         first, last = route[0][2], route[-1][2]
         idx = {r[2]: i for i, r in enumerate(route)}
         for x in want:
