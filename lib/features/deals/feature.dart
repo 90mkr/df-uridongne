@@ -1,13 +1,14 @@
-// 우리 단지 최근 거래 (이 폴더는 우리 단지 최근 거래 담당 방만 고침)
-// 지금은 본부가 만든 빈 틀입니다. 담당 방이 이 폴더 안에서 채웁니다.
-// 할 일: 평형별 최근 매매·전세, 1년 가격 흐름, 옆 단지 비교.
+// 우리 단지 실거래가 · 전월세 · 단지 정보 (이 폴더는 실거래가 방만 고침)
+// 「단지 정보」 화면(홈 맨 위 단지 이름을 누르면)에 카드 두 장: 우리 단지 정보 · 우리 단지 최근 거래
+// 자료: 국토교통부 실거래가(매매·전월세) → collector/features/deals.py → web/data/deals/<시군구>.json
+//       단지 정보는 K-apt 공동주택 기본·상세정보를 그 자리에서 (dgGet, 12시간 묶음)
 import 'package:flutter/material.dart';
 
 import '../../core/data.dart';
 import '../../core/feature.dart';
-import '../../core/icons.dart';
 import '../../core/theme.dart';
-import '../../core/ui.dart';
+import 'info.dart';
+import 'page.dart';
 
 class DealsFeature extends Feature {
   @override
@@ -21,28 +22,15 @@ class DealsFeature extends Feature {
   @override
   int get order => 10;
   @override
-  String get version => '0.0.1';
+  String get version => '0.1.0';
+  @override
+  bool get ready => true;
   @override
   Color get tint => kSoft;
 
   @override
-  Widget? homeCard(BuildContext context, Complex c) => HomeCardBox(icon: icon, title: name, onTap: () => openFeature(context, this), child: const ComingSoon());
+  Widget? homeCard(BuildContext context, Complex c) => DealsInfoCards(key: ValueKey('deals-${c.id}'), c: c, f: this);
 
   @override
-  Widget page(BuildContext context, Complex c) => DetailPage(
-        title: name,
-        icon: icon,
-        body: const Center(
-          child: Padding(
-            padding: EdgeInsets.all(30),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              LineIcon('deals', size: 54),
-              SizedBox(height: 14),
-              Text('준비하고 있어요', style: T.h2),
-              SizedBox(height: 6),
-              Text('평형별 최근 매매·전세, 1년 가격 흐름, 옆 단지 비교.', textAlign: TextAlign.center, style: T.small),
-            ]),
-          ),
-        ),
-      );
+  Widget page(BuildContext context, Complex c) => DealsPage(c: c);
 }
