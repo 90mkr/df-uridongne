@@ -133,7 +133,7 @@ def parcel(shot, tap, drag, sem, W, H):
 
 def trash(shot, tap, drag, sem, W, H):
     tap_has("생활 도구", wait=4)
-    tap_has("쓰레기", wait=8)
+    tap_has("분리수거", wait=8)
     shot("쓰레기")
     pg_wheel(700)
     shot("쓰레기_아래")
