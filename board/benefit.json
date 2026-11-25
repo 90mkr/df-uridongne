@@ -1,0 +1,11 @@
+{
+  "id": "benefit",
+  "name": "우리 동네 지원금·혜택 (청년정책 포함)",
+  "folder": "lib/features/benefit · collector/features/benefit.py · web/data/benefit",
+  "room": "지원금·혜택 방",
+  "state": "작업 중",
+  "doing": "1차: 공공서비스(혜택) 정보를 매일 모아 시군구별 파일로 + 혜택 목록·상세 화면 + 「나에게 맞는 것만」(나이대·자녀·어르신) + 청년 칸(온통청년). 커뮤니티에는 카드 연결만(본부 요청)",
+  "version": "0.0.1",
+  "updated": "2026-11-25",
+  "order": 40
+}
