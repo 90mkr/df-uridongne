@@ -26,7 +26,7 @@ class PetFeature extends Feature {
   @override
   int get order => 5;
   @override
-  String get version => '0.3.0';
+  String get version => '0.3.1';
   @override
   bool get ready => true;
   @override

@@ -1,5 +1,5 @@
 // 우리 동네 반려동물 — 테마 첫 화면 (대표님 11-25: 위에 탭을 늘어놓지 말고, 안에 앱 목록처럼 칸을 한 번 더)
-// 맨 위: 지금 상황 카드 (챙길 날 다가옴 > 밤·주말 응급 > 가까운 병원)
+// 맨 위: 「오늘의 반려 생활」 카드 (산책·체감·미세먼지·우리 아이 할 일, 대표님 11-26) · 응급 병원은 칸 목록 아래 한 줄
 // 그 아래: 칸 목록 (칸마다 독립 전문 화면) · 우리 아이 줄 · 서버 배너 (web/data/pet/promo.json, 앱 업데이트 없이 바꿈)
 import 'package:flutter/material.dart';
 
@@ -84,15 +84,11 @@ class _PetHubState extends State<PetHub> {
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(padding: const EdgeInsets.fromLTRB(kPad, 16, kPad, 30), children: [
-          _Now(
-              complex: c,
-              nearHosp: nearHosp,
-              nearNight: nearNight,
-              loaded: loaded,
+          _Today(
               walk: walk,
-              onEmergency: () => _go(PetEmergencyPage(complex: c)),
+              onWalk: () => _go(PetWalkPage(complex: c)),
               onKids: () => _go(const PetKidsPage()),
-              onWalk: () => _go(PetWalkPage(complex: c))),
+              onGuide: () => _go(PetGuidePage(complex: c))),
           const SizedBox(height: 22),
           const MixTitle('반려동물', '생활', size: 15),
           const SizedBox(height: 10),
@@ -100,7 +96,7 @@ class _PetHubState extends State<PetHub> {
             decoration: cardBox(),
             padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
             child: LayoutBuilder(builder: (ctx, box) {
-              final per = box.maxWidth > 520 ? 6 : 4;
+              final per = box.maxWidth > 520 ? 5 : 3; // 9칸: 휴대폰 3×3
               final w = box.maxWidth / per;
               return Wrap(children: [
                 for (final t in tiles)
@@ -123,6 +119,9 @@ class _PetHubState extends State<PetHub> {
               ]);
             }),
           ),
+          const SizedBox(height: 14),
+          // 밤·휴일 응급 병원 — 맨 위 대신 아래 한 줄로 (대표님 11-26)
+          _EmergencyRow(night: petNightNow(DateTime.now()), nearNight: nearNight, nearHosp: nearHosp, loaded: loaded, onTap: () => _go(PetEmergencyPage(complex: c))),
           for (final p in promos) ...[const SizedBox(height: 14), _Promo(p: p)],
           const SizedBox(height: 18),
           Text('${c.name} 둘레 3km 기준 · 소상공인 상가정보·인허가 자료', style: T.tiny),
@@ -132,104 +131,164 @@ class _PetHubState extends State<PetHub> {
   }
 }
 
-// 맨 위 「지금」 카드 — 한 장만
-class _Now extends StatelessWidget {
-  final Complex complex;
-  final (PetPlace, double)? nearHosp, nearNight;
-  final bool loaded;
+// 맨 위 「오늘의 반려 생활」 — 단지 홈 맨 위 카드처럼 몇 가지 정보를 한눈에 (대표님 11-26)
+// 큰 줄: 지금 산책 단계 + 추천 시간 · 작은 칸 넷: 산책 / 체감 / 미세먼지 / 우리 아이 수첩 다음 할 일
+class _Today extends StatelessWidget {
   final WalkDay? walk;
-  final VoidCallback onEmergency, onKids, onWalk;
-  const _Now(
-      {required this.complex,
-      required this.nearHosp,
-      required this.nearNight,
-      required this.loaded,
-      this.walk,
-      required this.onEmergency,
-      required this.onKids,
-      required this.onWalk});
+  final VoidCallback onWalk, onKids, onGuide;
+  const _Today({required this.walk, required this.onWalk, required this.onKids, required this.onGuide});
+
+  static const _wd = ['월', '화', '수', '목', '금', '토', '일'];
 
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    final due = dueList(now).where((x) => dayDiff(x.$2.next, now) <= 3).firstOrNull;
-    final night = petNightNow(now);
+    final w = walk;
+    final j = w?.nowJudge;
+    final h = w?.now;
+    final best = w?.best;
+    final cats = onlyCats;
 
-    Widget card({required String kicker, required String big, required String sub, required String btn, required VoidCallback onTap, String icon = 'pet'}) => Material(
-          color: kBlue,
-          borderRadius: BorderRadius.circular(kRadius),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(kRadius),
-            onTap: onTap,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(18, 16, 16, 16),
+    // 큰 줄
+    final String big, sub;
+    if (cats) {
+      big = '오늘도 집 안 사냥 놀이 10분';
+      sub = '고양이는 짧은 놀이를 하루 여러 번이 좋아요';
+    } else if (j == null) {
+      big = '오늘 날씨를 살피고 있어요';
+      sub = '산책하기 좋은 시간을 골라 드려요';
+    } else {
+      big = '지금 산책 ${kWalkShort[j.level]}';
+      sub = best == null ? '오늘 낮 산책 시간은 지났어요' : '추천 ${runText(best)}${j.why.isEmpty ? '' : ' · ${j.why.first}'}';
+    }
+
+    // 작은 칸
+    final f = h?.feels, t = h?.temp;
+    final dust = w == null ? '' : _dustShort(w);
+    final due = dueList(now).firstOrNull;
+    String kidVal = '등록', kidSub = '접종 알림';
+    if (due != null) {
+      final n = dayDiff(due.$2.next, now);
+      kidVal = n == 0 ? '오늘' : (n > 0 ? 'D-$n' : '${-n}일 지남');
+      kidSub = careById(due.$2.id).name;
+    } else if (kids.value.isNotEmpty) {
+      kidVal = '${kids.value.length}마리';
+      kidSub = '챙길 날 없음';
+    }
+    final stats = <(String, String, String, VoidCallback)>[
+      ('산책', j == null ? '-' : kWalkShort[j.level], best == null ? '' : _bestShort(best), onWalk),
+      ('체감', f == null ? '-' : '${f.round()}℃', t == null ? '' : '기온 ${t.round()}℃', onWalk),
+      ('미세먼지', dust.isEmpty ? '-' : dust, '', onWalk),
+      ('우리 아이', kidVal, kidSub, onKids),
+    ];
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF1570EA), Color(0xFF0B4DBA)]),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: const Color(0xFF0B4DBA).withValues(alpha: 0.16), blurRadius: 18)],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(children: [
+        Positioned(right: -14, top: -10, child: LineIcon('pet', size: 120, line: Colors.white.withValues(alpha: 0.16), fill: Colors.white.withValues(alpha: 0.06))),
+        Material(
+          color: Colors.transparent,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            InkWell(
+              onTap: cats ? onGuide : onWalk,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('오늘의 반려 생활 · ${now.month}월 ${now.day}일 ${_wd[now.weekday - 1]}요일', style: const TextStyle(fontSize: 12, color: Color(0xD9FFFFFF), fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 10),
+                  Text(big, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.7, height: 1.2)),
+                  const SizedBox(height: 4),
+                  Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, color: Color(0xE6FFFFFF))),
+                ]),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
               child: Row(children: [
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(kicker, style: const TextStyle(fontSize: 11.5, color: Colors.white70, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 4),
-                    Text(big, style: const TextStyle(fontSize: 19, color: Colors.white, fontWeight: FontWeight.w800, letterSpacing: -0.5, height: 1.25)),
-                    if (sub.isNotEmpty) ...[const SizedBox(height: 4), Text(sub, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Colors.white70))],
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
-                      child: Text(btn, style: const TextStyle(fontSize: 12.5, color: kBlue, fontWeight: FontWeight.w800)),
-                    ),
-                  ]),
-                ),
-                const SizedBox(width: 8),
-                LineIcon(icon, size: 58, line: Colors.white, fill: Colors.white.withValues(alpha: 0.22)),
+                for (var i = 0; i < stats.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 6),
+                  Expanded(child: _Stat(label: stats[i].$1, value: stats[i].$2, sub: stats[i].$3, onTap: stats[i].$4)),
+                ],
               ]),
             ),
-          ),
-        );
+          ]),
+        ),
+      ]),
+    );
+  }
 
-    if (due != null) {
-      final (k, c) = due;
-      final n = dayDiff(c.next, now);
-      return card(
-        kicker: '우리 아이 수첩',
-        big: '${k.name} ${careById(c.id).name}\n${n == 0 ? '오늘이에요' : (n > 0 ? '$n일 남았어요' : '${-n}일 지났어요')}',
-        sub: '${c.next.month}월 ${c.next.day}일${k.hosp.isNotEmpty ? ' · ${k.hosp}' : ''}',
-        btn: '수첩 열기',
-        onTap: onKids,
-        icon: 'book',
+  static String _bestShort((DateTime, DateTime, int) b) => '${b.$1.hour}~${b.$2.hour}시';
+  static String _dustShort(WalkData d) => d.dust <= 0 ? '' : const ['', '좋음', '보통', '나쁨', '매우나쁨'][d.dust.clamp(0, 4)];
+}
+
+class _Stat extends StatelessWidget {
+  final String label, value, sub;
+  final VoidCallback onTap;
+  const _Stat({required this.label, required this.value, required this.sub, required this.onTap});
+  @override
+  Widget build(BuildContext context) => InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Ink(
+          padding: const EdgeInsets.fromLTRB(10, 9, 8, 9),
+          decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(12)),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(label, maxLines: 1, style: const TextStyle(fontSize: 10.5, color: Color(0xCCFFFFFF), fontWeight: FontWeight.w600)),
+            const SizedBox(height: 3),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(value, maxLines: 1, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.5)),
+            ),
+            const SizedBox(height: 1),
+            Text(sub.isEmpty ? ' ' : sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, color: Color(0xB3FFFFFF))),
+          ]),
+        ),
       );
-    }
-    if (night) {
-      final x = nearNight;
-      return card(
-        kicker: now.weekday == DateTime.sunday ? '일요일 · 응급할 때' : '밤 시간 · 응급할 때',
-        big: '밤에도 여는\n동물병원 찾기',
-        sub: x == null ? '24시·응급 병원을 가까운 순으로 찾아 드려요' : '가장 가까운 곳: ${x.$1.name} · ${distText(x.$2)}',
-        btn: '응급·24시 병원 보기',
-        onTap: onEmergency,
-        icon: 'night',
-      );
-    }
-    // 낮에는 오늘의 산책 (매일 열어 볼 까닭 — 대표님 11-26)
-    final w = walk;
-    final wj = w?.nowJudge;
-    if (w != null && wj != null && !onlyCats) {
-      final b = w.best;
-      return card(
-        kicker: '오늘의 산책',
-        big: '지금 산책 ${kWalkShort[wj.level]}\n${b == null ? '내일을 미리 볼까요' : '추천 ${runText(b)}'}',
-        sub: wj.why.isEmpty ? (w.tips.isEmpty ? '' : w.tips.first.$2) : wj.why.take(2).join(' · '),
-        btn: '시간별·팁 보기',
-        onTap: onWalk,
-        icon: 'weather',
-      );
-    }
-    final h = nearHosp;
-    return card(
-      kicker: '가까운 동물병원',
-      big: h == null ? (loaded ? '응급·24시\n동물병원 찾기' : '찾고 있어요') : h.$1.name,
-      sub: h == null ? '' : '${complex.name}에서 ${distText(h.$2)} · 밤·주말엔 24시 병원을 먼저 보여 드려요',
-      btn: '응급·24시 병원 보기',
-      onTap: onEmergency,
-      icon: 'hosp',
+}
+
+// 밤·휴일 응급 동물병원 — 흰 카드 한 줄 (밤·일요일엔 문구만 바뀜)
+class _EmergencyRow extends StatelessWidget {
+  final bool night, loaded;
+  final (PetPlace, double)? nearNight, nearHosp;
+  final VoidCallback onTap;
+  const _EmergencyRow({required this.night, required this.nearNight, required this.nearHosp, required this.loaded, required this.onTap});
+  @override
+  Widget build(BuildContext context) {
+    final x = nearNight ?? nearHosp;
+    final sub = !loaded
+        ? '찾고 있어요'
+        : x == null
+            ? '24시·응급 병원을 가까운 순으로 찾아 드려요'
+            : '${nearNight != null ? '24시·야간' : '가장 가까운 병원'}: ${x.$1.name} · ${distText(x.$2)}';
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(kRadius),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(kRadius),
+        onTap: onTap,
+        child: Ink(
+          decoration: cardBox(),
+          padding: const EdgeInsets.fromLTRB(16, 13, 12, 13),
+          child: Row(children: [
+            const LineIcon('night', size: 32),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(night ? '지금 문 연 응급 동물병원' : '밤·휴일 응급 동물병원', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: -0.3)),
+                const SizedBox(height: 2),
+                Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.small),
+              ]),
+            ),
+            const Icon(Icons.chevron_right, size: 20, color: kMute),
+          ]),
+        ),
+      ),
     );
   }
 }
