@@ -358,7 +358,7 @@ class _NearLotsCardState extends State<NearLotsCard> {
         Row(children: [
           const LineIcon('parking', size: 28),
           const SizedBox(width: 8),
-          const Expanded(child: MixTitle('가까운', '공영주차장', size: 16)),
+          const Expanded(child: MixTitle('주차', '어디 하지', size: 16)),
           InkWell(
             borderRadius: BorderRadius.circular(14),
             onTap: _open,

@@ -16,7 +16,7 @@ class ParkingFeature extends Feature {
   @override
   String get id => 'parking';
   @override
-  String get name => '주차장';
+  String get name => '주차 어디 하지'; // 대표님 11-25: 「주차장」은 평범 → 「내 차 어디 댔지」와 짝
   @override
   String get icon => 'parking';
   @override
@@ -56,7 +56,7 @@ class MyCarFeature extends Feature {
   @override
   String get id => 'mycar';
   @override
-  String get name => '내 차';
+  String get name => '내 차 어디 댔지';
   @override
   String get icon => 'car';
   @override
