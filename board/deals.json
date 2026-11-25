@@ -2,10 +2,10 @@
  "id": "deals",
  "name": "실거래가",
  "folder": "lib/features/deals",
- "room": "",
- "state": "대기",
- "doing": "",
+ "room": "실거래가 방",
+ "state": "작업 중",
+ "doing": "우리 단지 실거래가·전월세·단지 정보 보기 1차",
  "version": "0.0.1",
- "updated": "2026-11-23 19:50",
+ "updated": "2026-11-25 22:50",
  "order": 6
 }
