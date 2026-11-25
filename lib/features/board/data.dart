@@ -12,7 +12,7 @@ import '../../core/fb.dart';
 
 // 게시판들 (대표님 11-25: 단체 홈페이지처럼 게시판 여러 개) — (id, 짧은 이름, 게시판 이름)
 const kBoards = [('news', '소식', '공지·소식'), ('share', '나눔', '나눔터'), ('free', '자유', '자유게시판'), ('rec', '추천', '업체 추천'), ('lost', '분실', '분실물')];
-const kBoardCats = [for (final b in kBoards) (b.$1, b.$2)];
+final kBoardCats = [for (final b in kBoards) (b.$1, b.$2)];
 String catName(String id) => kBoards.firstWhere((c) => c.$1 == id, orElse: () => ('', '자유', '자유게시판')).$2;
 String boardName(String id) => kBoards.firstWhere((c) => c.$1 == id, orElse: () => ('', '자유', '자유게시판')).$3;
 
