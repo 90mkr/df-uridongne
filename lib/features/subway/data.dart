@@ -21,6 +21,9 @@ class Station {
 
   bool get hasTable => tt.isNotEmpty;
 
+  // 이 역에서 떠나는 방향만 (끝역은 한 방향뿐 — 송도달빛축제공원·인천 등)
+  List<String> get dirs => [for (final ud in ['U', 'D']) if (tt.keys.any((k) => k.endsWith(ud))) ud];
+
   // 오늘 요일 구분: 01 평일 · 02 토요일 · 03 일요일(공휴일도 일요일 시간표)
   static String dayCode(DateTime now) => now.weekday == DateTime.saturday ? '02' : (now.weekday == DateTime.sunday ? '03' : '01');
 

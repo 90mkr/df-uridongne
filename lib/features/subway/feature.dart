@@ -26,7 +26,7 @@ class SubwayFeature extends Feature {
   @override
   int get order => 20;
   @override
-  String get version => '0.1.0';
+  String get version => '0.2.0';
   @override
   bool get ready => true;
 
@@ -78,10 +78,12 @@ class _HomeCardState extends State<_HomeCard> {
     } else if (!s.hasTable) {
       body = const SizedBox(height: 70, child: Center(child: Text('시간표를 준비하고 있어요', style: T.small)));
     } else {
+      final ds = s.dirs;
       body = Column(children: [
-        _Dir(s: s, ud: 'U', now: now),
-        const Divider(height: 1, thickness: 1, color: kLine),
-        _Dir(s: s, ud: 'D', now: now),
+        for (var i = 0; i < ds.length; i++) ...[
+          if (i > 0) const Divider(height: 1, thickness: 1, color: kLine),
+          _Dir(s: s, ud: ds[i], now: now),
+        ],
       ]);
     }
     // 대표님 시안(11-24): 보라 머리띠 + 오른쪽 전철 그림 + 흰 「시간표」 단추, 흰 판이 둥글게 겹침, 아래 안내는 옅은 상자
@@ -323,7 +325,7 @@ class _Page extends StatelessWidget {
                           if (!s.hasTable)
                             const Padding(padding: EdgeInsets.symmetric(vertical: 16), child: Center(child: Text('시간표를 준비하고 있어요', style: T.small)))
                           else
-                            for (final ud in ['U', 'D'])
+                            for (final ud in s.dirs)
                               Padding(
                                 padding: const EdgeInsets.only(top: 10),
                                 child: Row(children: [
