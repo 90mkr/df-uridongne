@@ -1,6 +1,7 @@
 // 주차장 상세 화면 (이 폴더는 주차장 담당 방만 고침)
 // 맨 위 「내 차 어디 댔지」 · 필터 줄(전체·지금 무료·공영·24시간) · 요금 말풍선 지도 · 아래 목록(가까운 순/싼 순, 줄마다 길안내)
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../core/data.dart';
@@ -9,6 +10,7 @@ import '../../core/fb.dart';
 import '../../core/icons.dart';
 import '../../core/map.dart';
 import '../../core/nav.dart';
+import '../../core/remote.dart';
 import '../../core/theme.dart';
 import '../../core/ui.dart';
 import 'busy.dart';
@@ -99,73 +101,111 @@ class _ParkingPageState extends State<ParkingPage> {
   @override
   Widget build(BuildContext context) {
     final list = items;
-    final h = MediaQuery.of(context).size.height;
+    final full = MediaQuery.of(context).size;
+    final top = MediaQuery.of(context).padding.top;
     final now = DateTime.now();
-    return DetailPage(
-      title: widget.atName == null ? '주차장' : '${widget.atName} 근처 주차장',
-      icon: 'parking',
-      white: false,
-      actions: [
-        IconButton(
-          tooltip: mapBig ? '목록 크게' : '지도 크게',
-          onPressed: () => setState(() => mapBig = !mapBig),
-          icon: LineIcon(mapBig ? 'list' : 'map', size: 23),
-        ),
-      ],
-      body: Column(children: [
-        Padding(padding: const EdgeInsets.fromLTRB(kPad, 12, kPad, 0), child: CarBar(lots: all ?? const [])),
-        SizedBox(
-          height: 48,
-          child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.fromLTRB(kPad, 10, kPad, 2), children: [
-            for (final k in const ['전체', '지금 무료', '공영', '24시간']) _chip(k, filter == k, () => setState(() => filter = k)),
-          ]),
-        ),
-        const SizedBox(height: 8),
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          height: mapBig ? h * 0.52 : h * 0.26,
-          decoration: const BoxDecoration(border: Border.symmetric(horizontal: BorderSide(color: kLine))),
-          child: all == null
-              ? Container(color: kBg)
-              : DongneMap(
-                  key: ValueKey('$km$filter${from.latitude}'),
-                  center: from,
-                  zoom: km == 1 ? 15 : (km == 2 ? 14 : (km == 3 ? 13.3 : 12.5)),
-                  pinFill: _fill,
-                  points: [
-                    for (final l in list.take(300))
-                      MapPoint(id: l.id, name: l.name, sub: l.label, badge: l.freeAt(now) ? '무료' : l.badge, pos: l.pos, onTap: (ctx) => showLot(ctx, l, from)),
-                  ],
+    Widget inner(Widget w) => Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 720), child: w));
+    final mapH = (mapBig ? full.height * 0.55 : full.height * 0.25).clamp(180.0, 620.0);
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: _page,
+        body: Stack(children: [
+          // 맨 위 파란 물결 (아래 끝은 바탕색으로 녹아 경계선이 없다)
+          Positioned(left: 0, right: 0, top: 0, height: top + 190, child: const _WaveHead()),
+          ListView(padding: EdgeInsets.only(top: top, bottom: 30), children: [
+            inner(_title()),
+            inner(Padding(padding: const EdgeInsets.fromLTRB(kPad, 6, kPad, 0), child: CarBar(lots: all ?? const []))),
+            inner(SizedBox(
+              height: 58,
+              child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.fromLTRB(kPad, 14, kPad, 4), children: [
+                for (final k in const ['전체', '지금 무료', '공영', '24시간']) _chip(k, filter == k, () => setState(() => filter = k)),
+              ]),
+            )),
+            inner(Padding(
+              padding: const EdgeInsets.fromLTRB(kPad, 10, kPad, 0),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                height: mapH,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: const Color(0xFFDDE6F3)),
+                  boxShadow: const [BoxShadow(color: Color(0x0F1E3A6E), blurRadius: 16)],
                 ),
-        ),
-        Expanded(
-          child: Container(
-            color: Colors.white,
-            child: Column(children: [
-              _head(list.length),
-              Expanded(child: _list(list)),
-            ]),
-          ),
-        ),
-      ]),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(17),
+                  child: all == null
+                      ? Container(color: kBg)
+                      : DongneMap(
+                          key: ValueKey('$km$filter${from.latitude}$mapBig'),
+                          center: from,
+                          zoom: km == 1 ? 15 : (km == 2 ? 14 : (km == 3 ? 13.3 : 12.5)),
+                          pinFill: _fill,
+                          points: [
+                            for (final l in list.take(300))
+                              MapPoint(id: l.id, name: l.name, sub: l.label, badge: l.freeAt(now) ? '무료' : l.badge, pos: l.pos, onTap: (ctx) => showLot(ctx, l, from)),
+                          ],
+                        ),
+                ),
+              ),
+            )),
+            inner(Padding(
+              padding: const EdgeInsets.fromLTRB(kPad - 4, 16, kPad - 4, 0),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFFE4EAF3)),
+                  boxShadow: const [BoxShadow(color: Color(0x0D1E3A6E), blurRadius: 18)],
+                ),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  _head(list.length),
+                  Container(height: 1, color: const Color(0xFFEEF1F6)),
+                  ..._rows(list, now),
+                ]),
+              ),
+            )),
+            inner(_foot()),
+          ]),
+        ]),
+      ),
     );
   }
 
-  Widget _head(int n) => Padding(
-        padding: const EdgeInsets.fromLTRB(kPad, 12, kPad - 6, 4),
+  // ← P 주차장                                   지도 크게
+  Widget _title() => Padding(
+        padding: const EdgeInsets.fromLTRB(6, 6, kPad - 8, 6),
         child: Row(children: [
-          const MixTitle('가까운', '주차장', size: 14.5),
-          const SizedBox(width: 6),
-          Text(all == null ? '' : '$n곳', style: const TextStyle(fontSize: 12, color: kSub, fontWeight: FontWeight.w500)),
-          const SizedBox(width: 4),
+          IconButton(onPressed: () => Navigator.of(context).maybePop(), icon: const Icon(Icons.arrow_back_rounded, size: 26, color: kInk)),
+          Image.asset('assets/icons/parking.png', width: 34, height: 34),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(widget.atName == null ? '주차장' : '${widget.atName} 근처',
+                maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: -0.7, color: kInk)),
+          ),
+          const Spacer(),
+          IconButton(
+            tooltip: mapBig ? '지도 작게' : '지도 크게',
+            onPressed: () => setState(() => mapBig = !mapBig),
+            icon: Icon(mapBig ? Icons.view_agenda_outlined : Icons.map_outlined, size: 25, color: _navy),
+          ),
+        ]),
+      );
+
+  Widget _head(int n) => Padding(
+        padding: const EdgeInsets.fromLTRB(18, 14, 10, 12),
+        child: Row(children: [
+          const Text('가까운 주차장', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: -0.5, color: kInk)),
+          const SizedBox(width: 8),
+          Text(all == null ? '' : '$n곳 · ', style: const TextStyle(fontSize: 13, color: kSub)),
           InkWell(
             borderRadius: BorderRadius.circular(6),
             onTap: () => setState(() => km = const {1: 2, 2: 3, 3: 5, 5: 1}[km]!),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              padding: const EdgeInsets.symmetric(vertical: 4),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Text('${km}km 안', style: const TextStyle(fontSize: 12, color: kSub)),
-                const Icon(Icons.unfold_more_rounded, size: 14, color: kMute),
+                Text('${km}km 안', style: const TextStyle(fontSize: 13, color: kSub)),
+                const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: kSub),
               ]),
             ),
           ),
@@ -176,15 +216,18 @@ class _ParkingPageState extends State<ParkingPage> {
       );
 
   Widget _chip(String t, bool on, VoidCallback f) => Padding(
-        padding: const EdgeInsets.only(right: 6),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(18),
-          onTap: f,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(color: on ? kInk : Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: on ? kInk : kLine)),
-            child: Text(t, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: on ? Colors.white : kSub)),
+        padding: const EdgeInsets.only(right: 8),
+        child: Material(
+          color: on ? _navy : Colors.white,
+          shape: StadiumBorder(side: BorderSide(color: on ? _navy : const Color(0xFFD6E0EE))),
+          child: InkWell(
+            customBorder: const StadiumBorder(),
+            onTap: f,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              alignment: Alignment.center,
+              child: Text(t, style: TextStyle(fontSize: 13.5, fontWeight: on ? FontWeight.w700 : FontWeight.w600, color: on ? Colors.white : _navy, letterSpacing: -0.3)),
+            ),
           ),
         ),
       );
@@ -193,44 +236,84 @@ class _ParkingPageState extends State<ParkingPage> {
         onTap: f,
         borderRadius: BorderRadius.circular(6),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-          child: Text(t, style: TextStyle(fontSize: 12, fontWeight: on ? FontWeight.w700 : FontWeight.w400, color: on ? kInk : kMute)),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Text(t, style: TextStyle(fontSize: 13, fontWeight: on ? FontWeight.w700 : FontWeight.w400, color: on ? kInk : kMute)),
         ),
       );
 
-  Widget _list(List<Lot> list) {
-    if (all == null) return const Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2)));
-    final foot = Padding(
-      padding: const EdgeInsets.fromLTRB(0, 16, 0, 0),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        SizedBox(width: 200, child: Btn('주차장 알려 주기', icon: 'parking', h: 40, onTap: () => openParkingReport(context, widget.complex))),
-        const SizedBox(height: 10),
-        Text(
-          '지자체가 공공데이터포털에 올린 공영 위주 자료라 빠진 주차장이 있을 수 있어요${updated.isEmpty ? '' : ' ($updated 받음)'}. 「지금 무료」에는 노상 주차장의 요금 시간 밖(야간·주말)도 들어가요. 현장 안내를 함께 확인해 주세요.',
-          style: T.tiny,
-        ),
-      ]),
-    );
+  List<Widget> _rows(List<Lot> list, DateTime now) {
+    if (all == null) return const [Padding(padding: EdgeInsets.all(30), child: Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2))))];
     if (list.isEmpty) {
-      return ListView(padding: const EdgeInsets.fromLTRB(kPad, 24, kPad, 30), children: [
-        const LineIcon('parking', size: 46, fill: _fill),
-        const SizedBox(height: 12),
-        Text(
-          (all ?? const []).isEmpty ? '이 동네 주차장 정보를 아직 받지 못했어요' : '조건에 맞는 주차장이 없어요\n「${km}km 안」을 눌러 거리를 넓혀 보세요',
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 13.5, color: kSub, height: 1.45),
+      return [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 26, 20, 26),
+          child: Column(children: [
+            Image.asset('assets/icons/parking.png', width: 48, height: 48),
+            const SizedBox(height: 10),
+            Text(
+              (all ?? const []).isEmpty ? '이 동네 주차장 정보를 아직 받지 못했어요' : '조건에 맞는 주차장이 없어요\n「${km}km 안」을 눌러 거리를 넓혀 보세요',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 13, color: kSub, height: 1.45),
+            ),
+          ]),
         ),
-        foot,
-      ]);
+      ];
     }
-    final now = DateTime.now();
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(kPad, 0, kPad, 30),
-      itemCount: list.length + 1,
-      separatorBuilder: (_, i) => i == list.length - 1 ? const SizedBox() : const Divider(height: 1, color: Color(0xFFEFF1F4)),
-      itemBuilder: (_, i) => i == list.length ? foot : LotRow(lot: list[i], dist: meters(from, list[i].pos), now: now, onTap: () => showLot(context, list[i], from)),
-    );
+    return [
+      for (var i = 0; i < list.length; i++) ...[
+        if (i > 0) Container(height: 1, margin: const EdgeInsets.symmetric(horizontal: 16), color: const Color(0xFFF0F2F6)),
+        LotRow(lot: list[i], dist: meters(from, list[i].pos), now: now, onTap: () => showLot(context, list[i], from)),
+      ],
+    ];
   }
+
+  Widget _foot() => Padding(
+        padding: const EdgeInsets.fromLTRB(kPad, 16, kPad, 0),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: () => openParkingReport(context, widget.complex),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 6),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.add_location_alt_outlined, size: 18, color: _navy),
+                SizedBox(width: 6),
+                Text('빠진 주차장 알려 주기', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _navy)),
+              ]),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '지자체가 공공데이터포털에 올린 공영 위주 자료예요${updated.isEmpty ? '' : ' ($updated 받음)'}. 「지금 무료」에는 노상 주차장의 요금 시간 밖(야간·주말)도 들어가요. 현장 안내를 함께 확인해 주세요.',
+            style: const TextStyle(fontSize: 11, color: kMute, height: 1.45),
+          ),
+        ]),
+      );
+}
+
+const _page = Color(0xFFF3F7FD); // 물결 그림 아래 끝 색에 맞춘 바탕
+const _navy = Color(0xFF173A73); // 시안의 짙은 남색 (고른 칩·글자)
+const _tile = Color(0xFFEAF1FF);
+
+// 맨 위 파란 물결 그림: 아래 40%에서 바탕색으로 서서히 녹인다
+class _WaveHead extends StatelessWidget {
+  const _WaveHead();
+  @override
+  Widget build(BuildContext context) => IgnorePointer(
+        child: Stack(fit: StackFit.expand, children: [
+          const ColoredBox(color: _page),
+          ShaderMask(
+            shaderCallback: (r) => const LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Colors.white, Colors.white, Color(0x00FFFFFF)],
+              stops: [0, 0.6, 1],
+            ).createShader(r),
+            blendMode: BlendMode.dstIn,
+            child: artImage('assets/art/parking_head.jpg', fit: BoxFit.cover, alignment: const Alignment(0, -0.6), filterQuality: FilterQuality.medium),
+          ),
+        ]),
+      );
 }
 
 class LotRow extends StatelessWidget {
@@ -246,39 +329,81 @@ class LotRow extends StatelessWidget {
     final open = l.openAt(now);
     final free = l.freeAt(now);
     final hrs = l.hoursText(now);
+    final info = [
+      distText(dist),
+      if (l.spaces > 0) '${l.spaces}면',
+      if (open == false && !free) '지금 운영 안 함' else if (hrs.isNotEmpty) hrs,
+    ].join(' · ');
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
         child: Row(children: [
+          // P 칸
+          Container(
+            width: 46,
+            height: 46,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(color: _tile, borderRadius: BorderRadius.circular(13)),
+            child: Container(
+              width: 26,
+              height: 26,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(7),
+                gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF3B82F6), Color(0xFF1D5FD8)]),
+              ),
+              child: const Text('P', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white, height: 1.1)),
+            ),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
-                Flexible(child: Text(l.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, height: 1.3))),
-                const SizedBox(width: 6),
-                Text(l.label, style: const TextStyle(fontSize: 11, color: kMute)),
+                Flexible(child: Text(l.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, letterSpacing: -0.4, height: 1.3))),
+                if (l.label.isNotEmpty) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(color: const Color(0xFFF1F3F7), borderRadius: BorderRadius.circular(20)),
+                    child: Text(l.label, style: const TextStyle(fontSize: 10.5, color: kSub, height: 1.3)),
+                  ),
+                ],
               ]),
-              const SizedBox(height: 3),
-              Text.rich(
-                TextSpan(children: [
-                  TextSpan(text: free ? (l.isFree ? '무료' : '지금 무료') : l.feeShort, style: TextStyle(color: free ? _freeColor : kInk, fontWeight: FontWeight.w700)),
-                  TextSpan(text: ' · ${distText(dist)}'),
-                  if (l.spaces > 0) TextSpan(text: ' · ${l.spaces}면'),
-                  if (open == false && !free) const TextSpan(text: ' · 지금 운영 안 함'),
-                  if (open != false && hrs.isNotEmpty) TextSpan(text: ' · $hrs'),
-                ]),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: T.small,
-              ),
+              const SizedBox(height: 6),
+              Row(children: [
+                _FeePill(free ? (l.isFree ? '무료' : '지금 무료') : l.feeShort, free: free),
+                const SizedBox(width: 6),
+                Flexible(child: Text(info, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, color: kSub, letterSpacing: -0.2))),
+              ]),
             ]),
           ),
-          const SizedBox(width: 6),
-          IconButton(tooltip: '길안내', onPressed: () => startNav(context, name: l.name, lat: l.lat, lng: l.lng), icon: const LineIcon('route', size: 23)),
+          const SizedBox(width: 8),
+          Material(
+            color: _tile,
+            shape: const StadiumBorder(),
+            child: InkWell(
+              customBorder: const StadiumBorder(),
+              onTap: () => startNav(context, name: l.name, lat: l.lat, lng: l.lng),
+              child: const SizedBox(width: 52, height: 40, child: Center(child: LineIcon('route', size: 22, line: kBlue))),
+            ),
+          ),
         ]),
       ),
     );
   }
+}
+
+class _FeePill extends StatelessWidget {
+  final String text;
+  final bool free;
+  const _FeePill(this.text, {required this.free});
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2),
+        decoration: BoxDecoration(color: free ? const Color(0xFFE3F5EA) : const Color(0xFFF1F4F9), borderRadius: BorderRadius.circular(20)),
+        child: Text(text, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: free ? const Color(0xFF1E8A50) : const Color(0xFF3D4452), height: 1.35)),
+      );
 }
 
 // 주차장 하나 자세히 (아래에서 올라오는 창)

@@ -160,28 +160,22 @@ class _CarBarState extends State<CarBar> {
         valueListenable: myCar,
         builder: (_, c, __) {
           if (c == null) {
-            return Material(
-              color: kInk,
-              borderRadius: BorderRadius.circular(kRadius),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(kRadius),
-                onTap: () => parkHere(context, widget.lots),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 13, 14, 13),
-                  child: Row(children: [
-                    LineIcon('car', size: 30, line: Colors.white, fill: Colors.white.withValues(alpha: 0.18)),
-                    const SizedBox(width: 10),
-                    const Expanded(
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        MixTitle('내 차', '어디 댔지', size: 15, color: Colors.white),
-                        SizedBox(height: 2),
-                        Text('지금 자리를 저장해 두면 요금·찾아가기를 도와드려요', style: TextStyle(fontSize: 11.5, color: Color(0xFFB9BCC6), height: 1.3)),
-                      ]),
-                    ),
-                    const Icon(Icons.add_rounded, color: Colors.white, size: 22),
+            return Container(
+              decoration: _carBox,
+              padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
+              child: Row(children: [
+                Image.asset('assets/icons/car.png', width: 52, height: 52),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('내 차 어디 댔지', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: -0.5, color: kInk)),
+                    SizedBox(height: 3),
+                    Text('세운 자리를 저장하면\n요금 계산·찾아가기를 도와드려요', style: TextStyle(fontSize: 11.5, color: kSub, height: 1.35)),
                   ]),
                 ),
-              ),
+                const SizedBox(width: 8),
+                _BlueBtn('여기 세웠어요', icon: Icons.add_rounded, onTap: () => parkHere(context, widget.lots)),
+              ]),
             );
           }
           return CarCard(car: c);
@@ -202,29 +196,29 @@ class CarCard extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(kRadius),
+        borderRadius: BorderRadius.circular(18),
         onTap: () => openCar(context),
         child: Ink(
-          decoration: cardBox(),
-          padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+          decoration: _carBox,
+          padding: EdgeInsets.fromLTRB(16, small ? 12 : 14, 14, small ? 12 : 14),
           child: Row(children: [
-            const LineIcon('car', size: 28),
-            const SizedBox(width: 10),
+            Image.asset('assets/icons/car.png', width: small ? 40 : 52, height: small ? 40 : 52),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
-                  const Text('주차 중', style: T.title),
+                  const Text('주차 중', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: kInk)),
                   const SizedBox(width: 6),
-                  Flexible(child: Text(car.lot?.name ?? (car.memo.isEmpty ? '' : car.memo), maxLines: 1, overflow: TextOverflow.ellipsis, style: T.tiny)),
+                  Flexible(child: Text(car.lot?.name ?? car.memo, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.tiny)),
                 ]),
-                const SizedBox(height: 3),
-                Text(carLine(car, now), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: -0.3)),
+                const SizedBox(height: 2),
+                Text(carLine(car, now), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: small ? 16 : 19, fontWeight: FontWeight.w800, letterSpacing: -0.6, color: kInk)),
                 if (end != null && end.isAfter(now)) Text('무료 ${_hm(end)}까지', style: T.tiny),
               ]),
             ),
             if (!small) ...[
               const SizedBox(width: 8),
-              SizedBox(width: 92, child: Btn('찾아가기', icon: 'route', primary: true, h: 40, onTap: () => startNav(context, name: '내 차', lat: car.lat, lng: car.lng, walk: true))),
+              _BlueBtn('찾아가기', iconName: 'route', onTap: () => startNav(context, name: '내 차', lat: car.lat, lng: car.lng, walk: true)),
             ] else
               const Icon(Icons.chevron_right_rounded, color: kMute),
           ]),
@@ -232,6 +226,40 @@ class CarCard extends StatelessWidget {
       ),
     );
   }
+}
+
+final _carBox = BoxDecoration(
+  color: Colors.white,
+  borderRadius: BorderRadius.circular(18),
+  border: Border.all(color: const Color(0xFFE4EAF3)),
+  boxShadow: const [BoxShadow(color: Color(0x141E3A6E), blurRadius: 20)],
+);
+
+// 파란 단추 (찾아가기 · 여기 세웠어요)
+class _BlueBtn extends StatelessWidget {
+  final String text;
+  final IconData? icon;
+  final String? iconName;
+  final VoidCallback onTap;
+  const _BlueBtn(this.text, {this.icon, this.iconName, required this.onTap});
+  @override
+  Widget build(BuildContext context) => Material(
+        color: kBlue,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              if (iconName != null) LineIcon(iconName!, size: 20, line: Colors.white, fill: Colors.transparent),
+              if (icon != null) Icon(icon, size: 19, color: Colors.white),
+              const SizedBox(width: 6),
+              Text(text, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: -0.3)),
+            ]),
+          ),
+        ),
+      );
 }
 
 // 단지 홈 맨 위 작은 카드 (주차 중일 때만, 아니면 빈칸)
