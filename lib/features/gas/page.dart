@@ -171,7 +171,7 @@ class _GasPageState extends State<GasPage> {
             Image.asset('assets/icons/gas.png', width: narrow ? 26 : 30, height: narrow ? 26 : 30),
             const SizedBox(width: 6),
             Flexible(
-              child: Text('가격 싼 주유소 찾기',
+              child: Text(narrow ? '싼 주유소 찾기' : '가격 싼 주유소 찾기',
                   maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: narrow ? 16.5 : 18, fontWeight: FontWeight.w800, letterSpacing: -0.7, color: kInk)),
             ),
             const Spacer(),
