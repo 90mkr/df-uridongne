@@ -148,7 +148,7 @@ I1 = ["계양", "귤현", "박촌", "임학", "계산", "경인교대입구", "�
       "인천시청", "예술회관", "인천터미널", "문학경기장", "선학", "신연수", "원인재", "동춘", "동막", "캠퍼스타운", "테크노파크", "지식정보단지",
       "인천대입구", "센트럴파크", "국제업무지구", "송도달빛축제공원"]
 ROUTES = {
-    "인천1호선": ("IC", "I1", [(f"I{110 + k}", n) for k, n in enumerate(I1)]),
+    "인천1호선": ("IC", "I1", [(str(110 + k), n) for k, n in enumerate(I1)]),  # 역 번호는 숫자만 (인천대입구 = 136, 11-25 시험으로 확인)
 }
 
 
@@ -176,16 +176,17 @@ def fill_kric(st):
     skipped = sorted({x.get("l") for x in st if not x.get("tt") and x.get("l") not in ROUTES})
     if skipped:
         print("  KRIC 역 번호가 아직 없는 호선:", skipped)
+    if "수인분당선" in skipped and os.environ.get("KRIC_PROBE"):
+        for l_ in ("K1", "K2", "K4", "KS", "SU", "K5", "B1", "S1"):
+            for c_ in ("249", "K249", "258", "K258", "1859"):
+                pr = kric("trainUseInfo/subwayTimetable", {"railOprIsttCd": "KR", "dayCd": "8", "lnCd": l_, "stinCd": c_})
+                if pr:
+                    print(f"  수인분당 시험 KR/{l_}/{c_} → {len(pr)}줄", pr[0])
     if not want:
         return
     ok = 0
     for line in sorted({x["l"] for x in want}):
         opr, ln, route = route_stations(line)
-        # 역 번호 꼴 맞춰 보기 (11-25 시험) — 서울역 견본 + 인천대입구 여러 꼴
-        for o, l_, c_ in (("S1", "1", "150"), ("KR", "1", "150"), ("IC", "I1", "I136"), ("IC", "1", "I136"), ("IC", "I1", "136"), ("IC", "1", "136"),
-                          ("IC", "I1", "1136"), ("IC", "I1", "I1136"), ("IC", "I1", "0136"), ("IC", "I1", "11136")):
-            pr = kric("trainUseInfo/subwayTimetable", {"railOprIsttCd": o, "dayCd": "8", "lnCd": l_, "stinCd": c_})
-            print(f"  시험 {o}/{l_}/{c_} → {len(pr or [])}줄", (pr or [None])[0])
         first, last = route[0][2], route[-1][2]
         idx = {r[2]: i for i, r in enumerate(route)}
         for x in want:
