@@ -15,6 +15,7 @@ import '../../core/me.dart' show openLogin;
 import '../../core/theme.dart';
 import '../../core/ui.dart';
 import 'data.dart';
+import 'noti.dart';
 
 class BoardPage extends StatefulWidget {
   final Complex c;
@@ -73,6 +74,13 @@ class _BoardPageState extends State<BoardPage> {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         titleSpacing: 0,
+        actions: [
+          IconButton(
+            tooltip: '알림 설정',
+            icon: const Icon(Icons.notifications_none_rounded),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => BoardNotiPage(c: widget.c))),
+          ),
+        ],
         title: Text.rich(TextSpan(children: [
           TextSpan(text: '${town ? townName : widget.c.name} ', style: const TextStyle(fontWeight: FontWeight.w800)),
           const TextSpan(text: '이야기', style: TextStyle(fontWeight: FontWeight.w300)),

@@ -8,6 +8,7 @@ import 'home.dart';
 import 'icons.dart';
 import 'theme.dart';
 import 'ui.dart';
+import '../features/board/noti.dart';
 
 class MeTab extends StatelessWidget {
   const MeTab({super.key});
@@ -57,6 +58,7 @@ class MeTab extends StatelessWidget {
                     _group([
                       _row('우리 단지', c?.name ?? '고르기', () => pickComplex(context)),
                       if (c != null) _row('홈 편집', '순서 · 보일 카드', () => openHomeEditFor(context, c)),
+                      if (c != null) _row('알림 설정', '게시판 · 일자리 · 댓글', () => Navigator.push(context, MaterialPageRoute(builder: (_) => BoardNotiPage(c: c)))),
                       _row('개인정보처리방침', '', () => openUrl('${kSiteUrl}policy/privacy.html', inApp: true)),
                       _row('이용약관', '', () => openUrl('${kSiteUrl}policy/terms.html', inApp: true)),
                       if (u != null) _row('회원 탈퇴', '', () => openUrl('${kSiteUrl}policy/delete.html', inApp: true)),

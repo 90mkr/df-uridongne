@@ -14,6 +14,7 @@ import 'map_tab.dart';
 import 'me.dart';
 import 'theme.dart';
 import 'tools_tab.dart';
+import 'push.dart';
 import 'remote.dart';
 
 class Shell extends StatefulWidget {
@@ -51,6 +52,13 @@ class _ShellState extends State<Shell> {
     if (!mounted) return;
     setState(() => booting = false);
     _shortcuts();
+    // 게시판 알림 주제: 앱 켤 때와 단지를 바꿀 때 다시 맞추기
+    final c0 = complex.value;
+    if (c0 != null) syncPush(c0);
+    complex.addListener(() {
+      final c = complex.value;
+      if (c != null) syncPush(c);
+    });
     if (complex.value == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => pickComplex(context, first: true));
     }
