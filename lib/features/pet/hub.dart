@@ -8,6 +8,7 @@ import '../../core/icons.dart';
 import '../../core/theme.dart';
 import '../../core/ui.dart';
 import 'data.dart';
+import 'guide.dart';
 import 'kids.dart';
 import 'kids_page.dart';
 import 'places.dart';
@@ -67,6 +68,7 @@ class _PetHubState extends State<PetHub> {
     final wl = walk?.nowJudge?.level;
     final tiles = <(String, String, String, Widget Function())>[
       ('weather', '오늘의 산책', wl == null ? '산책 지수' : kWalkShort[wl], () => PetWalkPage(complex: c)),
+      ('board', '생활 가이드', '건강·먹이·훈련', () => PetGuidePage(complex: c)),
       ('hosp', '동물병원', cnt(PetKind.hosp), () => PetPlacesPage(complex: c, kind: PetKind.hosp)),
       ('hair', '미용', cnt(PetKind.groom), () => PetPlacesPage(complex: c, kind: PetKind.groom)),
       ('home', '호텔·돌봄', cnt(PetKind.hotel), () => PetPlacesPage(complex: c, kind: PetKind.hotel)),
