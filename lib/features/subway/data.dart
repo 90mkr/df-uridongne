@@ -17,7 +17,8 @@ class Station {
   final String name, line, id;
   final LatLng pos;
   final Map<String, List<(String, String)>> tt; // 「01U」 → [(hhmm, 종착)]
-  const Station({required this.name, required this.line, required this.id, required this.pos, required this.tt});
+  final String prev, next2; // 앞 역(U 방향) · 뒤 역(D 방향) — 「이전역 ‹ 이 역 › 다음역」 띠
+  const Station({required this.name, required this.line, required this.id, required this.pos, required this.tt, this.prev = '', this.next2 = ''});
 
   bool get hasTable => tt.isNotEmpty;
 
@@ -39,6 +40,12 @@ class Station {
       if (out.length >= n) break;
     }
     return out;
+  }
+
+  /// 행선지 이름 (「검단호수공원행」): 그 방향에서 가장 많이 가는 종착역
+  String dest(String ud, DateTime now) {
+    final t = towards(ud, now);
+    return t.endsWith(' 방면') ? '${t.substring(0, t.length - 3)}행' : t;
   }
 
   /// 방향 이름: 그 방향 막차 종착역 기준 「계양 방면」
@@ -87,7 +94,16 @@ Future<List<Station>> stationsOf(String areaId) async {
         }
       });
     }
-    out.add(Station(name: '${x['n'] ?? ''}', line: '${x['l'] ?? ''}', id: '${x['id'] ?? ''}', pos: LatLng(lat, lng), tt: tt));
+    final nb = x['nb'] is List ? x['nb'] as List : const [];
+    out.add(Station(
+      name: '${x['n'] ?? ''}',
+      line: '${x['l'] ?? ''}',
+      id: '${x['id'] ?? ''}',
+      pos: LatLng(lat, lng),
+      tt: tt,
+      prev: nb.isNotEmpty ? '${nb[0]}' : '',
+      next2: nb.length > 1 ? '${nb[1]}' : '',
+    ));
   }
   _cache[areaId] = out;
   return out;

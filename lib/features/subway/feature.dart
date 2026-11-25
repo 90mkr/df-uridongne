@@ -78,13 +78,14 @@ class _HomeCardState extends State<_HomeCard> {
     } else if (!s.hasTable) {
       body = const SizedBox(height: 70, child: Center(child: Text('시간표를 준비하고 있어요', style: T.small)));
     } else {
-      final ds = s.dirs;
-      body = Column(children: [
-        for (var i = 0; i < ds.length; i++) ...[
-          if (i > 0) const Divider(height: 1, thickness: 1, color: kLine),
-          _Dir(s: s, ud: ds[i], now: now),
-        ],
-      ]);
+      body = s.prev.isNotEmpty || s.next2.isNotEmpty
+          ? Padding(padding: const EdgeInsets.only(top: 4), child: StationPeanut(s: s, now: now))
+          : Column(children: [
+              for (var i = 0; i < s.dirs.length; i++) ...[
+                if (i > 0) const Divider(height: 1, thickness: 1, color: kLine),
+                _Dir(s: s, ud: s.dirs[i], now: now),
+              ],
+            ]);
     }
     // 대표님 시안(11-24): 보라 머리띠 + 오른쪽 전철 그림 + 흰 「시간표」 단추, 흰 판이 둥글게 겹침, 아래 안내는 옅은 상자
     // 모서리까지 깔끔하게 잘리도록: 그림자 상자 > 둥글게 자르기 > 흰 바탕 > 누르기
@@ -181,6 +182,103 @@ class _HomeCardState extends State<_HomeCard> {
         ),
       ),
     );
+  }
+}
+
+// 호선 색 (네이버 지하철 노선도 색에 맞춤)
+Color lineColor(String line) {
+  if (line.contains('인천1')) return const Color(0xFF7CA8D5);
+  if (line.contains('인천2')) return const Color(0xFFF5A251);
+  if (line.contains('수인') || line.contains('분당')) return const Color(0xFFF5A200);
+  return const Color(0xFF6A5AE0);
+}
+
+String lineShort(String line) => line.replaceAll('호선', '').replaceAll('수인분당선', '수인분당').replaceAll('선', '');
+
+// 「‹ 앞 역 · [호선] 이 역 · 뒤 역 ›」 땅콩 띠 + 그 아래 양쪽 방향 다음 열차 (대표님 11-25, 네이버 지하철 참고)
+// 왼쪽 = 앞 역 쪽으로 가는 열차(U), 오른쪽 = 뒤 역 쪽(D). 끝역은 한쪽만
+class StationPeanut extends StatelessWidget {
+  final Station s;
+  final DateTime now;
+  const StationPeanut({super.key, required this.s, required this.now});
+  @override
+  Widget build(BuildContext context) {
+    final col = lineColor(s.line);
+    final hasU = s.dirs.contains('U'), hasD = s.dirs.contains('D');
+    final narrow = MediaQuery.of(context).size.width < 380;
+    Widget side(String t, bool left) => Expanded(
+          child: Container(
+            height: 34,
+            padding: EdgeInsets.only(left: left ? 10 : 34, right: left ? 34 : 10),
+            alignment: left ? Alignment.centerLeft : Alignment.centerRight,
+            decoration: BoxDecoration(
+              color: t.isEmpty ? const Color(0xFFEFF2F6) : col.withValues(alpha: 0.85),
+              borderRadius: BorderRadius.horizontal(left: Radius.circular(left ? 17 : 0), right: Radius.circular(left ? 0 : 17)),
+            ),
+            child: t.isEmpty
+                ? const SizedBox.shrink()
+                : Row(mainAxisSize: MainAxisSize.min, children: [
+                    if (left) const Icon(Icons.chevron_left_rounded, size: 18, color: Colors.white),
+                    Flexible(child: Text(t, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: narrow ? 12 : 13, fontWeight: FontWeight.w700, color: Colors.white))),
+                    if (!left) const Icon(Icons.chevron_right_rounded, size: 18, color: Colors.white),
+                  ]),
+          ),
+        );
+    Widget times(String ud, bool left) {
+      final n = s.next(ud, now, n: 2);
+      final dest = s.dest(ud, now);
+      return Expanded(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(left ? 4 : 14, 10, left ? 14 : 4, 6),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            if (n.isEmpty)
+              Text('$dest · 오늘 열차 끝', maxLines: 1, overflow: TextOverflow.ellipsis, style: T.tiny)
+            else
+              for (final d in n)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  child: Row(children: [
+                    Expanded(child: Text(dest, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: narrow ? 12 : 13, color: const Color(0xFF3F4756)))),
+                    const SizedBox(width: 6),
+                    Text(d.mins <= 1 ? '곧 도착' : d.minsText, style: TextStyle(fontSize: narrow ? 13 : 14, fontWeight: FontWeight.w800, color: const Color(0xFFE5484D))),
+                  ]),
+                ),
+          ]),
+        ),
+      );
+    }
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      SizedBox(
+        height: 42,
+        child: Stack(alignment: Alignment.center, children: [
+          Row(children: [side(s.prev, true), side(s.next2, false)]),
+          // 가운데 이 역: 흰 알약 + 호선 색 테두리(1px) + 작은 호선 알약
+          Container(
+            height: 42,
+            padding: const EdgeInsets.fromLTRB(6, 0, 16, 0),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(21), border: Border.all(color: col), boxShadow: const [BoxShadow(color: Color(0x1A0B2A5B), blurRadius: 8)]),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Container(
+                padding: const EdgeInsets.fromLTRB(9, 3, 9, 3),
+                decoration: BoxDecoration(color: col, borderRadius: BorderRadius.circular(14)),
+                child: Text(lineShort(s.line), style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: Colors.white)),
+              ),
+              const SizedBox(width: 7),
+              Text(s.name, style: TextStyle(fontSize: narrow ? 14.5 : 16, fontWeight: FontWeight.w800, color: kInk, letterSpacing: -0.4)),
+            ]),
+          ),
+        ]),
+      ),
+      if (s.hasTable)
+        IntrinsicHeight(
+          child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            if (hasU) times('U', true) else const Spacer(),
+            Container(width: 1, margin: const EdgeInsets.symmetric(vertical: 10), color: kLine),
+            if (hasD) times('D', false) else const Spacer(),
+          ]),
+        ),
+    ]);
   }
 }
 
@@ -324,7 +422,14 @@ class _Page extends StatelessWidget {
                           ),
                           if (!s.hasTable)
                             const Padding(padding: EdgeInsets.symmetric(vertical: 16), child: Center(child: Text('시간표를 준비하고 있어요', style: T.small)))
-                          else
+                          else if (s.prev.isNotEmpty || s.next2.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            StationPeanut(s: s, now: now),
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2, bottom: 2),
+                              child: Text([for (final ud in s.dirs) '${s.dest(ud, now)} 막차 ${s.last(ud, now)}'].join('  ·  '), textAlign: TextAlign.center, style: T.tiny),
+                            ),
+                          ] else
                             for (final ud in s.dirs)
                               Padding(
                                 padding: const EdgeInsets.only(top: 10),
