@@ -157,7 +157,7 @@ def gas(shot, tap, drag, sem, W, H):
     pg_wheel(600)
     shot("주유소_아래")
     pg_wheel(-1200)
-    tap_has("지도 보기", wait=8)
+    tap_has("지도", wait=8)
     shot("주유소_지도")
 
 

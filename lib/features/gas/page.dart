@@ -107,7 +107,7 @@ class _GasPageState extends State<GasPage> {
                       _head(true),
                       _pickers(inner),
                       inner(Padding(
-                        padding: const EdgeInsets.fromLTRB(kPad, 14, kPad, 30),
+                        padding: const EdgeInsets.fromLTRB(kPad, 4, kPad, 30),
                         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                           _summary(d, list),
                           const SizedBox(height: 10),
@@ -168,17 +168,17 @@ class _GasPageState extends State<GasPage> {
           top: top + 8,
           child: Row(children: [
             IconButton(onPressed: () => Navigator.of(context).maybePop(), icon: const Icon(Icons.arrow_back_rounded, size: 24, color: kInk)),
-            Image.asset('assets/icons/gas.png', width: narrow ? 28 : 32, height: narrow ? 28 : 32),
-            const SizedBox(width: 7),
+            Image.asset('assets/icons/gas.png', width: narrow ? 26 : 30, height: narrow ? 26 : 30),
+            const SizedBox(width: 6),
             Flexible(
               child: Text('가격 싼 주유소 찾기',
-                  maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: narrow ? 18 : 20, fontWeight: FontWeight.w800, letterSpacing: -0.7, color: kInk)),
+                  maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: narrow ? 16.5 : 18, fontWeight: FontWeight.w800, letterSpacing: -0.7, color: kInk)),
             ),
             const Spacer(),
             if (canMap)
               _GlassBtn(
                 icon: Icon(showMap ? Icons.format_list_bulleted_rounded : Icons.map_outlined, size: 17, color: kInk),
-                text: showMap ? '목록 보기' : '지도 보기',
+                text: showMap ? '목록' : '지도',
                 onTap: () => setState(() {
                   showMap = !showMap;
                   sel = null;
@@ -509,13 +509,9 @@ class _TopCard extends StatelessWidget {
             const SizedBox(width: 11),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [
-                  const Text('최저가', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: Color(0xFFB7800A))),
-                  const SizedBox(width: 6),
-                  Flexible(child: Text(s.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, height: 1.3))),
-                ]),
+                Text(s.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, height: 1.3)),
                 const SizedBox(height: 2),
-                Text([brandName(s.brand), distText(s.dist), if (s.self) '셀프'].where((x) => x.isNotEmpty).join(' · '), style: T.tiny),
+                Text(['최저가', brandName(s.brand), distText(s.dist), if (s.self) '셀프'].where((x) => x.isNotEmpty).join(' · '), maxLines: 1, overflow: TextOverflow.ellipsis, style: T.tiny),
               ]),
             ),
             const SizedBox(width: 8),
