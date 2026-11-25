@@ -1,6 +1,6 @@
 // 주유소 (이 폴더는 주유소 담당 방만 고침)
 // 단지 반경 안 주유소를 휘발유·경유·LPG·고급휘발유 가격 싼 순으로 — 목록 ↔ 지도(말풍선에 가격), 길안내.
-// 자료: 오피넷 → collector/features/gas.py → web/data/gas/<동네id>.json (앱은 열쇠값 없이 이 파일만 읽음)
+// 자료: 오피넷 지역별 최저가 20곳 → collector/features/gas.py → web/data/gas/index.json + a/<지역코드>.json (전국, 앱은 열쇠값 없이 파일만 읽음)
 import 'package:flutter/material.dart';
 
 import '../../core/data.dart';
@@ -22,7 +22,7 @@ class GasFeature extends Feature {
   @override
   int get order => 10;
   @override
-  String get version => '0.2.1';
+  String get version => '0.3.0';
   @override
   bool get ready => true;
   @override
@@ -37,14 +37,14 @@ class GasFeature extends Feature {
   @override
   int get mainOrder => 2;
 
-  // 지도 탭: 단지 3km 안 주유소 (휘발유 싼 순, 이름 옆에 가격)
+  // 지도 탭: 단지 5km 안 주유소 (휘발유 싼 순, 이름 옆에 가격)
   @override
   Future<List<MapPoint>> mapPoints(Complex c) async {
-    final d = await loadGas(c.areaId);
+    final d = await loadGas(c.pos);
     if (d == null) return const [];
     final fuel = await prefGet('gas.fuel') ?? 'B027';
     final f = kFuels.any((x) => x.$1 == fuel) ? fuel : 'B027';
-    final list = d.around(c.pos, f, 3000);
+    final list = d.around(c.pos, f, 5000);
     return [
       for (final s in list)
         MapPoint(
@@ -65,7 +65,7 @@ class _CheapCard extends StatelessWidget {
   const _CheapCard({required this.f, required this.c});
 
   Future<(GasStation, String)?> _load() async {
-    final d = await loadGas(c.areaId);
+    final d = await loadGas(c.pos);
     if (d == null) return null;
     final p = await prefGet('gas.fuel') ?? 'B027';
     final fuel = kFuels.any((x) => x.$1 == p) ? p : 'B027';

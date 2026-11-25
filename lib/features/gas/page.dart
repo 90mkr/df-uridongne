@@ -43,7 +43,7 @@ class GasPage extends StatefulWidget {
 
 class _GasPageState extends State<GasPage> {
   String fuel = 'B027';
-  int radius = 3000;
+  int radius = 5000;
   bool showMap = false;
   bool loading = true;
   GasData? data;
@@ -61,7 +61,7 @@ class _GasPageState extends State<GasPage> {
   Future<void> _start() async {
     final f = await prefGet('gas.fuel');
     final r = int.tryParse(await prefGet('gas.radius') ?? '');
-    final d = await loadGas(c.areaId);
+    final d = await loadGas(c.pos);
     if (!mounted) return;
     setState(() {
       if (f != null && kFuels.any((x) => x.$1 == f)) fuel = f;
@@ -71,7 +71,7 @@ class _GasPageState extends State<GasPage> {
     });
   }
 
-  double get zoom => radius <= 2000 ? 13.6 : (radius <= 3000 ? 13.0 : 12.3);
+  double get zoom => radius <= 3000 ? 13.0 : (radius <= 5000 ? 12.3 : 11.3);
 
   void _fuel(String f) {
     setState(() {
@@ -294,7 +294,7 @@ class _GasPageState extends State<GasPage> {
         const SizedBox(width: 4),
         Expanded(
           child: Text(
-            '단지에서 ${radius ~/ 1000}km 안 ${list.length}곳 · 오피넷 ${whenText(d.updated)} 기준',
+            '단지에서 ${radius ~/ 1000}km 안 ${list.length}곳 · 오피넷 ${whenText(d.updatedFor(fuel))} 기준',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(fontSize: 11.5, color: kSub),
@@ -332,7 +332,7 @@ class _GasPageState extends State<GasPage> {
           ]),
         ),
       const SizedBox(height: 12),
-      const Text('한국석유공사 오피넷 가격 기준 · 주유소가 알린 가격이라 실제와 다를 수 있어요.', style: T.tiny),
+      const Text('한국석유공사 오피넷 「지역별 최저가 20곳」 기준이에요. 시군구마다 가장 싼 곳을 모아 보여 드려서, 비싼 주유소는 목록에 없을 수 있어요. 주유소가 알린 가격이라 실제와 다를 수 있어요.', style: T.tiny),
     ];
   }
 
@@ -703,7 +703,7 @@ Future<void> showStation(BuildContext context, GasStation s, String fuel, GasDat
             Text(s.addr, style: T.small),
           ],
           const SizedBox(height: 6),
-          Text('오피넷 ${whenText(d.updated)} 기준 · 주유소가 알린 가격이라 실제와 다를 수 있어요', style: const TextStyle(fontSize: 10.5, color: kMute)),
+          Text('오피넷 ${whenText(d.updatedFor(fuel))} 기준 · 주유소가 알린 가격이라 실제와 다를 수 있어요', style: const TextStyle(fontSize: 10.5, color: kMute)),
           const SizedBox(height: 14),
           Row(children: [
             if (s.tel.isNotEmpty) ...[Expanded(child: Btn('전화', icon: 'phone', onTap: () => callTel(s.tel))), const SizedBox(width: 10)],

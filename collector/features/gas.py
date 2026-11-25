@@ -1,16 +1,14 @@
-# 주유소 가격 모으기 (주유소 담당 방만 고침)
+# 주유소 가격 모으기 (주유소 담당 방만 고침) — 0.3 전국판 (대표님 11-25: 출시 날부터 전국)
 #
-# 한국석유공사 오피넷 무료 API로 동네(regions.json 에서 ready·collect 인 곳)마다
-# 주유소·충전소의 휘발유·경유·고급휘발유·LPG 가격을 모아 web/data/gas/<동네id>.json 에 저장한다.
-# 앱은 이 파일만 읽는다 (열쇠값이 앱에 들어가지 않고, 오피넷 하루 조회 한도도 아낌).
-#
-# - 가격: 반경 검색(aroundAll) — 동네 범위를 5km 원 몇 개로 덮어 휘발유·경유·LPG 한 번씩
-# - 무료 열쇠 하루 300회: 한 번 실행 상한 GAS_MAX_CALLS(기본 90), 상세는 새 주유소만
-# - 전화·주소·세차·편의점: 상세(detailById) — 처음 보는 주유소와 매주 월요일에만 (나머지는 지난 파일에서 그대로)
-# - 시도 평균: avgSidoPrice 한 번
-# - 오피넷 좌표는 KATEC(베셀 타원체 TM) → 위경도로 바꿔 저장 (아래 변환은 pyproj 없이 직접 계산)
-#
-# 열쇠: 환경 변수 OPINET_KEY (깃허브 비밀). 없으면 아무것도 안 하고 끝냄.
+# 오피넷 무료 열쇠는 하루 300회. 그래서 반경 검색 대신 「지역별 최저가 주유소 20곳(lowTop10)」을 쓴다.
+# - 휘발유·경유: 전국 시군구(약 230곳)마다 최저가 20곳 → 한 번에 한 기름·한 시군구 = 1회
+# - LPG: 시도(17곳)마다 최저가 20곳
+# - 하루 예산(GAS_DAY_BUDGET, 기본 285회) 안에서 「가장 오래된 것부터」 새로 받는다.
+#   → 지금 한도로는 휘발유·경유가 대략 이틀에 한 번씩 번갈아 새로워지고 LPG·평균은 매일.
+#   → 오피넷이 한도를 늘려 주면 예산 숫자만 올리면 모두 매일 새로워진다.
+# - 하루 3번 불려도 그날 예산을 나눠 쓴다(state.json 에 오늘 쓴 횟수 기록).
+# 저장: web/data/gas/index.json (파일 목록·범위·시도 평균), web/data/gas/a/<지역코드>.json (주유소·가격)
+# 앱은 단지 위치를 품는 파일들만 받아 합친다. 열쇠는 깃허브 비밀 OPINET_KEY (없으면 아무것도 안 함).
 import json
 import math
 import os
@@ -22,20 +20,17 @@ from datetime import datetime, timedelta, timezone
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 OUT = os.path.join(ROOT, 'web', 'data', 'gas')
-REGIONS = os.path.join(ROOT, 'web', 'data', 'regions.json')
+AREA_DIR = os.path.join(OUT, 'a')
 KEY = os.environ.get('OPINET_KEY', '').strip()
 API = 'https://www.opinet.co.kr/api/'
 KST = timezone(timedelta(hours=9))
 
-PRODS = ['B027', 'D047', 'B034', 'K015']  # 휘발유 · 경유 · 고급휘발유 · LPG(자동차부탄)
-AROUND = ['B027', 'D047', 'K015']  # 반경 검색은 셋만 (고급휘발유는 상세에서 채움)
-RADIUS = 5000  # 오피넷 최대
-STEP_LAT, STEP_LNG = 0.06, 0.075  # 5km 원이 빈틈없이 덮이는 간격 (약 6.7km 칸, 대각선 반이 5km 안)
-# 무료 열쇠는 하루 300회 — 한 번 실행에 쓰는 상한 (하루 3번 돌아도 넉넉하게)
-MAX_CALLS = int(os.environ.get('GAS_MAX_CALLS', '90'))
-MARGIN = 0.012  # 동네 범위 밖 약 1km 까지는 같이 담음 (경계 단지용)
-
+DAY_BUDGET = int(os.environ.get('GAS_DAY_BUDGET', '285'))
+SGG_FUELS = ['B027', 'D047']  # 시군구 단위
+SIDO_FUELS = ['K015']  # 시도 단위 (충전소는 수가 적음)
+CNT = 20
 calls = 0
+budget = 0
 
 
 # ───────────────── KATEC ↔ 위경도 ─────────────────
@@ -133,10 +128,10 @@ def katec_to_wgs(x, y):
     return math.degrees(w[0]), math.degrees(w[1])
 
 
-# ───────────────── 오피넷 부르기 ─────────────────
+# ───────────────── 오피넷 부르기
 def call(name, **params):
     global calls
-    if calls >= MAX_CALLS:
+    if calls >= budget:
         return None
     params.update({'certkey': KEY, 'out': 'json'})
     url = API + name + '?' + urllib.parse.urlencode(params)
@@ -152,6 +147,8 @@ def call(name, **params):
             return oil if isinstance(oil, list) else [oil]
         except Exception as e:  # noqa: BLE001
             print(f'  ! {name} 실패 ({attempt + 1}): {e}')
+            if calls >= budget:
+                return None
             time.sleep(2 + attempt * 3)
     return None
 
@@ -167,16 +164,6 @@ def brand(o):
     return str(o.get('POLL_DIV_CD') or o.get('POLL_DIV_CO') or '').strip()
 
 
-def yn(v):
-    return str(v or '').strip().upper()
-
-
-def grid(b):
-    w, s, e, n = b[0] - MARGIN, b[1] - MARGIN, b[2] + MARGIN, b[3] + MARGIN
-    nx, ny = max(1, math.ceil((e - w) / STEP_LNG)), max(1, math.ceil((n - s) / STEP_LAT))
-    return [(s + (n - s) * (j + 0.5) / ny, w + (e - w) * (i + 0.5) / nx) for j in range(ny) for i in range(nx)]
-
-
 def load(path):
     try:
         with open(path, encoding='utf-8') as f:
@@ -185,120 +172,144 @@ def load(path):
         return None
 
 
-def collect_area(a, sido_avg, now):
-    path = os.path.join(OUT, f"{a['id']}.json")
-    old = load(path) or {}
-    cache = {s['id']: s for s in old.get('st', []) if isinstance(s, dict) and s.get('id')}
-    b = a['bbox']
-    w, s, e, n = b[0] - MARGIN, b[1] - MARGIN, b[2] + MARGIN, b[3] + MARGIN
-    st = {}
-    failed = 0
-    for lat, lng in grid(b):
-        kx, ky = wgs_to_katec(lat, lng)
-        for p in AROUND:
-            rows = call('aroundAll.do', x=f'{kx:.1f}', y=f'{ky:.1f}', radius=RADIUS, prodcd=p, sort=2)
-            if rows is None:
-                failed += 1
-                continue
-            for o in rows:
-                uid = str(o.get('UNI_ID') or '').strip()
-                gx, gy, price = num(o.get('GIS_X_COOR')), num(o.get('GIS_Y_COOR')), num(o.get('PRICE'))
-                if not uid or gx is None or gy is None:
-                    continue
-                y, x = katec_to_wgs(gx, gy)
-                if not (w <= x <= e and s <= y <= n):
-                    continue
-                r = st.setdefault(uid, {'id': uid, 'n': str(o.get('OS_NM') or '').strip(), 'b': brand(o), 'y': round(y, 6), 'x': round(x, 6), 'p': {}})
-                if price and price > 0:
-                    r['p'][p] = int(round(price))
-            time.sleep(0.15)
-    if not st:
-        print(f"  {a['name']}: 받은 주유소 없음 (실패 {failed}) — 지난 파일 유지")
-        return None
-    monday = now.weekday() == 0 and now.hour < 9
-    fresh = 0
-    for uid, r in st.items():
-        c = cache.get(uid)
-        if c and not monday and c.get('d'):
-            for k in ('tel', 'a', 'lpg', 'wash', 'cvs', 'maint', 'kp', 'd'):
-                if k in c:
-                    r[k] = c[k]
-            continue
-        rows = call('detailById.do', id=uid)
-        if rows:
-            o = rows[0]
-            r['tel'] = str(o.get('TEL') or '').strip()
-            r['a'] = str(o.get('NEW_ADR') or o.get('VAN_ADR') or '').strip()
-            r['lpg'] = yn(o.get('LPG_YN'))  # N 주유소 · Y 충전소 · C 겸업
-            r['wash'] = yn(o.get('CAR_WASH_YN')) == 'Y'
-            r['cvs'] = yn(o.get('CVS_YN')) == 'Y'
-            r['maint'] = yn(o.get('MAINT_YN')) == 'Y'
-            r['kp'] = yn(o.get('KPETRO_YN')) == 'Y'
-            r['d'] = now.strftime('%Y-%m-%d')
-            # 상세의 가격이 더 최신이면 그걸로 (반경 검색에 안 잡힌 기름도 채움)
-            ops = o.get('OIL_PRICE') or []
-            for op in (ops if isinstance(ops, list) else [ops]):
-                pc, pr = str(op.get('PRODCD') or ''), num(op.get('PRICE'))
-                if pc in PRODS and pr and pr > 0:
-                    r['p'][pc] = int(round(pr))
-            fresh += 1
-            time.sleep(0.15)
-        elif c:
-            for k in ('tel', 'a', 'lpg', 'wash', 'cvs', 'maint', 'kp', 'd'):
-                if k in c:
-                    r[k] = c[k]
-    sts = sorted((r for r in st.values() if r['p']), key=lambda r: (0 if r['p'].get('B027') else 1, r['p'].get('B027') or r['p'].get('K015') or 9999, r['n']))
-    avg = sido_avg.get(a['sido']) or {}
-    data = {
-        'area_id': a['id'],
-        'updated': now.strftime('%Y-%m-%d %H:%M'),
-        'sido': a['sido'],
-        'avg': {k: v[0] for k, v in avg.items()},
-        'diff': {k: v[1] for k, v in avg.items()},
-        'st': sts,
-    }
+def save(path, data):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, separators=(',', ':'))
-    print(f"  {a['name']}: 주유소 {len(sts)}곳 (상세 새로 {fresh}, 실패 {failed})")
-    return {'id': a['id'], 'name': a['name'], 'updated': data['updated'], 'count': len(sts)}
+
+
+def age_h(stamp, now):
+    try:
+        t = datetime.strptime(stamp, '%Y-%m-%d %H:%M').replace(tzinfo=KST)
+        return (now - t).total_seconds() / 3600
+    except Exception:  # noqa: BLE001
+        return 10 ** 6
+
+
+# ───────────────── 지역 코드 (한 달에 한 번)
+def areas(state, now):
+    a = state.get('areas')
+    if a and age_h(state.get('areas_at', ''), now) < 24 * 30:
+        return a
+    sido = call('areaCode.do')
+    if not sido:
+        return a or []
+    out = []
+    for s in sido:
+        sc, sn = str(s.get('AREA_CD') or '').strip(), str(s.get('AREA_NM') or '').strip()
+        if not sc:
+            continue
+        out.append({'c': sc, 'n': sn, 'lv': 'sido', 'sido': sc, 'sn': sn})
+        for g in call('areaCode.do', area=sc) or []:
+            gc, gn = str(g.get('AREA_CD') or '').strip(), str(g.get('AREA_NM') or '').strip()
+            if len(gc) == 4:
+                out.append({'c': gc, 'n': gn, 'lv': 'sgg', 'sido': sc, 'sn': sn})
+    if out:
+        state['areas'], state['areas_at'] = out, now.strftime('%Y-%m-%d %H:%M')
+    return out or a or []
+
+
+# ───────────────── 한 지역·한 기름 받기 → 지역 파일 고치기
+def fetch(area, fuel, now):
+    rows = call('lowTop10.do', prodcd=fuel, area=area['c'], cnt=CNT)
+    if rows is None:
+        return False
+    path = os.path.join(AREA_DIR, f"{area['c']}.json")
+    d = load(path) or {}
+    st = {x['id']: x for x in d.get('st', []) if isinstance(x, dict) and x.get('id')}
+    # 이 기름의 지난 값은 지움 (20곳 밖으로 밀린 곳은 지금 값을 모르므로)
+    for x in st.values():
+        x.get('p', {}).pop(fuel, None)
+    for o in rows:
+        uid = str(o.get('UNI_ID') or '').strip()
+        gx, gy, price = num(o.get('GIS_X_COOR')), num(o.get('GIS_Y_COOR')), num(o.get('PRICE'))
+        if not uid or gx is None or gy is None or not price or price <= 0:
+            continue
+        y, x = katec_to_wgs(gx, gy)
+        r = st.setdefault(uid, {'id': uid, 'p': {}})
+        r.update({'n': str(o.get('OS_NM') or '').strip(), 'b': brand(o), 'y': round(y, 6), 'x': round(x, 6),
+                  'a': str(o.get('NEW_ADR') or o.get('VAN_ADR') or '').strip()})
+        r.setdefault('p', {})[fuel] = int(round(price))
+    sts = [x for x in st.values() if x.get('p')]
+    up = d.get('up', {})
+    up[fuel] = now.strftime('%Y-%m-%d %H:%M')
+    data = {'c': area['c'], 'n': area['n'], 'lv': area['lv'], 'sido': area['sido'], 'sn': area['sn'], 'up': up,
+            'st': sorted(sts, key=lambda r: (r['p'].get('B027') or r['p'].get('D047') or r['p'].get('K015') or 9999))}
+    save(path, data)
+    return True
+
+
+def bbox(path):
+    d = load(path) or {}
+    ys = [s['y'] for s in d.get('st', []) if 'y' in s]
+    xs = [s['x'] for s in d.get('st', []) if 'x' in s]
+    if not ys:
+        return None
+    return [round(min(xs), 4), round(min(ys), 4), round(max(xs), 4), round(max(ys), 4)]
 
 
 def main():
+    global budget
     if not KEY:
-        print('OPINET_KEY 가 없어 주유소 가격을 모으지 않습니다 (깃허브 비밀에 넣으면 다음 실행부터 모음)')
+        print('OPINET_KEY 가 없어 주유소 가격을 모으지 않습니다')
         return 0
-    os.makedirs(OUT, exist_ok=True)
-    reg = load(REGIONS) or {}
-    want = set(filter(None, os.environ.get('AREAS', '').replace(' ', '').split(',')))
-    # 「앱 제작」을 동네 칸에 gas 라고 넣고 돌리면: 카카오 업체 모으기는 건너뛰고 주유소만 전 동네
-    want.discard('gas')
-    areas = []
-    for sd in reg.get('sido', []):
-        for a in sd.get('areas', []):
-            if want and a.get('id') not in want:
-                continue
-            if want or a.get('ready') or a.get('collect'):
-                if isinstance(a.get('bbox'), list) and len(a['bbox']) == 4:
-                    areas.append({**a, 'sido': sd.get('name', '')})
     now = datetime.now(KST)
-    sido_avg = {}
-    for o in call('avgSidoPrice.do') or []:
-        nm, pc, pr = str(o.get('SIDONM') or '').strip(), str(o.get('PRODCD') or ''), num(o.get('PRICE'))
-        if nm and pc in PRODS and pr:
-            sido_avg.setdefault(nm, {})[pc] = [round(pr, 1), num(o.get('DIFF')) or 0.0]
-    print(f'주유소: 동네 {len(areas)}곳, 시도 평균 {len(sido_avg)}곳')
-    idx = load(os.path.join(OUT, 'index.json')) or {}
-    done = {x['id']: x for x in idx.get('areas', []) if isinstance(x, dict) and x.get('id')}
-    for a in areas:
-        try:
-            r = collect_area(a, sido_avg, now)
-            if r:
-                done[a['id']] = r
-        except Exception as e:  # noqa: BLE001
-            print(f"  ! {a.get('name')} 실패: {e}")
-    with open(os.path.join(OUT, 'index.json'), 'w', encoding='utf-8') as f:
-        json.dump({'updated': now.strftime('%Y-%m-%d %H:%M'), 'areas': list(done.values())}, f, ensure_ascii=False, separators=(',', ':'))
-    print(f'주유소: 오피넷 조회 {calls}회')
+    spath = os.path.join(OUT, 'state.json')
+    state = load(spath) or {}
+    today = now.strftime('%Y-%m-%d')
+    used = state.get('used', 0) if state.get('day') == today else 0
+    budget = max(0, DAY_BUDGET - used)
+    if budget <= 0:
+        print(f'주유소: 오늘 예산 다 씀 ({used}회)')
+        return 0
+    al = areas(state, now)
+    # 평균: 시도 평균 + 전국 평균 (매 실행 2회 — 그날 첫 실행에서만)
+    avg = state.get('avg', {})
+    if used == 0 or not avg:
+        nat = call('avgAllPrice.do')
+        sid = call('avgSidoPrice.do')
+        if sid:
+            avg = {}
+            for o in sid:
+                sc, pc, pr = str(o.get('SIDOCD') or '').strip(), str(o.get('PRODCD') or ''), num(o.get('PRICE'))
+                if sc and pc in ('B027', 'D047', 'K015', 'B034') and pr:
+                    avg.setdefault(sc, {'n': str(o.get('SIDONM') or '').strip()})[pc] = [round(pr, 1), num(o.get('DIFF')) or 0.0]
+        if nat:
+            for o in nat:
+                pc, pr = str(o.get('PRODCD') or ''), num(o.get('PRICE'))
+                if pc in ('B027', 'D047', 'K015', 'B034') and pr:
+                    avg.setdefault('00', {'n': '전국'})[pc] = [round(pr, 1), num(o.get('DIFF')) or 0.0]
+        state['avg'] = avg
+    # 할 일: (나이 + 휘발유 가산) 큰 순서
+    jobs = []
+    for a in al:
+        fuels = SGG_FUELS if a['lv'] == 'sgg' else SIDO_FUELS
+        d = load(os.path.join(AREA_DIR, f"{a['c']}.json")) or {}
+        for f in fuels:
+            h = age_h(d.get('up', {}).get(f, ''), now)
+            if h < 18:
+                continue
+            jobs.append((h + (8 if f == 'B027' else 0) + (30 if f == 'K015' else 0), a, f))
+    jobs.sort(key=lambda j: -j[0])
+    done = 0
+    for _, a, f in jobs:
+        if calls >= budget:
+            break
+        if fetch(a, f, now):
+            done += 1
+        time.sleep(0.12)
+    # 목록 파일
+    lst = []
+    for a in al:
+        path = os.path.join(AREA_DIR, f"{a['c']}.json")
+        b = bbox(path)
+        if b:
+            d = load(path) or {}
+            lst.append({'c': a['c'], 'n': a['n'], 'lv': a['lv'], 'sido': a['sido'], 'sn': a['sn'], 'b': b, 'up': d.get('up', {})})
+    save(os.path.join(OUT, 'index.json'), {'updated': now.strftime('%Y-%m-%d %H:%M'), 'avg': avg, 'list': lst})
+    state.update({'day': today, 'used': used + calls})
+    save(spath, state)
+    print(f'주유소: 지역 {len(al)}곳 · 이번에 받은 것 {done}건 · 남은 할 일 {max(0, len(jobs) - done)}건 · 오피넷 {calls}회 (오늘 {used + calls}/{DAY_BUDGET})')
     return 0
 
 

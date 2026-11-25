@@ -9,7 +9,7 @@ const kFuels = [('B027', '휘발유'), ('D047', '경유'), ('K015', 'LPG'), ('B0
 String fuelName(String code) => kFuels.firstWhere((f) => f.$1 == code, orElse: () => (code, code)).$2;
 
 // 반경 고르기 (m)
-const kRadii = [2000, 3000, 5000];
+const kRadii = [3000, 5000, 10000];
 
 const _brands = {
   'SKE': 'SK에너지',
@@ -83,10 +83,13 @@ class GasStation {
 }
 
 class GasData {
-  final String updated, sido;
+  final Map<String, String> up; // 기름별 가장 최근 받은 시각
+  final String sido; // 평균 이름 (예: 인천, 없으면 전국)
   final Map<String, double> avg, diff;
   final List<GasStation> stations;
-  GasData(this.updated, this.sido, this.avg, this.diff, this.stations);
+  GasData(this.up, this.sido, this.avg, this.diff, this.stations);
+
+  String updatedFor(String fuel) => up[fuel] ?? (up.values.isEmpty ? '' : (up.values.toList()..sort()).last);
 
   // 단지에서 반경 안, 그 기름을 파는 곳만 — 싼 순 (같으면 가까운 순)
   List<GasStation> around(LatLng base, String fuel, int radius) {
@@ -102,24 +105,83 @@ class GasData {
   }
 }
 
-final Map<String, GasData?> _cache = {};
-final Map<String, DateTime> _at = {};
+// ── 전국판 (0.3): 오피넷 지역별 최저가 20곳을 시군구·시도 파일로 모아 둠
+//   index.json 의 범위(b)로 단지 위치를 품는 파일만 받아 합친다.
+dynamic _index;
+DateTime? _indexAt;
+final Map<String, (DateTime, Map)> _files = {};
 
-Future<GasData?> loadGas(String areaId) async {
-  final t = _at[areaId];
-  if (t != null && DateTime.now().difference(t).inMinutes < 10 && _cache[areaId] != null) return _cache[areaId];
-  final j = await getJson('${dataBase}gas/$areaId.json');
-  if (j is! Map) return _cache[areaId];
-  Map<String, double> nums(dynamic m) => {
-        if (m is Map)
-          for (final e in m.entries)
-            if (e.value is num) '${e.key}': (e.value as num).toDouble()
-      };
-  final st = (j['st'] as List? ?? const []).map(GasStation.fromJson).whereType<GasStation>().toList();
-  final d = GasData('${j['updated'] ?? ''}', '${j['sido'] ?? ''}', nums(j['avg']), nums(j['diff']), st);
-  _cache[areaId] = d;
-  _at[areaId] = DateTime.now();
-  return d;
+Future<Map?> _file(String code) async {
+  final c = _files[code];
+  if (c != null && DateTime.now().difference(c.$1).inMinutes < 30) return c.$2;
+  final j = await getJson('${dataBase}gas/a/$code.json');
+  if (j is! Map) return c?.$2;
+  _files[code] = (DateTime.now(), j);
+  return j;
+}
+
+Future<GasData?> loadGas(LatLng pos) async {
+  if (_index == null || _indexAt == null || DateTime.now().difference(_indexAt!).inMinutes >= 30) {
+    final j = await getJson('${dataBase}gas/index.json');
+    if (j is Map) {
+      _index = j;
+      _indexAt = DateTime.now();
+    }
+  }
+  final idx = _index;
+  if (idx is! Map) return null;
+  const m = 0.12; // 약 10km 밖 파일까지
+  final hit = <Map>[];
+  for (final a in (idx['list'] as List? ?? const [])) {
+    if (a is! Map || a['b'] is! List || (a['b'] as List).length != 4) continue;
+    final b = (a['b'] as List).map((v) => (v as num).toDouble()).toList();
+    if (pos.longitude >= b[0] - m && pos.longitude <= b[2] + m && pos.latitude >= b[1] - m && pos.latitude <= b[3] + m) hit.add(a);
+  }
+  if (hit.isEmpty) return null;
+  final files = await Future.wait([for (final a in hit.take(12)) _file('${a['c']}')]);
+  final byId = <String, GasStation>{};
+  final up = <String, String>{};
+  for (final f in files.whereType<Map>()) {
+    final u = f['up'];
+    if (u is Map) {
+      u.forEach((k, v) {
+        final o = up['$k'];
+        if (o == null || '$v'.compareTo(o) > 0) up['$k'] = '$v';
+      });
+    }
+    for (final x in (f['st'] as List? ?? const [])) {
+      final s = GasStation.fromJson(x);
+      if (s == null) continue;
+      final had = byId[s.id];
+      if (had == null) {
+        byId[s.id] = s;
+      } else {
+        had.prices.addAll(s.prices);
+      }
+    }
+  }
+  // 평균: 단지가 든 시군구의 시도 평균 → 없으면 전국
+  String sidoCode = '';
+  double best = double.infinity;
+  for (final a in hit.where((a) => a['lv'] == 'sgg')) {
+    final b = (a['b'] as List).map((v) => (v as num).toDouble()).toList();
+    final inside = pos.longitude >= b[0] && pos.longitude <= b[2] && pos.latitude >= b[1] && pos.latitude <= b[3];
+    final area = (b[2] - b[0]) * (b[3] - b[1]) + (inside ? 0 : 100);
+    if (area < best) {
+      best = area;
+      sidoCode = '${a['sido']}';
+    }
+  }
+  final avgs = idx['avg'] is Map ? idx['avg'] as Map : const {};
+  final av = (avgs[sidoCode] ?? avgs['00']) as Map?;
+  final avg = <String, double>{}, diff = <String, double>{};
+  av?.forEach((k, v) {
+    if (v is List && v.length == 2 && v[0] is num) {
+      avg['$k'] = (v[0] as num).toDouble();
+      diff['$k'] = v[1] is num ? (v[1] as num).toDouble() : 0;
+    }
+  });
+  return GasData(up, '${av?['n'] ?? '전국'}', avg, diff, byId.values.toList());
 }
 
 // 1,598
