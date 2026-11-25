@@ -260,25 +260,60 @@ def kapt_list(sgg):
     return out
 
 
+def _stems(*words):
+    out = set()
+    for w in words:
+        for x in (w or "").split():
+            x = re.sub(r"\d*(동|읍|면|리|가)$", "", x)
+            if len(x) >= 2:
+                out.add(x.lower())
+    return out
+
+
+def _name_eq(n, kn, stems):
+    if not n or not kn:
+        return 0
+    if n == kn:
+        return 3
+    for st in stems:  # 앞에 붙은 동네 이름(송도·기장 등)은 빼고 다시
+        if n.startswith(st):
+            n2 = n[len(st):]
+            if n2 == kn or (kn.startswith(st) and n2 == kn[len(st):]):
+                return 2
+        if kn.startswith(st) and kn[len(st):] == n:
+            return 2
+    if (n in kn or kn in n) and min(len(n), len(kn)) >= 4:
+        return 1
+    return 0
+
+
 def attach_kapt(apts, klist):
-    by_umd = {}
+    by_umd, alln = {}, []
     for k in klist or []:
-        by_umd.setdefault(g(k, "as3", "as4"), []).append((norm(g(k, "kaptName")), g(k, "kaptCode")))
+        a3, a4 = g(k, "as3"), g(k, "as4")
+        item = (norm(g(k, "kaptName")), g(k, "kaptCode"), _stems(a3, a4, g(k, "as2")))
+        alln.append(item)
+        for key in {a3, a4, f"{a3} {a4}".strip()} - {""}:
+            by_umd.setdefault(key, []).append(item)
     for a in apts.values():
         if a.get("o"):
             continue
         n = norm(a.get("n"))
         if not n:
             continue
-        best = None
-        for kn, code in by_umd.get(a.get("u", ""), []):
-            if not kn:
-                continue
-            if kn == n:
-                best = code
-                break
-            if (n in kn or kn in n) and min(len(n), len(kn)) >= 3:
-                best = best or code
+        u = a.get("u", "")
+        cands = []
+        for key in {u, u.split()[-1] if u else "", u.split()[0] if u else ""} - {""}:
+            cands += by_umd.get(key, [])
+        best, bs = None, 0
+        for kn, code, st in cands:
+            sc = _name_eq(n, kn, st | _stems(u))
+            if sc > bs:
+                best, bs = code, sc
+        if not best:  # 동 이름이 달라도 시군구 안에서 이름이 딱 맞는 곳이 하나면
+            same = [code for kn, code, st in alln if _name_eq(n, kn, st | _stems(u)) >= 2]
+            if len(set(same)) == 1:
+                best = same[0]
         if best:
             a["k"] = best
 
@@ -330,7 +365,8 @@ def main():
     except Exception:
         state = {}
     done = state.setdefault("done", {})  # "<sgg>|<kind>|<ym>": "받은 날 YYYYMMDD"
-    kdone = state.setdefault("kapt", {})  # "<sgg>": "받은 날"
+    state.pop("kapt", None)
+    kdone = state.setdefault("kapt2", {})  # "<sgg>": "받은 날"
     months = month_list()
     recent = set(months[:RECENT])
     today = NOW.strftime("%Y%m%d")
