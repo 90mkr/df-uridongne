@@ -206,23 +206,26 @@ class StationPeanut extends StatelessWidget {
     final col = lineColor(s.line);
     final hasU = s.dirs.contains('U'), hasD = s.dirs.contains('D');
     final narrow = MediaQuery.of(context).size.width < 380;
-    Widget side(String t, bool left) => Expanded(
+    // 바탕 띠(양쪽 반쪽 색) 위에 글자 줄: 「앞 역 글자 | 가운데 알약 | 뒤 역 글자」 — 글자가 알약 밑으로 숨지 않게
+    Widget half(String t, bool left) => Expanded(
           child: Container(
-            height: 34,
-            padding: EdgeInsets.only(left: left ? 10 : 34, right: left ? 34 : 10),
-            alignment: left ? Alignment.centerLeft : Alignment.centerRight,
             decoration: BoxDecoration(
               color: t.isEmpty ? const Color(0xFFEFF2F6) : col.withValues(alpha: 0.85),
               borderRadius: BorderRadius.horizontal(left: Radius.circular(left ? 17 : 0), right: Radius.circular(left ? 0 : 17)),
             ),
-            child: t.isEmpty
-                ? const SizedBox.shrink()
-                : Row(mainAxisSize: MainAxisSize.min, children: [
+          ),
+        );
+    Widget label(String t, bool left) => Expanded(
+          child: t.isEmpty
+              ? const SizedBox.shrink()
+              : Padding(
+                  padding: EdgeInsets.only(left: left ? 6 : 4, right: left ? 4 : 6),
+                  child: Row(mainAxisAlignment: left ? MainAxisAlignment.start : MainAxisAlignment.end, children: [
                     if (left) const Icon(Icons.chevron_left_rounded, size: 18, color: Colors.white),
                     Flexible(child: Text(t, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: narrow ? 12 : 13, fontWeight: FontWeight.w700, color: Colors.white))),
                     if (!left) const Icon(Icons.chevron_right_rounded, size: 18, color: Colors.white),
                   ]),
-          ),
+                ),
         );
     Widget times(String ud, bool left) {
       final n = s.next(ud, now, n: 2);
@@ -252,7 +255,9 @@ class StationPeanut extends StatelessWidget {
       SizedBox(
         height: 42,
         child: Stack(alignment: Alignment.center, children: [
-          Row(children: [side(s.prev, true), side(s.next2, false)]),
+          SizedBox(height: 34, child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [half(s.prev, true), half(s.next2, false)])),
+          Row(children: [
+            label(s.prev, true),
           // 가운데 이 역: 흰 알약 + 호선 색 테두리(1px) + 작은 호선 알약
           Container(
             height: 42,
@@ -268,6 +273,8 @@ class StationPeanut extends StatelessWidget {
               Text(s.name, style: TextStyle(fontSize: narrow ? 14.5 : 16, fontWeight: FontWeight.w800, color: kInk, letterSpacing: -0.4)),
             ]),
           ),
+            label(s.next2, false),
+          ]),
         ]),
       ),
       if (s.hasTable)
