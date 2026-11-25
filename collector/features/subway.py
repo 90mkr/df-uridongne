@@ -247,6 +247,11 @@ def main():
                 except Exception:  # noqa: BLE001
                     continue
             print(f"  역 {len(st)}곳 (호선별)")
+            path = os.path.join(OUT, f"st_{a['id']}.json")
+            if not st:
+                # 카카오가 잠깐 안 되면 빈 목록으로 덮지 않음 (11-25 사고)
+                print("  역을 하나도 못 받아 예전 파일을 그대로 둠")
+                continue
             if DKEY:
                 ok = 0
                 fails = 0
@@ -294,7 +299,7 @@ def main():
             else:
                 print("  DATA_GO_KR_KEY 가 없어 시간표는 건너뜀")
             fill_kric(st)
-            with open(os.path.join(OUT, f"st_{a['id']}.json"), "w", encoding="utf-8") as f:
+            with open(path, "w", encoding="utf-8") as f:
                 json.dump({"area_id": a["id"], "updated": now, "st": st}, f, ensure_ascii=False, separators=(",", ":"))
     print(f"끝 · 부른 횟수 {calls}번")
     return 0
