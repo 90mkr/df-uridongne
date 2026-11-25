@@ -13,6 +13,7 @@ import 'gas/feature.dart';
 import 'lotto/feature.dart';
 import 'parking/feature.dart';
 import 'pharmacy/feature.dart';
+import 'pet/feature.dart';
 import 'phonebook/feature.dart';
 import 'postcode/feature.dart';
 import 'roulette/feature.dart';
@@ -33,6 +34,7 @@ final List<Feature> allFeatures = [
   PhonebookFeature(), // 묶음: 동네 전화번호부
   DealsFeature(), // 한 줄: 우리 단지 최근 거래
   ToiletFeature(), // 생활 도구 맨 앞: 가까운 화장실 (급할 때, 11-25)
+  PetFeature(), // 생활 도구: 우리 동네 반려동물 (테마 — 안에 칸 목록, 반려동물 방이 대표님 허락으로 등록 11-26)
   GasFeature(), // 생활 도구
   ChargerFeature(),
   ParkingFeature(), // 생활 도구 + 홈: 가까운 공영주차장
