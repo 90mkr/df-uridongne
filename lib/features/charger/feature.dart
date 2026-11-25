@@ -22,7 +22,7 @@ class ChargerFeature extends Feature {
   @override
   int get order => 20;
   @override
-  String get version => '0.3.1';
+  String get version => '0.3.2';
   @override
   bool get ready => true;
   @override
@@ -68,6 +68,8 @@ class _NearCard extends StatelessWidget {
     final near = set.all.where((s) => meters(c.pos, s.pos) <= 3000 && s.pick(plugs: mine).isNotEmpty).toList()
       ..sort((a, b) => meters(c.pos, a.pos).compareTo(meters(c.pos, b.pos)));
     if (near.isEmpty) return null;
+    // 가까운 5곳은 지금 상태를 받아 온다 (안 받으면 주 1회 모아 둔 숫자가 그대로 보임)
+    await refreshMany(near, max: 5);
     int free(Station s) => s.pick(plugs: mine).where((x) => x.use == Use.free).length;
     final best = near.firstWhere((s) => free(s) > 0, orElse: () => near.first);
     return (best, free(best));

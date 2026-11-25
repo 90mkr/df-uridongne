@@ -238,10 +238,21 @@ Future<bool> refreshStation(Station s) async {
   }
 }
 
-// 여러 곳을 한꺼번에 (최대 [max]곳)
-Future<void> refreshMany(List<Station> list, {int max = 12}) async {
-  if (!canLive) return;
-  await Future.wait([for (final s in list.take(max)) refreshStation(s)]);
+// 여러 곳을 한꺼번에 (최대 [max]곳) — 실제로 새 상태를 받은 곳 수를 돌려줌
+Future<int> refreshMany(List<Station> list, {int max = 12}) async {
+  if (!canLive) return 0;
+  final r = await Future.wait([for (final s in list.take(max)) refreshStation(s)]);
+  return r.where((x) => x).length;
+}
+
+// 가장 최근에 실시간 상태를 받은 시각 (못 받았으면 null)
+DateTime? lastLive(Iterable<Station> list) {
+  DateTime? t;
+  for (final s in list) {
+    final a = s.liveAt;
+    if (a != null && (t == null || a.isAfter(t))) t = a;
+  }
+  return t;
 }
 
 // 「12분 전」 같은 말

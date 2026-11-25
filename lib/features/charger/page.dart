@@ -109,7 +109,8 @@ class _ChargerPageState extends State<ChargerPage> {
     if (!canLive) return;
     await refreshMany(items, max: 14);
     if (!mounted) return;
-    setState(() => liveAt = DateTime.now());
+    // 실제로 받은 곳이 있을 때만 「방금 받은 상태」 (못 받으면 모아 둔 시각을 그대로 보여 줌)
+    setState(() => liveAt = lastLive(items));
   }
 
   List<Charger> mine(Station s) => s.pick(fastOnly: mode == Mode.fast, plugs: plugs);
@@ -152,7 +153,7 @@ class _ChargerPageState extends State<ChargerPage> {
       final m = DateTime.now().difference(liveAt!).inMinutes;
       return m < 1 ? '방금 받은 상태' : '$m분 전 기준';
     }
-    return set?.updated.isNotEmpty == true ? '${set!.updated.substring(5)} 기준' : '';
+    return set?.updated.isNotEmpty == true ? '${set!.updated.substring(5)} 모은 자료' : '';
   }
 
   @override
