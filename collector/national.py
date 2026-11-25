@@ -274,9 +274,10 @@ def vworld(addr):
 def road_key(a):
     """도로명주소에서 「시군구 도로명 건물번호」만 (동·호·괄호 빼고)."""
     a = re.sub(r"\(.*?\)", "", a or "")
+    a = re.sub(r"(로|길)\s+(\d+번?[가-힣]*길)", r"\1\2", a)
     w = a.split()
     gu = w[1] if len(w) > 1 else ""
-    m = re.search(r"(\S+(?:로|길))\s*(\d+(?:-\d+)?)", a)
+    m = re.search(r"(\S+(?:로|길))\s+(\d+(?:-\d+)?)", a)
     return f"{gu} {m.group(1)} {m.group(2)}" if m else ""
 
 
