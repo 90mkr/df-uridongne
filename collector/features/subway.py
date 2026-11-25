@@ -6,6 +6,11 @@
 
     KAKAO_REST_KEY   카카오 REST 키
     DATA_GO_KR_KEY   공공데이터포털 인증키 (TAGO 지하철정보 활용신청 필요)
+    KRIC_KEY         철도산업정보센터(레일포털) 서비스키 — 「열차별 운행시각표」 trainUseInfo/subwayTimetable (11-25 발급)
+
+3) TAGO 에 시간표가 없는 역(인천1·2호선 등)은 KRIC 「열차별 운행시각표」로 채운다.
+   KRIC 응답엔 방향·종착이 없어서, 노선 순서(도시철도 전체노선정보)로 옆 역 시각과 견줘
+   같은 열차번호가 다음 역에 더 늦게 오면 「번호 큰 쪽 끝역 방면」으로 나눈다.
 
 저장 파일
     web/data/subway/st_<동네>.json   {"updated", "st": [{n, l, y, x, id, tt: {"01U": [[hhmm, 종착], …], …}}]}
@@ -26,6 +31,8 @@ DATA = os.path.join(ROOT, "web", "data")
 OUT = os.path.join(DATA, "subway")
 KST = timezone(timedelta(hours=9))
 TAGO = "https://apis.data.go.kr/1613000/SubwayInfoService/"
+RKEY = os.environ.get("KRIC_KEY", "").strip()
+KRIC = "https://openapi.kric.go.kr/openapi/"
 
 calls = 0
 
@@ -108,6 +115,126 @@ def hhmm(s):
     return s[:4] if len(s) >= 4 else ""
 
 
+# ---------------- KRIC (레일포털) ----------------
+def kric(path, params):
+    q = urllib.parse.urlencode({**params, "format": "json"})
+    key = urllib.parse.quote(RKEY, safe="")
+    t = get(f"{KRIC}{path}?serviceKey={key}&{q}")
+    try:
+        j = json.loads(t)
+    except Exception:  # noqa: BLE001
+        print("  KRIC 응답이 JSON 이 아님:", t[:200].replace("\n", " "))
+        return None
+    hdr = j.get("header") or {}
+    code = str(hdr.get("resultCode", "00"))
+    if code not in ("00", "03"):
+        print("  KRIC 오류:", code, str(hdr.get("resultMsg", ""))[:120])
+        return None
+    b = j.get("body")
+    if isinstance(b, dict):
+        b = b.get("item") or b.get("items") or []
+    return b if isinstance(b, list) else ([b] if b else [])
+
+
+def norm(n):
+    n = re.sub(r"\(.*?\)|\s", "", str(n or ""))
+    return n[:-1] if n.endswith("역") and len(n) > 2 else n
+
+
+# 우리 역 호선 이름 → KRIC (운영기관, 호선) 후보
+LINES = {
+    "인천1호선": [("IC", "I1"), ("IC", "1")],
+    "인천2호선": [("IC", "I2"), ("IC", "2")],
+    "수인분당선": [("KR", "K1"), ("KR", "K2"), ("KR", "SB")],
+}
+
+
+def route_stations(opr, ln):
+    """노선 역 순서 [(순서, stinCd, 역이름)] — 도시철도 전체노선정보 (안 되면 빈 목록)"""
+    for params in ({"mreaWideCd": "01", "lnCd": ln}, {"railOprIsttCd": opr, "lnCd": ln}):
+        rows = kric("trainUseInfo/subwayRouteInfo", params)
+        if rows:
+            out = []
+            for r in rows:
+                if str(r.get("railOprIsttCd", opr)) != opr and r.get("railOprIsttCd"):
+                    continue
+                try:
+                    out.append((int(float(r.get("stinConsOrdr") or 0)), str(r.get("stinCd", "")), norm(r.get("stinNm"))))
+                except Exception:  # noqa: BLE001
+                    continue
+            out = sorted({o[1]: o for o in out if o[1]}.values())
+            if out:
+                return out
+    return []
+
+
+def times(opr, ln, stin, day):
+    """{열차번호: hhmm}"""
+    rows = kric("trainUseInfo/subwayTimetable", {"railOprIsttCd": opr, "dayCd": day, "lnCd": ln, "stinCd": stin}) or []
+    out = {}
+    for r in rows:
+        t = hhmm(r.get("dptTm")) or hhmm(r.get("arvTm"))
+        if t and t != "0000":
+            out[str(r.get("trnNo", ""))] = t
+    return out
+
+
+def fill_kric(st):
+    if not RKEY:
+        print("  KRIC_KEY 가 없어 KRIC 시간표는 건너뜀")
+        return
+    want = [x for x in st if not x.get("tt") and x.get("l") in LINES]
+    if not want:
+        return
+    ok = 0
+    for line in sorted({x["l"] for x in want}):
+        route, opr, ln = [], "", ""
+        for opr, ln in LINES[line]:
+            route = route_stations(opr, ln)
+            if route:
+                break
+        if not route:
+            print(f"  {line}: KRIC 노선 역 목록을 못 받음 (서비스키에 「도시철도 전체노선정보」 활용신청이 필요할 수 있음)")
+            continue
+        print(f"  {line}: KRIC {opr}/{ln} 역 {len(route)}곳 · {route[0][2]} ~ {route[-1][2]}")
+        first, last = route[0][2], route[-1][2]
+        idx = {r[2]: i for i, r in enumerate(route)}
+        for x in want:
+            if x["l"] != line:
+                continue
+            i = idx.get(norm(x["n"]))
+            if i is None:
+                print(f"  {x['n']}: 노선 목록에 이름이 없음")
+                continue
+            tt = {}
+            for day, code in (("01", "8"), ("02", "7"), ("03", "9")):
+                here = times(opr, ln, route[i][1], code)
+                if not here:
+                    continue
+                nxt = times(opr, ln, route[i + 1][1], code) if i + 1 < len(route) else {}
+                prv = times(opr, ln, route[i - 1][1], code) if i > 0 else {}
+                up, down = [], []
+                for no, t in here.items():
+                    # 같은 열차가 다음(번호 큰) 역에 더 늦게 오면 → 끝역 쪽(D), 앞(번호 작은) 역에 더 늦게 오면 → 첫역 쪽(U)
+                    if no in nxt and nxt[no] >= t:
+                        down.append([t, last])
+                    elif no in prv and prv[no] >= t:
+                        up.append([t, first])
+                    elif i == len(route) - 1:
+                        up.append([t, first])
+                    elif i == 0:
+                        down.append([t, last])
+                if up:
+                    tt[day + "U"] = sorted(up)
+                if down:
+                    tt[day + "D"] = sorted(down)
+            if tt:
+                x["tt"] = tt
+                x["src"] = "kric"
+                ok += 1
+    print(f"  KRIC 시간표 받은 역 {ok}곳")
+
+
 def main():
     if not KKEY:
         print("카카오 키가 없어 지하철역을 모으지 않습니다")
@@ -181,6 +308,7 @@ def main():
                 print(f"  시간표 받은 역 {ok}곳")
             else:
                 print("  DATA_GO_KR_KEY 가 없어 시간표는 건너뜀")
+            fill_kric(st)
             with open(os.path.join(OUT, f"st_{a['id']}.json"), "w", encoding="utf-8") as f:
                 json.dump({"area_id": a["id"], "updated": now, "st": st}, f, ensure_ascii=False, separators=(",", ":"))
     print(f"끝 · 부른 횟수 {calls}번")
