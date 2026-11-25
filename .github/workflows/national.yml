@@ -1,0 +1,50 @@
+name: 전국 자료
+# 본부 방만 고침. 전국 동네·가게·아파트·전화번호를 공공데이터로 만들어 store 가지(나중에 R2)에 올린다.
+# 카카오 자료는 저장하지 않는다 (카카오 정책: 실시간 호출만).
+on:
+  workflow_dispatch:
+    inputs:
+      sido:
+        description: '시도 코드 (쉼표, 비우면 전국) 예: 50,26,51'
+        required: false
+        default: ''
+  schedule:
+    - cron: '17 18 * * 0'   # 매주 월요일 새벽 3시 17분(한국) 전국 다시
+concurrency: { group: national, cancel-in-progress: false }
+permissions: { contents: write }
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+      - name: 지난 자료 가져오기
+        run: |
+          mkdir -p /tmp/store
+          if git ls-remote --exit-code origin store >/dev/null 2>&1; then
+            git clone -q --depth 1 -b store "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" /tmp/store
+          else
+            git init -q /tmp/store
+          fi
+      - name: 만들기
+        run: python3 collector/national.py
+        env:
+          DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
+          VWORLD_KEY: ${{ secrets.VWORLD_KEY }}
+          SIDO: ${{ github.event.inputs.sido }}
+          OUT: /tmp/store
+      - name: store 가지에 올리기 (기록 없이 한 장)
+        run: |
+          cd /tmp/store
+          rm -rf .git && git init -q && git checkout -q -b store
+          git add -A
+          git -c user.name=df-uridongne -c user.email=dfmail@naver.com commit -q -m "전국 자료 $(date -u +%F)"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" store
+          du -sh . ; ls | wc -l
+      - name: R2에 올리기 (비밀이 있으면)
+        if: ${{ env.R2_KEY != '' }}
+        env:
+          R2_KEY: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ACCOUNT: ${{ secrets.R2_ACCOUNT_ID }}
+        run: python3 collector/r2.py /tmp/store
