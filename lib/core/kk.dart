@@ -1,6 +1,6 @@
 // 카카오 장소 찾기 — 「중간 다리」 /kk/ 경유 (본부 방만 고침)
 // 카카오 정책: 장소 자료는 미리 긁어 모으지 말고 「필요한 순간에」 불러 쓴다.
-// 그래서 준비된 동네(자동 제작 자료)가 아닌 곳은 이걸로 그 자리에서 불러온다. 다리가 최대 7일 묶어 둬서 같은 단지는 다시 안 부른다.
+// 카카오 결과는 저장·묶어 두기(캐시) 모두 안 됨 — 부를 때마다 새로 부르고 화면에만 보여 준다 (장소 번호·링크만 저장 가능).
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -11,9 +11,9 @@ import 'dg.dart';
 import 'keys.dart';
 
 /// 카카오 로컬 API 한 번 부르기. path 예: 'v2/local/search/keyword.json'
-Future<Map?> kkGet(String path, Map<String, String> q, {int cache = 604800}) async {
+Future<Map?> kkGet(String path, Map<String, String> q, {int cache = 0}) async {
   if (kDataProxy.isEmpty) return null;
-  final qs = Uri(queryParameters: {...q, '_c': '$cache'}).query;
+  final qs = Uri(queryParameters: {...q, if (cache > 0) '_c': '$cache'}).query;
   try {
     final r = await http.get(Uri.parse('$kDataProxy/kk/$path?$qs'), headers: dgHeaders).timeout(const Duration(seconds: 10));
     if (r.statusCode != 200) return null;
@@ -25,7 +25,7 @@ Future<Map?> kkGet(String path, Map<String, String> q, {int cache = 604800}) asy
 }
 
 /// 여러 쪽(최대 3쪽 × 15개)까지 모아 오기
-Future<List<Map>> kkAll(String kind, Map<String, String> q, {int pages = 3, int cache = 604800}) async {
+Future<List<Map>> kkAll(String kind, Map<String, String> q, {int pages = 3, int cache = 0}) async {
   final out = <Map>[];
   for (var p = 1; p <= pages; p++) {
     final j = await kkGet('v2/local/search/$kind.json', {...q, 'page': '$p', 'size': '15'}, cache: cache);
@@ -55,11 +55,11 @@ Future<List<Complex>> kkComplexes({String q = '', LatLng? near}) async {
   final docs = <Map>[];
   if (q.trim().isNotEmpty) {
     final t = q.trim();
-    docs.addAll(await kkAll('keyword', {'query': t, if (near != null) 'x': '${near.longitude}', if (near != null) 'y': '${near.latitude}'}, cache: 86400));
-    if (!t.contains('아파트')) docs.addAll(await kkAll('keyword', {'query': '$t 아파트'}, pages: 2, cache: 86400));
+    docs.addAll(await kkAll('keyword', {'query': t, if (near != null) 'x': '${near.longitude}', if (near != null) 'y': '${near.latitude}'}));
+    if (!t.contains('아파트')) docs.addAll(await kkAll('keyword', {'query': '$t 아파트'}, pages: 2));
   } else if (near != null) {
     for (final kw in ['아파트', '주상복합', '오피스텔']) {
-      docs.addAll(await kkAll('keyword', {'query': kw, 'x': '${near.longitude}', 'y': '${near.latitude}', 'radius': '2500', 'sort': 'distance'}, pages: kw == '아파트' ? 3 : 1, cache: 86400));
+      docs.addAll(await kkAll('keyword', {'query': kw, 'x': '${near.longitude}', 'y': '${near.latitude}', 'radius': '2500', 'sort': 'distance'}, pages: kw == '아파트' ? 3 : 1));
     }
   }
   final seen = <String>{};

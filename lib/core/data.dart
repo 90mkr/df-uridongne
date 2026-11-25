@@ -8,6 +8,9 @@ import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'kk.dart';
+import 'remote.dart';
+
 // 자동 제작이 모아 둔 자료 파일 주소 (web/data/ → 미리보기 주소의 data/)
 const kSiteUrl = 'https://90mkr.github.io/df-uridongne/';
 const kDataUrl = '${kSiteUrl}data/';
@@ -17,6 +20,12 @@ const kKokpleWeb = 'https://90mkr.github.io/df-app-lab/';
 // 자료는 저장소 main 에서 바로 받는다 (자료를 모아 올리면 미리보기 게시를 기다리지 않고 곧바로 보임 — 5분 안팎 캐시)
 const kRawDataUrl = 'https://raw.githubusercontent.com/90mkr/df-uridongne/main/web/data/';
 String get dataBase => kRawDataUrl;
+// 전국 동네·가게·아파트 (공공데이터로 매주 새로 만듦, 본부 「전국 자료」) — 서버 설정 app.json 의 store 로 바꿀 수 있음 (R2)
+const kStoreUrl = 'https://raw.githubusercontent.com/90mkr/df-uridongne/store/';
+String get storeBase {
+  final s = remoteCfg.value.store;
+  return s.isEmpty ? kStoreUrl : (s.endsWith('/') ? s : '$s/');
+}
 
 // JSON 받기 (실패하면 null). 10분 단위로 새로 받는다.
 Future<dynamic> getJson(String url, {Duration timeout = const Duration(seconds: 20)}) async {
@@ -57,7 +66,7 @@ List<Area> areas = [];
 
 Future<void> loadAreas() async {
   if (areas.isNotEmpty) return;
-  final j = await getJson('${dataBase}regions.json');
+  final j = await getJson('${storeBase}regions.json') ?? await getJson('${dataBase}regions.json');
   if (j is! Map) return;
   final out = <Area>[];
   for (final s in (j['sido'] as List? ?? const [])) {
@@ -73,9 +82,10 @@ Future<void> loadAreas() async {
 
 Area? areaAt(LatLng p) {
   Area? best;
-  var bd = 15000.0;
+  var bd = 30000.0;
   for (final a in areas) {
-    final d = a.contains(p) ? 0.0 : meters(p, a.center);
+    // 범위가 겹치면(시군구 경계) 범위 안 동네 가운데 가운데가 가장 가까운 곳
+    final d = a.contains(p) ? meters(p, a.center) - 1e7 : meters(p, a.center);
     if (d < bd) {
       bd = d;
       best = a;
@@ -122,7 +132,12 @@ final Map<String, List<Complex>> _apts = {};
 Future<List<Complex>> complexesOf(Area a) async {
   final have = _apts[a.id];
   if (have != null) return have;
-  final j = await getJson('${dataBase}apt_${a.id}.json');
+  final j = await getJson('${storeBase}apt_${a.id}.json');
+  if (j == null) {
+    // 아직 아파트 자료가 없는 동네: 그 자리에서 카카오로 찾아 보여 주기만 (저장 안 함)
+    final live = await kkComplexes(near: a.center);
+    return [for (final c in live) Complex(id: c.id, name: c.name, addr: c.addr, areaId: a.id, lat: c.lat, lng: c.lng)];
+  }
   final list = <Complex>[
     for (final x in (j is Map ? (j['apts'] as List? ?? const []) : const []))
       if (x is Map && x['y'] != null)

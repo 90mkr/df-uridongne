@@ -72,9 +72,17 @@ class Shop {
   List<List<int>> hours = const []; // [여는 요일, 여는 시각(HHMM), 닫는 요일, 닫는 시각] — 요일 0=일요일
   bool owned = false; // 사장님 직접 관리
   String photo = ''; // 대표 사진 주소 (사장님 등록 때)
+  // 번호가 없을 때 그 자리에서 카카오로 찾은 번호·장소 번호 — 화면에만 쓰고 저장하지 않음 (카카오 정책)
+  String liveTel = '', kakaoId = '';
+  bool liveTried = false;
   Shop(this.id, this.name, this.cats, this.sub, this.addr, this.tel, this.lat, this.lng);
   LatLng get pos => LatLng(lat, lng);
-  String get kakaoUrl => 'https://place.map.kakao.com/$id';
+  String get phone => tel.isNotEmpty ? tel : liveTel;
+  String get kakaoUrl => kakaoId.isNotEmpty
+      ? 'https://place.map.kakao.com/$kakaoId'
+      : RegExp(r'^\d+$').hasMatch(id)
+          ? 'https://place.map.kakao.com/$id'
+          : 'https://map.kakao.com/link/search/${Uri.encodeComponent(name)}';
 
   // 지금 영업 중인지 (영업시간 자료가 있을 때만)
   Open openAt(DateTime now) {
@@ -162,6 +170,23 @@ Future<List<Shop>> _liveShops(Complex c) async {
   return list;
 }
 
+// 전화번호가 없는 가게: 누르는 순간 카카오에서 그 가게를 찾아 번호를 화면에만 보여 준다 (저장·묶어 두기 없음)
+Future<String> livePhone(Shop s) async {
+  if (s.phone.isNotEmpty || s.liveTried) return s.phone;
+  s.liveTried = true;
+  String norm(String t) => t.replaceAll(RegExp(r'[\s()·\-]'), '').toLowerCase();
+  final n = norm(s.name.split(' ').first);
+  final docs = await kkAll('keyword', {'query': s.name, 'x': '${s.lng}', 'y': '${s.lat}', 'radius': '300', 'sort': 'distance'}, pages: 1);
+  for (final d in docs) {
+    final pn = norm('${d['place_name'] ?? ''}');
+    if (pn.isEmpty || n.isEmpty || !(pn.contains(n) || n.contains(pn))) continue;
+    s.kakaoId = '${d['id'] ?? ''}';
+    s.liveTel = '${d['phone'] ?? ''}'.trim();
+    if (s.liveTel.isNotEmpty) break;
+  }
+  return s.phone;
+}
+
 Future<List<Shop>> shopsOf(String areaId) async {
   if (areaId.isEmpty) {
     final c = complex.value;
@@ -169,7 +194,7 @@ Future<List<Shop>> shopsOf(String areaId) async {
   }
   final have = _cache[areaId];
   if (have != null) return have;
-  final r = await Future.wait([getJson('$dataBase$areaId.json'), getJson('$kKokpleDataUrl$areaId.json')]);
+  final r = await Future.wait([getJson('$storeBase$areaId.json'), getJson('$kKokpleDataUrl$areaId.json')]);
   final j = r[0] is Map ? r[0] as Map : const {};
   final list = <Shop>[
     for (final s in (j['shops'] as List? ?? const []))
@@ -188,7 +213,7 @@ Future<List<Shop>> shopsOf(String areaId) async {
     final v0 = vids.isNotEmpty && vids.first is Map ? vids.first as Map : const {};
     final kok = Kok((p['grate'] as num?)?.toDouble() ?? 0, (p['greviews'] as num?)?.toInt() ?? 0, vids.length,
         thumb: v0['id'] == null ? '' : 'https://i.ytimg.com/vi/${v0['id']}/mqdefault.jpg', ch: '${v0['ch'] ?? ''}');
-    var s = byId[id];
+    var s = byId[id] ?? _sameShop(list, p);
     if (s == null) {
       final lat = (p['lat'] as num?)?.toDouble(), lng = (p['lng'] as num?)?.toDouble();
       if (lat == null || lng == null) continue;
@@ -213,6 +238,22 @@ Future<List<Shop>> shopsOf(String areaId) async {
   // 사장님 직접 관리 표시 (있으면)
   _loadOwned(areaId, byId);
   return list;
+}
+
+// 콕플 맛집(카카오 번호)과 공공데이터 가게(다른 번호)를 이름·거리로 이어 붙이기
+Shop? _sameShop(List<Shop> list, Map p) {
+  final lat = (p['lat'] as num?)?.toDouble(), lng = (p['lng'] as num?)?.toDouble();
+  if (lat == null || lng == null) return null;
+  String norm(String t) => t.replaceAll(RegExp(r'[\s()·\-]'), '').toLowerCase();
+  final n = norm('${p['name'] ?? ''}'.split(' ').first);
+  if (n.length < 2) return null;
+  final at = LatLng(lat, lng);
+  for (final s in list) {
+    if ((s.lat - lat).abs() > 0.001 || (s.lng - lng).abs() > 0.0012) continue;
+    final sn = norm(s.name);
+    if ((sn.contains(n) || n.contains(norm(s.name.split(' ').first))) && meters(at, s.pos) < 80) return s;
+  }
+  return null;
 }
 
 Future<void> _loadOwned(String areaId, Map<String, Shop> byId) async {

@@ -46,14 +46,24 @@ class ShopSheet extends StatelessWidget {
         RecBox(shop: s, complex: complex),
         const SizedBox(height: 14),
         _row(context, '주소', s.addr.isEmpty ? '-' : s.addr, copy: s.addr),
-        _row(context, '전화', s.tel.isEmpty ? '등록된 번호가 없어요' : s.tel, copy: s.tel),
-        const SizedBox(height: 14),
-        Row(children: [
-          if (s.tel.isNotEmpty) ...[Expanded(child: Btn('전화하기', icon: 'phone', primary: true, onTap: () => callTel(s.tel))), const SizedBox(width: 10)],
-          Expanded(child: Btn('길안내', icon: 'route', primary: s.tel.isEmpty, onTap: () => startNav(context, name: s.name, lat: s.lat, lng: s.lng))),
-          const SizedBox(width: 10),
-          Expanded(child: Btn('카카오맵', icon: 'map', onTap: () => openUrl(s.kakaoUrl))),
-        ]),
+        // 번호가 없으면 여는 순간 카카오에서 찾아 화면에만 보여 준다 (저장 안 함)
+        FutureBuilder<String>(
+          future: livePhone(s),
+          builder: (context, snap) {
+            final t = snap.data ?? s.phone;
+            final wait = snap.connectionState != ConnectionState.done && t.isEmpty;
+            return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              _row(context, '전화', t.isNotEmpty ? t : (wait ? '번호 찾는 중…' : '등록된 번호가 없어요'), copy: t),
+              const SizedBox(height: 14),
+              Row(children: [
+                if (t.isNotEmpty) ...[Expanded(child: Btn('전화하기', icon: 'phone', primary: true, onTap: () => callTel(t))), const SizedBox(width: 10)],
+                Expanded(child: Btn('길안내', icon: 'route', primary: t.isEmpty, onTap: () => startNav(context, name: s.name, lat: s.lat, lng: s.lng))),
+                const SizedBox(width: 10),
+                Expanded(child: Btn('카카오맵', icon: 'map', onTap: () => openUrl(s.kakaoUrl))),
+              ]),
+            ]);
+          },
+        ),
         const SizedBox(height: 12),
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           _link('정보 수정 신고', () {

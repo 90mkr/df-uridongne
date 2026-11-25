@@ -230,7 +230,7 @@ class _ShopCardState extends State<ShopCard> {
               ]),
               const SizedBox(height: 10),
               Row(children: [
-                Expanded(flex: 4, child: _mini(s.tel.isEmpty ? '번호 없음' : '전화하기', Icons.call_rounded, s.tel.isEmpty ? null : () => callTel(s.tel), primary: s.tel.isNotEmpty, h: 34)),
+                Expanded(flex: 4, child: _mini('전화하기', Icons.call_rounded, () => _call(context, s), primary: true, h: 34)),
                 const SizedBox(width: 6),
                 Expanded(flex: 4, child: _mini('길안내', Icons.near_me_rounded, () => startNav(context, name: s.name, lat: s.lat, lng: s.lng), h: 34)),
                 const SizedBox(width: 6),
@@ -302,7 +302,7 @@ class _ShopCardState extends State<ShopCard> {
           Padding(
             padding: const EdgeInsets.fromLTRB(8, 7, 8, 8),
             child: Row(children: [
-              Expanded(flex: 5, child: _mini(s.tel.isEmpty ? '번호없음' : '전화', Icons.call_rounded, s.tel.isEmpty ? null : () => callTel(s.tel), primary: s.tel.isNotEmpty)),
+              Expanded(flex: 5, child: _mini('전화', Icons.call_rounded, () => _call(context, s), primary: true)),
               const SizedBox(width: 4),
               Expanded(flex: 5, child: _mini('길안내', Icons.near_me_rounded, () => startNav(context, name: s.name, lat: s.lat, lng: s.lng))),
               const SizedBox(width: 4),
@@ -383,5 +383,15 @@ class OpenMark extends StatelessWidget {
       const SizedBox(width: 4),
       Text(t, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: c)),
     ]);
+  }
+}
+
+// 번호가 없으면 누르는 순간 찾아서 건다 (찾은 번호는 저장하지 않음)
+Future<void> _call(BuildContext context, Shop s) async {
+  final t = await livePhone(s);
+  if (t.isNotEmpty) {
+    callTel(t);
+  } else if (context.mounted) {
+    toast(context, '등록된 전화번호를 찾지 못했어요');
   }
 }
