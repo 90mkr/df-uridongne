@@ -28,11 +28,11 @@ class ToolsTab extends StatelessWidget {
           right: 0,
           top: 0,
           height: top + 300,
-          child: ShaderMask(
+          child: ClipRect(child: ShaderMask(
             shaderCallback: (r) => const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.white, Colors.white, Colors.transparent], stops: [0, 0.7, 1]).createShader(r),
             blendMode: BlendMode.dstIn,
             child: Image.asset('assets/art/tools_bg.jpg', fit: BoxFit.cover, alignment: Alignment.topRight, filterQuality: FilterQuality.medium),
-          ),
+          )),
         ),
         ListView(padding: EdgeInsets.zero, children: [
         SizedBox(

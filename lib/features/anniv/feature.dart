@@ -186,11 +186,11 @@ class _AnnivPageState extends State<AnnivPage> {
             right: 0,
             top: 0,
             height: artH,
-            child: ShaderMask(
+            child: ClipRect(child: ShaderMask(
               shaderCallback: (r) => const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.white, Colors.white, Color(0x00FFFFFF), Color(0x00FFFFFF)], stops: [0, 0.55, 0.88, 1]).createShader(r),
               blendMode: BlendMode.dstIn,
               child: Image.asset('assets/art/anniv_bg.jpg', fit: BoxFit.cover, alignment: w < 600 ? Alignment.bottomCenter : const Alignment(1, 0.3), filterQuality: FilterQuality.medium),
-            ),
+            )),
           ),
           Center(
             child: ConstrainedBox(

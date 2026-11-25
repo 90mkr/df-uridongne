@@ -130,12 +130,12 @@ class _PostHomeState extends State<PostHome> {
             right: 0,
             top: 0,
             height: artH,
-            child: ShaderMask(
+            child: ClipRect(child: ShaderMask(
               // 사진 아래 45%를 투명으로 서서히 → 바탕 그라데이션과 이어짐 (끝 줄에 색이 남지 않게 마지막은 완전 투명)
               shaderCallback: (r) => const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.white, Colors.white, Color(0x00FFFFFF), Color(0x00FFFFFF)], stops: [0, 0.55, 0.88, 1]).createShader(r),
               blendMode: BlendMode.dstIn,
               child: Image.asset('assets/art/parcel_bg.jpg', fit: BoxFit.cover, alignment: w < 600 ? Alignment.bottomCenter : const Alignment(1, 0.3), filterQuality: FilterQuality.medium),
-            ),
+            )),
           ),
           Center(
             child: ConstrainedBox(

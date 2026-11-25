@@ -140,7 +140,7 @@ class _TrashPageState extends State<TrashPage> {
           bottom: 0,
           width: artW + 30,
           height: artH + 10,
-          child: ShaderMask(
+          child: ClipRect(child: ShaderMask(
             shaderCallback: (r) => const LinearGradient(colors: [Color(0x00FFFFFF), Colors.white, Colors.white], stops: [0, 0.3, 1]).createShader(r),
             blendMode: BlendMode.dstIn,
             child: ShaderMask(
@@ -148,7 +148,7 @@ class _TrashPageState extends State<TrashPage> {
               blendMode: BlendMode.dstIn,
               child: Image.asset('assets/art/trash_head.png', fit: BoxFit.cover, alignment: Alignment.centerRight, filterQuality: FilterQuality.medium),
             ),
-          ),
+          )),
         ),
         Positioned(
           left: 4,
