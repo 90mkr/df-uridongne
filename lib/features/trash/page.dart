@@ -63,15 +63,19 @@ class _TrashPageState extends State<TrashPage> {
   }
 
   @override
-  Widget build(BuildContext context) => DetailPage(
-        title: '쓰레기·분리수거',
-        icon: 'trash',
-        body: loading
-            ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
-            : RefreshIndicator(
-                onRefresh: () => _load(fresh: true),
-                child: ListView(padding: const EdgeInsets.only(bottom: 34), children: _body(info!)),
-              ),
+  Widget build(BuildContext context) => Scaffold(
+        backgroundColor: const Color(0xFFF6F9FD),
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: loading
+                ? Column(children: [_header(null), const Expanded(child: Center(child: CircularProgressIndicator(strokeWidth: 2)))])
+                : RefreshIndicator(
+                    onRefresh: () => _load(fresh: true),
+                    child: ListView(padding: const EdgeInsets.only(bottom: 34), children: _body(info!)),
+                  ),
+          ),
+        ),
       );
 
   Widget _pad(Widget w) => Padding(padding: const EdgeInsets.symmetric(horizontal: kPad), child: w);
@@ -80,6 +84,9 @@ class _TrashPageState extends State<TrashPage> {
     final z = i.zone;
     return [
       _header(i),
+      // 두 칸: 수거하지 않는 날 | 대형 폐기물 (머리 그림 아래에 살짝 겹침)
+      Transform.translate(offset: const Offset(0, -16), child: _pad(_offBulk(z))),
+      _pad(_where(i)),
       if (z == null && i.needPick)
         _pad(_notice('이 지역은 구역마다 배출 요일이 달라요. 단지가 속한 구역을 골라 주세요.', '구역 고르기', _pickZone))
       else if (i.gov == null && !i.fromApt)
@@ -97,10 +104,8 @@ class _TrashPageState extends State<TrashPage> {
       if (z != null) ...[
         _pad(_head('배출 방법')),
         _pad(_methods(z)),
-        const SizedBox(height: 12),
-        _pad(_offBulk(z)),
       ],
-      _pad(_head('이건 어떻게 버려요?')),
+      _pad(_head('이건 어떻게 버려요?', big: true)),
       _pad(const GuideBox()),
       const SizedBox(height: 22),
       _pad(Text(
@@ -113,69 +118,75 @@ class _TrashPageState extends State<TrashPage> {
     ];
   }
 
-  // ── 맨 위: 옅은 하늘빛 띠 + 오른쪽 그림, 위치·제목·구역
-  Widget _header(TrashInfo i) {
-    final g = i.gov;
-    final z = i.zone;
+  // ── 맨 위 (대표님 시안 11-25): ← 재활용 아이콘 「쓰레기·분리수거」 + 오른쪽 그림(쓰레기통·상자·병)
+  // 그림 왼쪽·아래는 바탕으로 서서히 녹여 경계선이 안 생기게
+  Widget _header(TrashInfo? i) {
+    final top = MediaQuery.of(context).padding.top;
     final w = MediaQuery.of(context).size.width.clamp(0, 720).toDouble();
-    final artW = (w * 0.44).clamp(140.0, 230.0);
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFFE6F0FE), Colors.white]),
-      ),
+    final artW = (w * 0.5).clamp(170.0, 330.0);
+    final artH = artW * 290 / 610;
+    final h = top + (artH + 6).clamp(96.0, 170.0);
+    return SizedBox(
+      height: h,
       child: Stack(children: [
-        Positioned(right: 8, top: 6, width: artW, child: Image.memory(trashArt['head']!, fit: BoxFit.contain, gaplessPlayback: true)),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(kPad, 22, kPad, 6),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Padding(
-              padding: EdgeInsets.only(right: artW - 20),
-              child: Row(children: [
-                const TrashIcon('pin', size: 18, line: kBlue, fill: Color(0xFFD6E4FF)),
-                const SizedBox(width: 4),
-                Flexible(
-                  child: Text(
-                    g == null ? c.name : '${g.sido} ${g.gu}${i.dong.isNotEmpty ? ' · ${i.dong}' : ''}',
-                    maxLines: 2,
-                    style: const TextStyle(fontSize: 12.5, color: kInk, height: 1.3),
-                  ),
-                ),
-              ]),
+        // 바탕: 왼쪽 위 옅은 하늘 → 아래 화면 바탕색
+        const Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomCenter, colors: [Color(0xFFE6F1FD), Color(0xFFF6F9FD)])),
+          ),
+        ),
+        Positioned(
+          right: 0,
+          bottom: 0,
+          width: artW + 30,
+          height: artH + 10,
+          child: ShaderMask(
+            shaderCallback: (r) => const LinearGradient(colors: [Color(0x00FFFFFF), Colors.white, Colors.white], stops: [0, 0.3, 1]).createShader(r),
+            blendMode: BlendMode.dstIn,
+            child: ShaderMask(
+              shaderCallback: (r) => const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0x00FFFFFF), Colors.white, Colors.white, Color(0x00FFFFFF)], stops: [0, 0.18, 0.86, 1]).createShader(r),
+              blendMode: BlendMode.dstIn,
+              child: Image.asset('assets/art/trash_head.png', fit: BoxFit.cover, alignment: Alignment.centerRight, filterQuality: FilterQuality.medium),
             ),
-            SizedBox(height: (artW * 0.5) - 30),
-            Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-              Expanded(
-                child: Text.rich(
-                  TextSpan(children: [
-                    TextSpan(text: c.name, style: const TextStyle(fontWeight: FontWeight.w800)),
-                    const TextSpan(text: ' 배출 안내', style: TextStyle(fontWeight: FontWeight.w400, color: kSub)),
-                  ]),
-                  style: const TextStyle(fontSize: 19, color: kInk, letterSpacing: -0.6, height: 1.3),
-                ),
-              ),
-              if ((g?.zones.length ?? 0) > 1) ...[
-                const SizedBox(width: 10),
-                InkWell(
-                  borderRadius: BorderRadius.circular(20),
-                  onTap: _pickZone,
-                  child: Container(
-                    padding: const EdgeInsets.fromLTRB(12, 7, 14, 7),
-                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: kBlue)),
-                    child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                      TrashIcon('swap', size: 15, line: kBlue, weight: 3),
-                      SizedBox(width: 5),
-                      Text('구역 바꾸기', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: kBlue)),
-                    ]),
-                  ),
-                ),
-              ],
-            ]),
-            if (z != null) ...[
-              const SizedBox(height: 5),
-              Text('지자체 기준 구역 : ${z.label}', style: const TextStyle(fontSize: 12, color: kSub, height: 1.35)),
-            ],
+          ),
+        ),
+        Positioned(
+          left: 4,
+          top: top + 14,
+          child: Row(children: [
+            IconButton(onPressed: () => Navigator.of(context).maybePop(), icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 21, color: kInk)),
+            Image.asset('assets/icons/recycle.png', width: 38, height: 38),
+            const SizedBox(width: 8),
+            Text('쓰레기·분리수거', style: TextStyle(fontSize: w < 380 ? 19 : 21, fontWeight: FontWeight.w800, letterSpacing: -0.7, color: kInk)),
           ]),
         ),
+      ]),
+    );
+  }
+
+  // 위치 · 구역 (두 칸 아래 한 줄)
+  Widget _where(TrashInfo i) {
+    final g = i.gov;
+    final z = i.zone;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 0, 0, 4),
+      child: Row(children: [
+        const TrashIcon('pin', size: 16, line: kBlue, fill: Color(0xFFD6E4FF)),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(
+            [g == null ? c.name : '${g.sido} ${g.gu}${i.dong.isNotEmpty ? ' · ${i.dong}' : ''}', if (z != null) z.label].join('  ·  '),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 12, color: kSub),
+          ),
+        ),
+        if ((g?.zones.length ?? 0) > 1)
+          TextButton(
+            onPressed: _pickZone,
+            style: TextButton.styleFrom(foregroundColor: kBlue, padding: const EdgeInsets.symmetric(horizontal: 8), minimumSize: const Size(0, 30), textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+            child: const Text('구역 바꾸기'),
+          ),
       ]),
     );
   }
@@ -319,12 +330,12 @@ class _TrashPageState extends State<TrashPage> {
         ),
       );
 
-  Widget _head(String t) => Padding(
+  Widget _head(String t, {bool big = false}) => Padding(
         padding: const EdgeInsets.fromLTRB(0, 28, 0, 12),
         child: Row(children: [
-          Container(width: 3, height: 17, decoration: BoxDecoration(color: kBlue, borderRadius: BorderRadius.circular(2))),
+          Container(width: 3, height: big ? 20 : 17, decoration: BoxDecoration(color: big ? _green : kBlue, borderRadius: BorderRadius.circular(2))),
           const SizedBox(width: 8),
-          Text(t, style: const TextStyle(fontSize: 16.5, fontWeight: FontWeight.w800, letterSpacing: -0.5)),
+          Text(t, style: TextStyle(fontSize: big ? 19 : 16.5, fontWeight: FontWeight.w800, letterSpacing: -0.5)),
         ]),
       );
 
@@ -403,57 +414,59 @@ class _TrashPageState extends State<TrashPage> {
     );
   }
 
-  // ── 수거하지 않는 날 | 대형 폐기물
-  Widget _offBulk(Zone z) => Container(
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: kLine), boxShadow: kShadow),
-        child: IntrinsicHeight(
-          child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(14, 14, 10, 14),
-                child: Row(children: [
-                  const TrashIcon('calx', size: 30, line: kBlue, fill: Color(0xFFD6E4FF)),
-                  const SizedBox(width: 9),
-                  Expanded(
-                    child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      const Text('수거하지 않는 날', maxLines: 1, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, letterSpacing: -0.4)),
-                      const SizedBox(height: 2),
-                      Text(z.off.isEmpty ? '없음' : z.off.replaceAll('+', ', '), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: kSub)),
-                    ]),
-                  ),
-                ]),
-              ),
-            ),
-            Container(width: 1, margin: const EdgeInsets.symmetric(vertical: 14), color: kLine),
-            Expanded(
+  // ── 수거하지 않는 날 | 대형 폐기물: 따로 떨어진 두 칸 (왼쪽 옅은 파랑 · 오른쪽 옅은 초록), 큰 아이콘 + 제목 + 설명 + 화살표
+  Widget _offBulk(Zone? z) {
+    final narrow = MediaQuery.of(context).size.width < 380;
+    Widget card(String title, String sub, IconData icon, Color ink, List<Color> tint, Color disk, VoidCallback? onTap) => Expanded(
+          child: Container(
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(18), boxShadow: const [BoxShadow(color: Color(0x140B2A5B), blurRadius: 14)]),
+            child: Material(
+              color: Colors.transparent,
               child: InkWell(
-                borderRadius: const BorderRadius.horizontal(right: Radius.circular(16)),
-                onTap: () => _bulkSheet(z),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 14, 6, 14),
+                borderRadius: BorderRadius.circular(18),
+                onTap: onTap,
+                child: Ink(
+                  height: narrow ? 92 : 100,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: tint),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: Colors.white),
+                  ),
+                  padding: EdgeInsets.fromLTRB(narrow ? 10 : 12, 10, 6, 10),
                   child: Row(children: [
-                    const TrashIcon('b', size: 30, line: kBlue, fill: Color(0xFFD6E4FF)),
-                    const SizedBox(width: 9),
+                    Container(
+                      width: narrow ? 40 : 48,
+                      height: narrow ? 40 : 48,
+                      decoration: BoxDecoration(color: disk, shape: BoxShape.circle),
+                      child: Icon(icon, size: narrow ? 22 : 26, color: ink),
+                    ),
+                    SizedBox(width: narrow ? 8 : 10),
                     Expanded(
                       child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        const Text('대형 폐기물', maxLines: 1, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, letterSpacing: -0.4)),
-                        const SizedBox(height: 2),
-                        Text(
-                          (z.method['b'] ?? '').isNotEmpty ? z.method['b']! : '신고 후 배출',
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 12, color: kSub),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(title, maxLines: 1, style: TextStyle(fontSize: narrow ? 13.5 : 15, fontWeight: FontWeight.w800, letterSpacing: -0.5, color: kInk)),
                         ),
+                        const SizedBox(height: 4),
+                        Text(sub, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: narrow ? 11 : 12, color: const Color(0xFF5A6475), height: 1.35)),
                       ]),
                     ),
-                    const Icon(Icons.chevron_right, size: 20, color: kSub),
+                    Icon(Icons.chevron_right_rounded, size: 20, color: onTap == null ? Colors.transparent : kInk),
                   ]),
                 ),
               ),
             ),
-          ]),
-        ),
-      );
+          ),
+        );
+    final off = z == null ? '구역을 고르면 보여요' : (z.off.isEmpty ? '없음' : z.off.replaceAll('+', ', '));
+    final bulk = z == null ? '신고 후 배출' : ((z.method['b'] ?? '').isNotEmpty ? z.method['b']! : '신고 후 배출');
+    return Row(children: [
+      card('수거하지 않는 날', off, Icons.event_busy_rounded, kBlue, const [Color(0xFFF4F8FF), Color(0xFFE3EEFD)], const Color(0xFFD9E7FD), null),
+      const SizedBox(width: 10),
+      card('대형 폐기물', bulk, Icons.weekend_outlined, const Color(0xFF1F9D57), const [Color(0xFFF2FBF5), Color(0xFFDDF3E4)], const Color(0xFFCDEEDA), z == null ? null : () => _bulkSheet(z)),
+    ]);
+  }
 
   void _bulkSheet(Zone z) => showSheet<void>(
         context,

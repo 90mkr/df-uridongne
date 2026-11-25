@@ -3,7 +3,6 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme.dart';
-import '../../core/ui.dart';
 import 'trash_icons.dart';
 
 class GuideItem {
@@ -61,52 +60,121 @@ class _GuideBoxState extends State<GuideBox> {
     super.dispose();
   }
 
+  final Set<String> open = {};
+
+  // 대표님 시안(11-25) 그림이 있는 품목 (맨 앞 8개) — 그림 바탕색에 맞춘 알약 색
+  static const _art = {
+    '투명 페트병': ('pet', Color(0xFFE3EFFE), Color(0xFF1E5FC7)),
+    '플라스틱 용기': ('plastic', Color(0xFFEDE8FB), Color(0xFF5B4BB7)),
+    '비닐': ('vinyl', Color(0xFFDDF4EA), Color(0xFF1C8A5A)),
+    '스티로폼': ('styro', Color(0xFFFDF3D3), Color(0xFF8A6A0C)),
+    '택배 상자': ('box', Color(0xFFFDEBD9), Color(0xFFB0581A)),
+    '종이': ('paper', Color(0xFFE3EDFC), Color(0xFF1E5FC7)),
+    '우유팩·두유팩': ('milk', Color(0xFFE3EFFE), Color(0xFF1E5FC7)),
+    '유리병': ('glass', Color(0xFFECE9FB), Color(0xFF5B4BB7)),
+  };
+  // 그림 없는 품목: 종류별 옅은 빛 칸 + 선 아이콘
+  static const _kindTint = {
+    'g': (Color(0xFFEAF1FB), Color(0xFF3F5E8C)),
+    'f': (Color(0xFFFFF0E0), Color(0xFFB0581A)),
+    'r': (Color(0xFFE3F5EB), Color(0xFF1C8A5A)),
+    'b': (Color(0xFFF1ECFB), Color(0xFF5B4BB7)),
+    's': (Color(0xFFFDF3D3), Color(0xFF8A6A0C)),
+  };
+
   @override
   Widget build(BuildContext context) {
     String norm(String s) => s.replaceAll(' ', '').toLowerCase();
     final w = norm(t);
     final list = w.isEmpty ? kGuide.take(8).toList() : kGuide.where((g) => norm('${g.name}${g.where}${g.also.join()}').contains(w)).toList();
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      // 둥근 알약 모양 찾기 칸
       TextField(
         controller: q,
         onChanged: (v) => setState(() => t = v),
-        style: const TextStyle(fontSize: 14),
-        decoration: inputDeco('예: 아이스팩, 치킨뼈, 깨진 유리').copyWith(
-          prefixIcon: const Padding(padding: EdgeInsets.all(11), child: TrashIcon('search', size: 18)),
-          prefixIconConstraints: const BoxConstraints(minWidth: 40),
+        style: const TextStyle(fontSize: 14.5),
+        decoration: InputDecoration(
+          hintText: '예: 아이스팩, 치킨뼈, 깨진 유리',
+          hintStyle: const TextStyle(fontSize: 14.5, color: Color(0xFF9AA4B4)),
+          isDense: true,
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(vertical: 15),
+          prefixIcon: const Padding(padding: EdgeInsets.fromLTRB(16, 0, 8, 0), child: Icon(Icons.search_rounded, size: 24, color: Color(0xFF3F4756))),
+          prefixIconConstraints: const BoxConstraints(minWidth: 48),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(28), borderSide: const BorderSide(color: Color(0xFFD5DEEA))),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(28), borderSide: const BorderSide(color: Color(0xFFD5DEEA))),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(28), borderSide: const BorderSide(color: kBlue)),
         ),
       ),
-      const SizedBox(height: 6),
+      const SizedBox(height: 14),
       if (list.isEmpty)
         const Padding(padding: EdgeInsets.symmetric(vertical: 14), child: Text('찾는 품목이 없어요. 담당 부서에 물어보시는 게 가장 정확해요.', style: T.small)),
       for (var i = 0; i < list.length; i++) ...[
-        if (i > 0) const Divider(height: 1, color: kLine),
+        if (i > 0) const SizedBox(height: 6),
         _row(list[i]),
       ],
       if (w.isEmpty)
-        Padding(
-          padding: const EdgeInsets.only(top: 6),
-          child: Text('품목 ${kGuide.length}개 중 일부예요. 위 칸에 찾아보세요.', style: T.tiny),
+        Container(
+          margin: const EdgeInsets.only(top: 14),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          decoration: BoxDecoration(color: const Color(0xFFE9F4EF), borderRadius: BorderRadius.circular(24)),
+          child: Row(children: [
+            const Icon(Icons.info_outline_rounded, size: 19, color: Color(0xFF1C8A5A)),
+            const SizedBox(width: 8),
+            Expanded(child: Text('품목 ${kGuide.length}개 중 일부예요. 위 칸에 찾아보세요.', style: const TextStyle(fontSize: 13, color: Color(0xFF2E3A48)))),
+          ]),
         ),
     ]);
   }
 
-  Widget _row(GuideItem g) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Padding(padding: const EdgeInsets.only(top: 1), child: TrashIcon(g.kind, size: 22)),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                Flexible(child: Text(g.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700))),
-                const SizedBox(width: 6),
-                Pill(g.where),
-              ]),
-              const SizedBox(height: 3),
-              Text(g.how, style: const TextStyle(fontSize: 12, color: kSub, height: 1.4)),
+  // 품목 한 칸: 그림(옅은 빛 네모) · 이름 + 알약 · 설명 두 줄 · 화살표 (누르면 설명 전부 펼침)
+  Widget _row(GuideItem g) {
+    final art = _art[g.name];
+    final kt = _kindTint[g.kind] ?? _kindTint['g']!;
+    final pillBg = art?.$2 ?? kt.$1;
+    final pillInk = art?.$3 ?? kt.$2;
+    final isOpen = open.contains(g.name);
+    return Container(
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFE6EBF2)), boxShadow: const [BoxShadow(color: Color(0x0D0B2A5B), blurRadius: 10)]),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => setState(() => isOpen ? open.remove(g.name) : open.add(g.name)),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(10, 10, 6, 10),
+            child: Row(children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  width: 68,
+                  height: 58,
+                  child: art != null
+                      ? Image.asset('assets/art/tg_${art.$1}.png', fit: BoxFit.cover, filterQuality: FilterQuality.medium)
+                      : ColoredBox(color: kt.$1, child: Center(child: TrashIcon(g.kind, size: 30, line: kt.$2))),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 8, runSpacing: 4, children: [
+                    Text(g.name, style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800, letterSpacing: -0.5, color: kInk)),
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(10, 3, 10, 3),
+                      decoration: BoxDecoration(color: pillBg, borderRadius: BorderRadius.circular(20)),
+                      child: Text(g.where, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: pillInk)),
+                    ),
+                  ]),
+                  const SizedBox(height: 4),
+                  Text(g.how, maxLines: isOpen ? null : 2, overflow: isOpen ? null : TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, color: Color(0xFF3F4756), height: 1.4)),
+                ]),
+              ),
+              Icon(isOpen ? Icons.expand_less_rounded : Icons.chevron_right_rounded, size: 22, color: const Color(0xFF8A95A8)),
             ]),
           ),
-        ]),
-      );
+        ),
+      ),
+    );
+  }
 }
