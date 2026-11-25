@@ -21,7 +21,7 @@ class PetTripPage extends StatefulWidget {
 }
 
 class _PetTripPageState extends State<PetTripPage> {
-  bool loading = true, map = true, far = false;
+  bool loading = true, map = false, far = false; // 카드 먼저 (대표님 11-26)
   TripKind kind = TripKind.all;
   List<(Trip, double)> all = const [];
 

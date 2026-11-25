@@ -1,5 +1,5 @@
 // 우리 동네 반려동물 — 업체 화면 (응급·24시 / 동물병원 / 미용 / 호텔·돌봄 / 용품 / 동물약국)
-// 목록·지도가 함께 있는 화면은 지도 먼저 (대표님 11-23), 응급만 「가장 가까운 한 곳 크게」 먼저
+// 반려동물 칸은 업체가 많지 않아 카드(목록) 먼저, 지도는 「지도 보기」로 (대표님 11-26) · 응급은 「가장 가까운 한 곳 크게」 먼저
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:latlong2/latlong.dart';
@@ -32,7 +32,7 @@ bool _hospMatch(PetPlace p, String f) {
   return RegExp(re).hasMatch(p.name);
 }
 
-// ---------------- 칸별 화면 (지도 먼저) ----------------
+// ---------------- 칸별 화면 (카드 먼저) ----------------
 class PetPlacesPage extends StatefulWidget {
   final Complex complex;
   final PetKind kind;
@@ -42,7 +42,7 @@ class PetPlacesPage extends StatefulWidget {
 }
 
 class _PetPlacesPageState extends State<PetPlacesPage> {
-  bool loading = true, map = true;
+  bool loading = true, map = false; // 대표님 11-26: 동물 업체는 많지 않아 카드(목록) 먼저, 지도는 원할 때
   String filter = 'all';
   List<(PetPlace, double)> all = const [];
   double km = 3;
@@ -98,7 +98,12 @@ class _PetPlacesPageState extends State<PetPlacesPage> {
                         : ListView(padding: const EdgeInsets.fromLTRB(kPad, 6, kPad, 30), children: [
                             Text('${widget.complex.name}에서 가까운 순 · ${l.length}곳', style: T.small),
                             const SizedBox(height: 4),
-                            for (final x in l.take(80)) PetRow(p: x.$1, m: x.$2),
+                            const SizedBox(height: 6),
+                            Container(
+                              decoration: cardBox(),
+                              padding: const EdgeInsets.symmetric(horizontal: 14),
+                              child: Column(children: [for (final x in l.take(80)) PetRow(p: x.$1, m: x.$2)]),
+                            ),
                             const SizedBox(height: 14),
                             const PetNote(),
                           ]),
