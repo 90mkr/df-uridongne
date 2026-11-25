@@ -35,8 +35,8 @@ KST = timezone(timedelta(hours=9))
 NOW = datetime.now(KST).strftime("%Y-%m-%d %H:%M")
 
 SIDO = [  # 소상공인 시도 코드, 짧은 이름 (앱 동네 고르기 순서)
-    ("11", "서울"), ("28", "인천"), ("41", "경기"), ("26", "부산"), ("27", "대구"), ("29", "광주"), ("30", "대전"), ("31", "울산"),
-    ("36", "세종"), ("51", "강원"), ("42", "강원"), ("43", "충북"), ("44", "충남"), ("52", "전북"), ("45", "전북"), ("46", "전남"),
+    ("11", "서울"), ("28", "인천"), ("41", "경기"), ("26", "부산"), ("27", "대구"), ("12", "전남광주"), ("29", "전남광주"), ("46", "전남광주"),
+    ("30", "대전"), ("31", "울산"), ("36", "세종"), ("51", "강원"), ("42", "강원"), ("43", "충북"), ("44", "충남"), ("52", "전북"), ("45", "전북"),
     ("47", "경북"), ("48", "경남"), ("50", "제주"),
 ]
 SPLIT = 15000  # 한 동네 가게가 이보다 많으면 행정동 묶음으로 나눈다 (파일 크기·앱 속도)
@@ -281,45 +281,63 @@ def road_key(a):
     return f"{gu} {m.group(1)} {m.group(2)}" if m else ""
 
 
-def build_apts(regions, all_shops):
-    # 같은 건물(도로명+번호)에 있는 가게 좌표 — 지오코더 키가 없을 때 대신 씀
-    bld = {}
-    for s in all_shops:
-        k = road_key(s["a"])
-        if k and k not in bld:
-            bld[k] = (s["y"], s["x"])
+def kapt_all():
+    out, page = [], 1
+    while True:
+        j = dg("1613000/AptListService4/getTotalAptList4", pageNo=page, numOfRows=1000, _type="json")
+        if not j:
+            return None if not out else out
+        body = (j.get("response") or {}).get("body") or {}
+        items = body.get("items") or []
+        if isinstance(items, dict):
+            items = items.get("item") or []
+        if isinstance(items, dict):
+            items = [items]
+        out += items
+        if len(out) >= int(body.get("totalCount") or 0) or not items:
+            return out
+        page += 1
+
+
+def build_apts(regions, bld):
+    """전국 단지를 한 번에 — 좌표(브이월드, 없으면 같은 건물 가게) → 법정동으로 동네, 못 찾으면 가장 가까운 동네."""
+    lst = kapt_all()
+    if lst is None:
+        print("  K-apt 단지 목록 막힘 (활용신청 필요) — 아파트 건너뜀")
+        return None
+    print(f"  K-apt 단지 {len(lst):,}곳")
     reg_of_ldong = {}
     for r in regions:
         for ld, n in r["_ldongs"].items():
             if n > reg_of_ldong.get(ld, ("", 0))[1]:
                 reg_of_ldong[ld] = (r["id"], n)
-    by_g = defaultdict(list)
-    for r in regions:
-        by_g[r["_g"]].append(r)
+    with ThreadPoolExecutor(6) as ex:  # 기본정보 미리 (지난번 받아 둔 건 건너뜀)
+        list(ex.map(lambda it: kapt_basis(it.get("kaptCode")), [it for it in lst if it.get("kaptCode") not in KAPT_CACHE]))
+    todo = sorted({(KAPT_CACHE.get(it.get("kaptCode")) or {}).get("doroJuso", "").strip() for it in lst} - set(GEO) - {""})
+    if VKEY:
+        with ThreadPoolExecutor(6) as ex:
+            list(ex.map(vworld, todo))
     apts = defaultdict(list)
     miss = 0
-    for g, rs in by_g.items():
-        lst = kapt_list_sigungu(g)
-        if lst is None:
-            print("  K-apt 단지 목록 막힘 (활용신청 필요) — 아파트 건너뜀")
-            return None
-        for it in lst:
-            code = it.get("kaptCode")
-            name = (it.get("kaptName") or "").strip()
-            b = kapt_basis(code) or {}
-            road = (b.get("doroJuso") or "").strip()
-            addr = road or (b.get("kaptAddr") or "").strip()
-            yx = vworld(road) or bld.get(road_key(road))
-            if not yx:
-                miss += 1
+    for it in lst:
+        code = it.get("kaptCode")
+        b = KAPT_CACHE.get(code) or {}
+        road = (b.get("doroJuso") or "").strip()
+        yx = GEO.get(road) or bld.get(road_key(road))
+        if not yx:
+            miss += 1
+            continue
+        bjd = str(it.get("bjdCode") or b.get("bjdCode") or "")
+        rid = reg_of_ldong.get(bjd, (None, 0))[0]
+        if not rid:
+            near = [r for r in regions if r["bbox"][0] <= yx[1] <= r["bbox"][2] and r["bbox"][1] <= yx[0] <= r["bbox"][3]]
+            if not near:  # 이번에 만든 시도 밖 (시도만 골라 돌릴 때)
                 continue
-            bjd = str(it.get("bjdCode") or b.get("bjdCode") or "")
-            rid = reg_of_ldong.get(bjd, (None, 0))[0]
-            if not rid or rid not in {r["id"] for r in rs}:  # 법정동으로 못 찾으면 가장 가까운 동네
-                rid = min(rs, key=lambda r: (r["lat"] - yx[0]) ** 2 + (r["lng"] - yx[1]) ** 2)["id"]
-            kind = (b.get("codeAptNm") or "").strip()
-            apts[rid].append({"id": code, "n": name, "k": "" if kind in ("", "아파트") else kind, "a": addr, "t": (b.get("kaptTel") or "").strip(),
-                              "h": int(b.get("kaptdaCnt") or 0), "y": round(yx[0], 6), "x": round(yx[1], 6)})
+            rid = min(near, key=lambda r: (r["lat"] - yx[0]) ** 2 + (r["lng"] - yx[1]) ** 2)["id"]
+        kind = (b.get("codeAptNm") or "").strip()
+        apts[rid].append({"id": code, "n": (it.get("kaptName") or b.get("kaptName") or "").strip(), "k": "" if kind in ("", "아파트") else kind,
+                          "a": road or (b.get("kaptAddr") or "").strip(), "t": (b.get("kaptTel") or "").strip(),
+                          "h": int(b.get("kaptdaCnt") or 0), "y": round(yx[0], 6), "x": round(yx[1], 6)})
     print(f"  아파트 {sum(len(v) for v in apts.values()):,}단지 (좌표 못 찾음 {miss})")
     return apts
 
@@ -400,6 +418,20 @@ def add_phones(shops, idx):
 
 
 # ---------------- 저장 ----------------
+# K-apt 기본정보·브이월드 좌표는 공공 자료라 다음 번을 위해 store 에 남겨 둔다 (하루 호출 한도 나눠 쓰기)
+def load_caches():
+    for name, d in (("_kapt.json", KAPT_CACHE), ("_geo.json", GEO)):
+        try:
+            for k, v in json.load(open(os.path.join(OUT, name), encoding="utf-8")).items():
+                d[k] = tuple(v) if isinstance(v, list) else v
+        except Exception:
+            pass
+
+
+def save_caches():
+    dump("_kapt.json", {k: v for k, v in KAPT_CACHE.items() if v})
+    dump("_geo.json", {k: v for k, v in GEO.items() if v})
+
 
 def dump(name, obj):
     os.makedirs(OUT, exist_ok=True)
@@ -420,6 +452,8 @@ def main():
     reg["note"] = "동네 목록 — 전국 시군구(큰 곳은 나눔). 소상공인 상가정보·K-apt·인허가로 만듦(카카오 자료는 저장하지 않음)."
     have = {s["name"]: s for s in reg.get("sido", [])}
     lic = license_index() if os.environ.get("PHONES", "1") == "1" else {}
+    load_caches()
+    all_regions, bld = [], {}
     done_names = set()
     for code, sname in SIDO:
         if want and code not in want:
@@ -432,14 +466,15 @@ def main():
         if lic:
             print(f"  전화번호 붙임 {add_phones(shops, lic):,}곳")
         regions = build_regions(sname, shops)
-        apts = build_apts(regions, shops)
+        for sh in shops:
+            k = road_key(sh["a"])
+            if k and k not in bld:
+                bld[k] = (sh["y"], sh["x"])
         for r in regions:
-            ps = sorted(r["_shops"], key=lambda z: (z["c"][0], z["n"]))
-            clean = [{k: v for k, v in s.items() if not k.startswith("_")} for s in ps]
+            ps = sorted(r.pop("_shops"), key=lambda z: (z["c"][0], z["n"]))
+            clean = [{k: v for k, v in x.items() if not k.startswith("_")} for x in ps]
             dump(f"{r['id']}.json", {"area": r["name"], "area_id": r["id"], "updated": NOW, "count": len(clean), "src": "소상공인시장진흥공단 상가(상권)정보", "shops": clean})
-            if apts is not None:
-                al = sorted(apts.get(r["id"], []), key=lambda z: z["n"])
-                dump(f"apt_{r['id']}.json", {"area_id": r["id"], "updated": NOW, "src": "공동주택관리정보시스템(K-apt)", "apts": al})
+        all_regions += regions
         entry = {"name": sname, "areas": [{k: v for k, v in r.items() if not k.startswith("_")} for r in regions]}
         if sname in done_names:  # 강원 51·42 처럼 코드가 둘인 곳
             have[sname]["areas"] += entry["areas"]
@@ -447,6 +482,14 @@ def main():
             have[sname] = entry
             done_names.add(sname)
         print(f"  동네 {len(regions)}곳 · 가게 {len(shops):,}곳")
+        del raw, shops
+    if all_regions and os.environ.get("APTS", "1") == "1":
+        apts = build_apts(all_regions, bld)
+        if apts is not None:
+            for r in all_regions:
+                al = sorted(apts.get(r["id"], []), key=lambda z: z["n"])
+                dump(f"apt_{r['id']}.json", {"area_id": r["id"], "updated": NOW, "src": "공동주택관리정보시스템(K-apt)", "apts": al})
+    save_caches()
     order = [n for _, n in SIDO]
     reg["sido"] = sorted(have.values(), key=lambda s: order.index(s["name"]) if s["name"] in order else 99)
     with open(reg_path, "w", encoding="utf-8") as f:

@@ -43,10 +43,8 @@ const _aptSkip = ['상가', '관리사무소', '부동산', '공인중개', '경
 
 // 단지가 어느 동네 소속인지: 준비된 동네 범위 안이면 그 동네, 아니면 빈칸(그 자리에서 불러오기 모드)
 String areaIdAt(LatLng p) {
-  for (final a in areas) {
-    if (a.ready && a.contains(p)) return a.id;
-  }
-  return '';
+  final a = areaAt(p);
+  return a != null && a.ready && a.contains(p) ? a.id : '';
 }
 
 /// 전국 어디든 단지 찾기 — 이름(q)으로, 또는 위치(near) 둘레로
