@@ -66,7 +66,6 @@ jobs:
           NEIS_KEY: ${{ secrets.NEIS_KEY }}
           KOPIS_KEY: ${{ secrets.KOPIS_KEY }}
           KRIC_KEY: ${{ secrets.KRIC_KEY }}
-          KRIC_PROBE: '1'
           FEATURES: ${{ github.event.schedule == '40 22,3,9 * * *' && 'gas,events' || ((github.event.schedule == '20 12 * * 6' || github.event.schedule == '7 0 * * 0') && 'lotto' || inputs.features) }}
         run: |
           for f in collector/features/*.py; do

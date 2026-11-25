@@ -167,8 +167,21 @@ def times(opr, ln, stin, day):
     for r in rows:
         t = hhmm(r.get("dptTm")) or hhmm(r.get("arvTm"))
         if t and t != "0000":
+            if int(t[:2]) < 3:  # 자정 넘은 막차 00:01 → 24:01 (하루 끝에 오도록)
+                t = f"{int(t[:2]) + 24}{t[2:]}"
             out[str(r.get("trnNo", ""))] = t
     return out
+
+
+def near_times(opr, ln, route, i, step, code):
+    """i 에서 step(+1/-1) 쪽으로 가며 시간표가 있는 첫 역 (번호가 비어 있는 역 건너뜀 — 예: 수인분당 K268)"""
+    k = i + step
+    while 0 <= k < len(route) and abs(k - i) <= 3:
+        t = times(opr, ln, route[k][1], code)
+        if t:
+            return t
+        k += step
+    return {}
 
 
 def fill_kric(st):
@@ -183,8 +196,6 @@ def fill_kric(st):
     for line in sorted({x["l"] for x in want}):
         opr, ln, route = route_stations(line)
         first, last = ROUTES[line][3], ROUTES[line][4]  # 방면 이름 (번호 작은 쪽 / 큰 쪽 끝)
-        if os.environ.get("KRIC_PROBE"):
-            print(f"  {line} 역별 평일 열차 수:", [(r[2], len(times(opr, ln, r[1], "8"))) for r in route[-8:]])
         idx = {r[2]: i for i, r in enumerate(route)}
         for x in want:
             if x["l"] != line:
@@ -198,8 +209,8 @@ def fill_kric(st):
                 here = times(opr, ln, route[i][1], code)
                 if not here:
                     continue
-                nxt = times(opr, ln, route[i + 1][1], code) if i + 1 < len(route) else {}
-                prv = times(opr, ln, route[i - 1][1], code) if i > 0 else {}
+                nxt = near_times(opr, ln, route, i, 1, code)
+                prv = near_times(opr, ln, route, i, -1, code)
                 up, down = [], []
                 for no, t in here.items():
                     # 같은 열차가 다음(번호 큰) 역에 더 늦게 오면 → 끝역 쪽(D), 앞(번호 작은) 역에 더 늦게 오면 → 첫역 쪽(U)
@@ -215,6 +226,10 @@ def fill_kric(st):
                     tt[day + "U"] = sorted(up)
                 if down:
                     tt[day + "D"] = sorted(down)
+            # KRIC 은 토요일(7) 시간표를 안 줌 → 휴일 시간표를 토요일로 (주말 운행이 같은 노선이 대부분)
+            for ud in ("U", "D"):
+                if "02" + ud not in tt and "03" + ud in tt:
+                    tt["02" + ud] = tt["03" + ud]
             if tt:
                 x["tt"] = tt
                 x["src"] = "kric"
