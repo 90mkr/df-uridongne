@@ -159,42 +159,41 @@ class _ChargerPageState extends State<ChargerPage> {
   Widget build(BuildContext context) {
     final list = items;
     final empty = !loading && (set?.all.isEmpty ?? true);
+    // 머리 사진은 화면 끝까지, 내용은 가운데 최대 720
+    Widget inner(Widget w) => Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 720), child: w));
     return Scaffold(
       backgroundColor: _page,
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 720),
-          child: loading
-              ? Column(children: [_head(), const Expanded(child: Center(child: CircularProgressIndicator(strokeWidth: 2)))])
-              : empty
-                  ? Column(children: [_head(), Expanded(child: _empty())])
-                  : mapView
-                      ? Column(children: [_head(), Expanded(child: _map(list))])
-                      : _list(list),
-        ),
-      ),
+      body: loading
+          ? Column(children: [_head(), const Expanded(child: Center(child: CircularProgressIndicator(strokeWidth: 2)))])
+          : empty
+              ? Column(children: [_head(), Expanded(child: inner(_empty()))])
+              : mapView
+                  ? Column(children: [_head(), Expanded(child: _map(list))])
+                  : _list(list, inner),
     );
   }
 
   // ── 맨 위: 오른쪽 충전소 사진(왼쪽·아래는 바탕에 녹임) + ← 아이콘 제목 + 내 차·지도 + 고르기
   Widget _head() {
     final top = MediaQuery.of(context).padding.top;
-    final w = MediaQuery.of(context).size.width.clamp(0, 720).toDouble();
+    final full = MediaQuery.of(context).size.width;
+    final w = full.clamp(0, 720).toDouble();
     final narrow = w < 380;
     final h = top + 150.0;
+    final side = (full - w) / 2; // 넓은 화면: 글자·단추는 가운데 720 안에
     return SizedBox(
       height: h,
       child: Stack(children: [
         const Positioned.fill(
           child: DecoratedBox(
-            decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomCenter, colors: [Color(0xFFE4F0FD), _page])),
+            decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFFE4F0FD), _page])),
           ),
         ),
         Positioned(
           right: 0,
           top: 0,
           bottom: 0,
-          width: w * 0.68,
+          width: (full * 0.68).clamp(0.0, 760.0),
           child: IgnorePointer(
             child: ShaderMask(
               shaderCallback: (r) => const LinearGradient(colors: [Color(0x00FFFFFF), Color(0xCCFFFFFF), Colors.white], stops: [0, 0.38, 1]).createShader(r),
@@ -208,8 +207,8 @@ class _ChargerPageState extends State<ChargerPage> {
           ),
         ),
         Positioned(
-          left: 2,
-          right: kPad - 6,
+          left: side + 2,
+          right: side + kPad - 6,
           top: top + 8,
           child: Row(children: [
             IconButton(onPressed: () => Navigator.of(context).maybePop(), icon: const Icon(Icons.arrow_back_rounded, size: 24, color: kInk)),
@@ -230,8 +229,8 @@ class _ChargerPageState extends State<ChargerPage> {
           ]),
         ),
         Positioned(
-          left: 0,
-          right: 0,
+          left: side,
+          right: side,
           top: top + 62,
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -248,8 +247,8 @@ class _ChargerPageState extends State<ChargerPage> {
           ),
         ),
         Positioned(
-          left: kPad,
-          right: kPad,
+          left: side + kPad,
+          right: side + kPad,
           top: top + 110,
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
@@ -299,7 +298,7 @@ class _ChargerPageState extends State<ChargerPage> {
         ]),
       );
 
-  Widget _list(List<Station> list) {
+  Widget _list(List<Station> list, Widget Function(Widget) inner) {
     final home = list.where(_isHome).firstOrNull;
     final rest = [for (final s in list) if (s != home) s];
     final cheap = cheapId;
@@ -307,7 +306,7 @@ class _ChargerPageState extends State<ChargerPage> {
       onRefresh: _live,
       child: ListView(padding: EdgeInsets.zero, children: [
         _head(),
-        Padding(
+        inner(Padding(
           padding: const EdgeInsets.fromLTRB(kPad, 4, kPad, 30),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             if (chargeTimer.value != null) ...[_TimerCard(t: chargeTimer.value!), const SizedBox(height: 10)],
@@ -345,7 +344,7 @@ class _ChargerPageState extends State<ChargerPage> {
               style: T.tiny,
             ),
           ]),
-        ),
+        )),
       ]),
     );
   }
@@ -396,18 +395,14 @@ class _ChargerPageState extends State<ChargerPage> {
         Padding(
           padding: const EdgeInsets.fromLTRB(18, 16, 14, 14),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Expanded(
-                child: Text(plugs.isEmpty ? '지금 비어 있는 충전기' : '내 차에 맞는 빈 충전기',
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: -0.4, color: Colors.white)),
-              ),
-              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                if (basis.isNotEmpty) _GlassTag(basis, line: true),
-                const SizedBox(height: 5),
-                _GlassTag('${distText(radius)} 안 ${list.length}곳', icon: Icons.place_rounded),
-              ]),
+            Text(plugs.isEmpty ? '지금 비어 있는 충전기' : '내 차에 맞는 빈 충전기',
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: -0.4, color: Colors.white)),
+            const SizedBox(height: 7),
+            Wrap(spacing: 6, runSpacing: 5, children: [
+              if (basis.isNotEmpty) _GlassTag(basis, line: true),
+              _GlassTag('${distText(radius)} 안 ${list.length}곳', icon: Icons.place_rounded),
             ]),
-            const SizedBox(height: 2),
+            const SizedBox(height: 6),
             Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
               _big(Icons.bolt_rounded, '급속', fast, narrow),
               if (mode != Mode.fast) ...[
