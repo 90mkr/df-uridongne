@@ -144,6 +144,15 @@ Matched? matchIn(SggDeals all, {String kapt = '', required String name, String a
     if (identical(a, best)) continue;
     if (a.umd == best.umd && a.officetel == best.officetel && normName(a.name) == bn) m = m.mergeWith(a);
   }
+  if (m.bjd.isEmpty) {
+    // 오피스텔 자료엔 법정동 코드가 없어 같은 동 단지 코드를 빌려 씀 (건축물대장 부를 때)
+    for (final a in all.apts) {
+      if (a.umd == m.umd && a.bjd.length == 10) {
+        m.bjd = a.bjd;
+        break;
+      }
+    }
+  }
   final same = [
     for (final a in all.apts)
       if (a.umd == m.umd && normName(a.name) != bn && a.sales.isNotEmpty) a

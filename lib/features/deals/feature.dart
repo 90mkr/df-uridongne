@@ -22,7 +22,7 @@ class DealsFeature extends Feature {
   @override
   int get order => 10;
   @override
-  String get version => '0.1.2';
+  String get version => '0.1.3';
   @override
   bool get ready => true;
   @override
