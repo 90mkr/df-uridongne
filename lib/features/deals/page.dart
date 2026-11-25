@@ -21,6 +21,7 @@ class DealsPage extends StatefulWidget {
 
 class _DealsPageState extends State<DealsPage> {
   Matched? m;
+  SggDeals? all; // 못 찾았을 때 시군구 인기 단지 보여 주기
   bool loading = true;
   int mode = 0; // 0 매매 · 1 전월세
   int area = -1;
@@ -39,8 +40,11 @@ class _DealsPageState extends State<DealsPage> {
     } else {
       mm = widget.preset ?? await matchComplex(widget.c);
     }
+    final sg = sggOf(widget.c);
+    final al = mm?.all ?? widget.all ?? (sg == null ? null : await loadSgg(sg));
     if (!mounted) return;
     setState(() {
+      all = al;
       m = mm;
       loading = false;
       if (mm != null) {
@@ -75,21 +79,52 @@ class _DealsPageState extends State<DealsPage> {
       body: loading
           ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
           : mm == null
-              ? _empty()
+              ? _empty(all)
               : ListView(padding: const EdgeInsets.fromLTRB(kPad, 14, kPad, 32), children: _body(mm)),
     );
   }
 
-  Widget _empty() => ListView(padding: const EdgeInsets.fromLTRB(kPad, 30, kPad, 30), children: [
-        const Text('이 단지의 최근 1년 거래를 찾지 못했어요', style: T.h2, textAlign: TextAlign.center),
+  Widget _empty(SggDeals? al) {
+    final top = [...?al?.apts.where((a) => a.sales.isNotEmpty)]..sort((a, b) => b.sales.length.compareTo(a.sales.length));
+    return ListView(padding: const EdgeInsets.fromLTRB(kPad, 26, kPad, 30), children: [
+      const Text('이 단지의 최근 1년 거래를 찾지 못했어요', style: T.h2, textAlign: TextAlign.center),
+      const SizedBox(height: 8),
+      Text(
+          sggOf(widget.c) == null || al == null
+              ? '이 동네 실거래 자료를 아직 모으지 못했어요. 곧 채워 넣을게요.'
+              : '단지 이름이 국토교통부 자료와 달라 못 찾았거나, 1년 동안 거래가 없었을 수 있어요. 실거래 신고는 계약 후 30일 안에 올라와요.',
+          textAlign: TextAlign.center,
+          style: T.small),
+      if (top.isNotEmpty) ...[
+        const SizedBox(height: 26),
+        const MixTitle('우리 동네', '거래 많은 단지', size: 15),
+        const SizedBox(height: 3),
+        const Text('최근 1년 매매 건수 순', style: T.tiny),
         const SizedBox(height: 8),
-        Text(
-            sggOf(widget.c) == null
-                ? '이 동네 실거래 자료를 아직 모으지 못했어요. 곧 채워 넣을게요.'
-                : '단지 이름이 국토교통부 자료와 달라 못 찾았거나, 1년 동안 거래가 없었을 수 있어요. 아파트 실거래 신고는 계약 후 30일 안에 올라와요.',
-            textAlign: TextAlign.center,
-            style: T.small),
-      ]);
+        for (final o in top.take(12)) _aptRow(o, o.sales.first, al!),
+      ],
+    ]);
+  }
+
+  Widget _aptRow(DealApt o, Sale b, SggDeals al) => InkWell(
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => DealsPage(c: widget.c, other: o, all: al))),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFEDF0F4)))),
+          child: Row(children: [
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(o.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, letterSpacing: -0.3)),
+                const SizedBox(height: 1),
+                Text('${o.umd}${o.built > 0 ? ' · ${o.built}년' : ''} · ${sqm(b.area)} · ${b.floor}층 · ${monthText(b.ymd)}', style: T.tiny),
+              ]),
+            ),
+            Text(won(b.price), style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, letterSpacing: -0.3)),
+            const SizedBox(width: 4),
+            const Icon(Icons.chevron_right, size: 18, color: kMute),
+          ]),
+        ),
+      );
 
   List<Widget> _body(Matched mm) {
     final a = mm.apt;
@@ -228,26 +263,7 @@ class _DealsPageState extends State<DealsPage> {
         if (best == null || (areaGroup(s.area) - area).abs() < (areaGroup(best.area) - area).abs()) best = s;
       }
       if (best == null) continue;
-      final b = best;
-      rows.add(InkWell(
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => DealsPage(c: widget.c, other: o, all: mm.all))),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFEDF0F4)))),
-          child: Row(children: [
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(o.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, letterSpacing: -0.3)),
-                const SizedBox(height: 1),
-                Text('${o.built > 0 ? '${o.built}년 · ' : ''}${sqm(b.area)} · ${b.floor}층 · ${monthText(b.ymd)}', style: T.tiny),
-              ]),
-            ),
-            Text(won(b.price), style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, letterSpacing: -0.3)),
-            const SizedBox(width: 4),
-            const Icon(Icons.chevron_right, size: 18, color: kMute),
-          ]),
-        ),
-      ));
+      rows.add(_aptRow(o, best, mm.all));
     }
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: rows);
   }

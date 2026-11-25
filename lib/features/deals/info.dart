@@ -116,6 +116,7 @@ class AptInfoCard extends StatelessWidget {
     final i = info;
     final cells = <(String, String)>[];
     String? tel;
+    final access = <String>[];
     if (i != null) {
       final hh = i.n('kaptdaCnt');
       if (hh > 0) cells.add(('세대', '${_comma(hh)}세대'));
@@ -135,9 +136,19 @@ class AptInfoCard extends StatelessWidget {
       if (park > 0) cells.add(('주차', '${_comma(park)}대${hh > 0 ? ' (세대당 ${(park / hh).toStringAsFixed(1)})' : ''}'));
       final ev = i.n('kaptdEcnt');
       if (ev > 0) cells.add(('승강기', '$ev대'));
+      final cc = i.n('kaptdCccnt');
+      if (cc > 0) cells.add(('CCTV', '$cc대'));
+      final evc = i.n('groundElChargerCnt') + i.n('undergroundElChargerCnt');
+      if (evc > 0) cells.add(('전기차 충전', '$evc기'));
       final bc = i.s('kaptBcompany');
       if (bc.isNotEmpty) cells.add(('시공', bc));
       tel = i.s('kaptTel');
+      String clean(String v) => v == 'null' ? '' : v;
+      final line = clean(i.s('subwayLine')), st = clean(i.s('subwayStation')), wsub = clean(i.s('kaptdWtimesub')), wbus = clean(i.s('kaptdWtimebus'));
+      if (line.isNotEmpty) access.add('지하철 $line${st.isNotEmpty ? ' $st역' : ''}${wsub.isNotEmpty ? ' · 걸어서 $wsub' : ''}');
+      if (wbus.isNotEmpty) access.add('버스 정류장까지 $wbus');
+      final edu = clean(i.s('educationFacility'));
+      if (edu.isNotEmpty) access.add('학교 $edu');
     } else if (built > 0) {
       cells.add(('준공', '$built년'));
     }
@@ -169,6 +180,12 @@ class AptInfoCard extends StatelessWidget {
                 ),
             ]);
           }),
+        if (access.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Container(height: 1, color: const Color(0xFFEDF0F4)),
+          const SizedBox(height: 10),
+          for (final t in access) Padding(padding: const EdgeInsets.only(bottom: 3), child: Text(t, style: T.small)),
+        ],
         if (tel != null && tel.replaceAll(RegExp(r'[^0-9]'), '').length >= 7) ...[
           const SizedBox(height: 12),
           Btn('관리사무소 전화  $tel', h: 40, onTap: () => callTel(tel!)),

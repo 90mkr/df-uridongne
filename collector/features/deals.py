@@ -228,6 +228,9 @@ def merge(apts, kind, ym, items):
                            "s": [], "e": []}
             if not is_apt:
                 a["o"] = 1
+        bc = g(it, "sggCd") + g(it, "umdCd")
+        if len(bc) == 10:
+            a["d"] = bc
         r = road_of(it)
         if r:
             a["r"] = r
@@ -293,7 +296,7 @@ def attach_kapt(apts, klist):
         a3, a4 = g(k, "as3"), g(k, "as4")
         item = (norm(g(k, "kaptName")), g(k, "kaptCode"), _stems(a3, a4, g(k, "as2")))
         alln.append(item)
-        for key in {a3, a4, f"{a3} {a4}".strip()} - {""}:
+        for key in {a3, a4, f"{a3} {a4}".strip(), "#" + g(k, "bjdCode")} - {"", "#"}:
             by_umd.setdefault(key, []).append(item)
     for a in apts.values():
         if a.get("o"):
@@ -303,7 +306,7 @@ def attach_kapt(apts, klist):
             continue
         u = a.get("u", "")
         cands = []
-        for key in {u, u.split()[-1] if u else "", u.split()[0] if u else ""} - {""}:
+        for key in {u, u.split()[-1] if u else "", u.split()[0] if u else "", "#" + a.get("d", "")} - {"", "#"}:
             cands += by_umd.get(key, [])
         best, bs = None, 0
         for kn, code, st in cands:
@@ -311,9 +314,11 @@ def attach_kapt(apts, klist):
             if sc > bs:
                 best, bs = code, sc
         if not best:  # 동 이름이 달라도 시군구 안에서 이름이 딱 맞는 곳이 하나면
-            same = [code for kn, code, st in alln if _name_eq(n, kn, st | _stems(u)) >= 2]
-            if len(set(same)) == 1:
-                best = same[0]
+            for need in (2, 1):
+                same = {code for kn, code, st in alln if _name_eq(n, kn, st | _stems(u)) >= need}
+                if len(same) == 1:
+                    best = same.pop()
+                    break
         if best:
             a["k"] = best
 
@@ -366,7 +371,8 @@ def main():
         state = {}
     done = state.setdefault("done", {})  # "<sgg>|<kind>|<ym>": "받은 날 YYYYMMDD"
     state.pop("kapt", None)
-    kdone = state.setdefault("kapt2", {})  # "<sgg>": "받은 날"
+    state.pop("kapt2", None)
+    kdone = state.setdefault("kapt3", {})  # "<sgg>": "받은 날"
     months = month_list()
     recent = set(months[:RECENT])
     today = NOW.strftime("%Y%m%d")
