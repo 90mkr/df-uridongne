@@ -16,6 +16,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 330
+    env:
+      R2_KEY: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_ACCOUNT: ${{ secrets.R2_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@v4
       - name: 지난 자료 가져오기
@@ -42,9 +46,5 @@ jobs:
           git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" store
           du -sh . ; ls | wc -l
       - name: R2에 올리기 (비밀이 있으면)
-        if: ${{ env.R2_KEY != '' }}
-        env:
-          R2_KEY: ${{ secrets.R2_ACCESS_KEY_ID }}
-          R2_SECRET: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          R2_ACCOUNT: ${{ secrets.R2_ACCOUNT_ID }}
+        if: env.R2_KEY != ''
         run: python3 collector/r2.py /tmp/store
