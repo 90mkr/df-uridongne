@@ -1,3 +1,4 @@
+import 'dart:async';
 // 파이어베이스 (본부 방만 고침): 콕플과 같은 「디자인필」 프로젝트(kokple)를 함께 쓴다.
 // ─ 로그인: 카카오 · 구글 · 이메일 (콕플과 같은 계정 — 한 번 가입하면 두 앱 공통)
 // ─ 저장 칸 이름은 모두 dn_ 로 시작한다 (콕플 칸과 섞이지 않게). 기능 칸은 dn_<기능>_… (예: dn_trash_days)
@@ -6,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart' as fs;
 import 'package:firebase_auth/firebase_auth.dart' as fa;
 import 'package:firebase_core/firebase_core.dart' as fc;
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
 const kFb = <String, String>{
   'apiKey': 'AIzaSyCtAYeMr_86li7WmmkXUL6Nx0ae8xmG5ME',
@@ -96,11 +98,22 @@ Future<String?> _run(Future<void> Function() f, String fail) async {
     authTick.value++;
     return null;
   } on fa.FirebaseAuthException catch (e) {
-    return authMsg(e.code);
-  } catch (_) {
-    return fail;
+    debugPrint('login: ${e.code} ${e.message}');
+    final m = authMsg(e.code);
+    // 원인을 알 수 있게 알 수 없는 오류는 짧은 설명을 붙인다 (대표님 11-26 「카카오·구글 둘 다 안 됨」)
+    return m.contains(e.code) && (e.message ?? '').isNotEmpty ? '$m\n${_cut(e.message!)}' : m;
+  } on TimeoutException {
+    return '로그인 창에서 앱으로 돌아오지 못했어요. 다시 눌러 주세요';
+  } on PlatformException catch (e) {
+    debugPrint('login: ${e.code} ${e.message}');
+    return '$fail (${e.code})\n${_cut(e.message ?? '')}';
+  } catch (e) {
+    debugPrint('login: $e');
+    return '$fail\n${_cut('$e')}';
   }
 }
+
+String _cut(String s) => s.length > 120 ? '${s.substring(0, 120)}…' : s;
 
 String authMsg(String code) => switch (code) {
       'invalid-email' => '이메일 모양이 맞지 않아요',
