@@ -11,6 +11,7 @@ import '../../core/map.dart';
 import '../../core/theme.dart';
 import '../../core/ui.dart';
 import 'data.dart';
+import 'go_page.dart';
 import 'route_page.dart';
 import 'widgets.dart';
 
@@ -544,6 +545,8 @@ class _BusPageState extends State<BusPage> {
         await Future.wait([for (final s in shown) _fetchOne(s)]);
       },
       child: ListView(padding: EdgeInsets.fromLTRB(kPad, top, kPad, 28), children: [
+        GoBar(c: widget.complex),
+        const SizedBox(height: 14),
         Row(children: [
           if (picked != null)
             InkWell(
