@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../core/data.dart';
+import '../../core/here.dart';
 import '../../core/feature.dart';
 import '../../core/icons.dart';
 import '../../core/map.dart';
@@ -73,7 +74,12 @@ class _ToiletPageState extends State<ToiletPage> {
 
   Future<void> _load() async {
     // 급할 때는 「지금 내가 있는 곳」 기준 — 위치를 못 받으면 우리 단지 기준
-    final p = await myLocation(ask: true).timeout(const Duration(seconds: 6), onTimeout: () => null);
+    // 「어디 기준」 알약에서 우리 단지를 고르면 단지 기준 (11-26)
+    final p = hereChoice.value == false && !widget.complex.isHere
+        ? null
+        : widget.complex.isHere
+            ? widget.complex.pos
+            : await myLocation(ask: true).timeout(const Duration(seconds: 6), onTimeout: () => null);
     at = p ?? widget.complex.pos;
     fromGps = p != null;
     var v = await toiletsNear(at!, km: 2);

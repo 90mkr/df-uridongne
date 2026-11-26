@@ -9,6 +9,7 @@ import 'data.dart';
 import 'fb.dart';
 import 'feature.dart';
 import 'home.dart';
+import 'here.dart';
 import 'home_layout.dart';
 import 'map_tab.dart';
 import 'me.dart';
@@ -73,7 +74,7 @@ class _ShellState extends State<Shell> {
         final c = complex.value;
         final f = featureById(type);
         if (c == null || f == null || !mounted) return;
-        Navigator.of(context).push(MaterialPageRoute(builder: (ctx) => f.page(ctx, c)));
+        Navigator.of(context).push(MaterialPageRoute(builder: (ctx) => featurePage(ctx, f.id, c, f.page)));
       });
       qa.setShortcutItems(const [ShortcutItem(type: 'toilet', localizedTitle: '가까운 화장실')]);
     } catch (_) {}
@@ -87,7 +88,9 @@ class _ShellState extends State<Shell> {
       builder: (context, c, _) {
         final pages = <Widget>[
           const HomeTab(),
-          c == null ? const _NoComplex() : (featureById('phonebook')?.page(context, c) ?? const SizedBox()),
+          c == null
+              ? const _NoComplex()
+              : (featureById('phonebook') == null ? const SizedBox() : featurePage(context, 'phonebook', c, featureById('phonebook')!.page)),
           const MapTab(),
           const ToolsTab(),
           const MeTab(),

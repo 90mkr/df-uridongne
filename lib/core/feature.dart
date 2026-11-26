@@ -19,6 +19,7 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 
 import 'data.dart';
+import 'here.dart';
 import 'theme.dart';
 
 enum Slot { header, hero, half, section, wide, tool, info, tail }  // tail: 본문 맨 아래(생활 도구 위) 큰 카드 — 늦게 뜨는 실시간 자료(예: 버스)  // info: 홈이 아니라 「단지 정보」 화면(단지 이름 누르면)에 나오는 카드
@@ -101,5 +102,5 @@ class Brief {
 void openFeature(BuildContext context, Feature f) {
   final c = complex.value;
   if (c == null) return;
-  Navigator.of(context).push(MaterialPageRoute(builder: (ctx) => f.page(ctx, c)));
+  Navigator.of(context).push(MaterialPageRoute(builder: (ctx) => featurePage(ctx, f.id, c, f.page)));
 }
