@@ -118,16 +118,21 @@ Future<List<Station>> nearStations(Complex c, {double km = 2}) async {
   return l;
 }
 
-// 네이버 지도에서 이 역 열기 (대표님 11-26: 예전 모바일 검색 주소는 휴대폰에서 지도가 안 나옴)
-// 휴대폰: 네이버 지도 앱으로 바로 (역을 누르면 실시간 도착까지 나옴) → 앱이 없으면 새 네이버 지도 웹 주소
-String naverStationUrl(Station s) => 'https://map.naver.com/p/search/${Uri.encodeComponent('${s.name}역 ${s.line}')}';
+// 지도 앱에서 이 역 열기 (대표님 11-26: 길찾기처럼 지도 앱으로 바로 넘어가야 편함 — 예전 네이버 모바일 검색은 목록만 나옴)
+// 길찾기 칸에서 「다음부터 이 지도로」 고른 앱이 있으면 그 앱, 없으면 카카오맵 → 네이버 지도 앱 → 카카오맵 웹 순서
+String naverStationUrl(Station s) => 'https://map.kakao.com/link/search/${Uri.encodeComponent('${s.name}역 ${s.line}')}';
 
 Future<void> openNaverStation(Station s) async {
   final q = Uri.encodeComponent('${s.name}역 ${s.line}');
   if (!kIsWeb) {
-    try {
-      if (await launchUrl(Uri.parse('nmap://search?query=$q&appname=kr.designfeel.dongne'), mode: LaunchMode.externalApplication)) return;
-    } catch (_) {}
+    final pick = await prefGet('bus.goApp') ?? '';
+    final kakao = 'kakaomap://search?q=$q&p=${s.pos.latitude},${s.pos.longitude}';
+    final naver = 'nmap://search?query=$q&appname=kr.designfeel.dongne';
+    for (final u in pick == 'naver' ? [naver, kakao] : [kakao, naver]) {
+      try {
+        if (await launchUrl(Uri.parse(u), mode: LaunchMode.externalApplication)) return;
+      } catch (_) {}
+    }
   }
   await launchUrl(Uri.parse(naverStationUrl(s)), mode: LaunchMode.externalApplication);
 }

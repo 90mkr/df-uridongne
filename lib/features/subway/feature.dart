@@ -29,7 +29,7 @@ class SubwayFeature extends Feature {
   @override
   int get order => 20;
   @override
-  String get version => '0.3.2';
+  String get version => '0.3.3';
   @override
   bool get ready => true;
 
@@ -345,7 +345,7 @@ class _NaverLink extends StatelessWidget {
                 Icon(Icons.info_outline_rounded, size: 15, color: kSub),
                 SizedBox(width: 6),
                 Expanded(child: Text('시간표 기준이에요. 늦어질 수 있어요.', style: T.tiny)),
-                Text('네이버 지도에서 실시간', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: kBlue)),
+                Text('지도 앱에서 실시간', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: kBlue)),
                 Icon(Icons.chevron_right_rounded, size: 16, color: kBlue),
               ]),
             ),
