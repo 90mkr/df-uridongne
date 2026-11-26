@@ -27,7 +27,7 @@ class WeatherFeature extends Feature {
   @override
   int get order => 10;
   @override
-  String get version => '0.3.0';
+  String get version => '0.3.1';
   @override
   bool get ready => true;
   @override
@@ -597,11 +597,17 @@ const _tipSvg = <String, String>{
   'thermo': '<path d="M20 28V11a4 4 0 0 1 8 0v17a7 7 0 1 1-8 0z" fill="F"/><path d="M24 33V18"/><path d="M32 14h4M32 19h3M32 24h4"/>',
 };
 
+// 대표님이 고른 입체 아이콘 (11-26) — 있는 것은 그림으로, 나머지는 선 그림
+const _tipArt = {'umbrella', 'shirt', 'window'};
+
 class _TipIcon extends StatelessWidget {
   final String name;
   const _TipIcon(this.name);
   @override
   Widget build(BuildContext context) {
+    if (_tipArt.contains(name)) {
+      return Image.asset('assets/art/tip_$name.png', width: 28, height: 28, fit: BoxFit.contain, filterQuality: FilterQuality.medium);
+    }
     final b = _tipSvg[name];
     if (b == null) return LineIcon(name, size: 26, fill: kSoft);
     final svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" stroke="#17181c" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">'
