@@ -93,7 +93,11 @@ class _HereFrameState extends State<HereFrame> {
     final here = _useHere;
     final c = here ? hereComplex(pos!, widget.home) : widget.home;
     return Stack(children: [
-      KeyedSubtree(key: ValueKey(c.id), child: widget.builder(context, c)),
+      // 알약이 목록 맨 아래를 가리지 않게 아래 여백을 더 준다
+      MediaQuery(
+        data: MediaQuery.of(context).copyWith(padding: MediaQuery.of(context).padding.copyWith(bottom: MediaQuery.of(context).padding.bottom + 64)),
+        child: KeyedSubtree(key: ValueKey(c.id), child: widget.builder(context, c)),
+      ),
       Positioned(
         left: 0,
         right: 0,
