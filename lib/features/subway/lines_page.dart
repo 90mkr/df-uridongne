@@ -378,7 +378,7 @@ class _LinesPageState extends State<LinesPage> {
           id: 'st|${s.$1}',
           pos: s.$2,
           key: '${s.$1}|${l.name}|$sel',
-          size: sel ? const Size(150, 44) : const Size(10, 10),
+          size: sel ? const Size(190, 58) : const Size(10, 10),
           z: sel ? 9 : 1,
           onTap: () => _tapStation(s.$1, l),
           child: sel ? _StationTag(name: s.$1, color: l.color) : _Dot(color: l.color),
@@ -492,7 +492,7 @@ class _Painter extends CustomPainter {
     final bold = [for (final l in lines) if (_strong(l)) l];
     // 키울수록 글자·점·선도 같이 커짐 (지도 카드처럼) — 1km 가 30점일 때 기준, 최대 2.2배
     final px = s * _World.perKm; // 1km 가 화면 몇 점
-    final g = math.pow(px / 30, 0.6).clamp(1.0, 2.2).toDouble();
+    final g = math.pow(px / 30, 0.7).clamp(1.0, 2.8).toDouble(); // 대표님 11-26: 키울 때 글자가 더 확실히 커지게
     final lw = (pick != null ? 5.0 : 4.0) * math.min(g, 1.6) / s;
 
     void drawLine(SubLine l, Color col, double w) {
@@ -539,6 +539,11 @@ class _Painter extends CustomPainter {
           final r = RRect.fromRectAndRadius(Rect.fromCenter(center: o, width: 15 * g / s, height: 10 * g / s), Radius.circular(5 * g / s));
           canvas.drawRRect(r, fill);
           canvas.drawRRect(r, ring..color = const Color(0xFF3A3F4A));
+        } else if (st.$1 == tapped) {
+          // 고른 역: 진한 파란 큰 점 + 흰 테 (대표님 11-26)
+          canvas.drawCircle(o, 8 * g / s, Paint()..color = kBlue.withValues(alpha: 0.18));
+          canvas.drawCircle(o, 5.6 * g / s, Paint()..color = kBlue);
+          canvas.drawCircle(o, 5.6 * g / s, ring..color = Colors.white);
         } else {
           canvas.drawCircle(o, 4.2 * g / s, fill);
           canvas.drawCircle(o, 4.2 * g / s, ring..color = l.color);
@@ -576,10 +581,10 @@ class _Painter extends CustomPainter {
       if (pri == 1 && px < 9) continue;
       final sel = pri == 0;
       double fs(double b) => ((b * g) * 2).round() / 2; // 0.5 단위 (글자 그림 다시 쓰기)
-      final tp = _text(n, size: fs(sel ? 14 : (pri == 1 ? 13 : 12)), w: sel || pri == 1 ? FontWeight.w700 : FontWeight.w600, color: sel ? kBlue : kInk);
+      final tp = _text(n, size: fs(sel ? 16 : (pri == 1 ? 14 : 13)), w: sel ? FontWeight.w800 : (pri == 1 ? FontWeight.w700 : FontWeight.w600), color: sel ? Colors.white : kInk); // 대표님 11-26: 글자 더 크게
       final w = tp.width / s, h = tp.height / s;
       // 오른쪽 → 왼쪽 → 위 → 아래 중 빈 곳
-      final gap = (6 + 4 * g) / s;
+      final gap = (sel ? 12 + 4 * g : 6 + 4 * g) / s;
       final cands = [
         Rect.fromLTWH(o.dx + gap, o.dy - h / 2, w, h),
         Rect.fromLTWH(o.dx - gap - w, o.dy - h / 2, w, h),
@@ -597,8 +602,16 @@ class _Painter extends CustomPainter {
       at ??= cands.first;
       placed.add(at.inflate(2 / s));
       hits.add((n, at.inflate(4 / s)));
-      // 선 위에서도 읽히게 반투명 흰 바탕
-      canvas.drawRRect(RRect.fromRectAndRadius(at.inflate(1.5 / s), Radius.circular(3 / s)), Paint()..color = const Color(0xD9FFFFFF));
+      // 선 위에서도 읽히게 반투명 흰 바탕 · 고른 역은 파란 알약에 흰 글자 (잘 보이게)
+      if (sel) {
+        final pill = RRect.fromRectAndRadius(at.inflate(5 / s), Radius.circular(9 / s));
+        canvas.drawRRect(pill.shift(Offset(0, 1 / s)), Paint()
+          ..color = kBlue.withValues(alpha: 0.35)
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, 6 / s));
+        canvas.drawRRect(pill, Paint()..color = kBlue);
+      } else {
+        canvas.drawRRect(RRect.fromRectAndRadius(at.inflate(1.5 / s), Radius.circular(3 / s)), Paint()..color = const Color(0xD9FFFFFF));
+      }
       canvas.save();
       canvas.translate(at.left, at.top);
       canvas.scale(1 / s);
@@ -935,17 +948,32 @@ class _StationTag extends StatelessWidget {
   final String name;
   final Color color;
   const _StationTag({required this.name, required this.color});
+  // 대표님 11-26: 고른 역이 잘 표가 안 남 → 노선 색을 진하게·글자 크게·그림자, 아래 점도 꽉 찬 큰 점
+  Color get _deep {
+    final h = HSLColor.fromColor(color);
+    return h.withLightness((h.lightness - 0.18).clamp(0.22, 0.5)).withSaturation((h.saturation + 0.1).clamp(0, 1)).toColor();
+  }
+
   @override
   Widget build(BuildContext context) => Align(
         alignment: Alignment.bottomCenter,
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-            decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.white, width: 1)),
-            child: Text('$name역', maxLines: 1, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white, height: 1.2)),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            decoration: BoxDecoration(
+              color: _deep,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white, width: 1),
+              boxShadow: [BoxShadow(color: _deep.withValues(alpha: 0.45), blurRadius: 12)],
+            ),
+            child: Text('$name역', maxLines: 1, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white, height: 1.2, letterSpacing: -0.4)),
           ),
           const SizedBox(height: 3),
-          Container(width: 10, height: 10, decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, border: Border.all(color: color, width: 1))),
+          Container(
+            width: 16,
+            height: 16,
+            decoration: BoxDecoration(color: _deep, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 1), boxShadow: [BoxShadow(color: _deep.withValues(alpha: 0.5), blurRadius: 8, spreadRadius: 1)]),
+          ),
         ]),
       );
 }
