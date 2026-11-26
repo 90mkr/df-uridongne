@@ -181,7 +181,7 @@ class _WeatherPageState extends State<_WeatherPage> {
                   : Padding(
                       padding: const EdgeInsets.all(30),
                       child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        const LineIcon('weather', size: 54, fill: kSoftYellow),
+                        const SkyIcon(Sky.partly, size: 72),
                         const SizedBox(height: 14),
                         const Text('날씨를 받지 못했어요', style: T.h2),
                         const SizedBox(height: 6),
@@ -202,7 +202,7 @@ class _WeatherPageState extends State<_WeatherPage> {
               RefreshIndicator(
               onRefresh: () => _load(force: true),
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(kPad, 40, kPad, 30),
+                padding: EdgeInsets.fromLTRB(kPad, (math.min(MediaQuery.sizeOf(context).width, 720) * 0.135).clamp(52.0, 100.0), kPad, 30),
                 children: [
                   if (w!.alert != null) ...[_AlertBar(a: w!.alert!), const SizedBox(height: 14)],
                   _Now(w: w!, c: widget.c),
