@@ -3,9 +3,9 @@
  "name": "우리 동네 반려동물 (테마 방)",
  "folder": "lib/features/pet · collector/features/pet.py · web/data/pet",
  "room": "반려동물 테마 방",
- "state": "작업 중",
- "doing": "대표님 디자인(3D 아이콘·강아지 고양이 배경·시안) 반영 — 테마 첫 화면 맨 위 카드·칸 아이콘",
- "version": "0.4.0",
- "updated": "2026-11-26 16:25",
+ "state": "대기",
+ "doing": "0.5.0 올림 — 대표님 디자인 반영: 3D 아이콘 10개(assets/art/pet_*.png), 테마 첫 화면 맨 위 강아지·고양이 카드(assets/art/pet_hero.png, artImage라 서버에서 교체 가능)·색 칸 넷, 칸 5개씩, 응급 줄 전화 아이콘. 홈 배너(흰 카드)는 그대로. 다음: 사료량·물 계산기",
+ "version": "0.5.0",
+ "updated": "2026-11-26 17:00",
  "order": 30
 }
