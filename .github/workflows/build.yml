@@ -66,6 +66,7 @@ jobs:
           NEIS_KEY: ${{ secrets.NEIS_KEY }}
           KOPIS_KEY: ${{ secrets.KOPIS_KEY }}
           KRIC_KEY: ${{ secrets.KRIC_KEY }}
+          YOUTH_KEY: ${{ secrets.YOUTH_KEY }} # 지원금 「청년정책」 칸 (온통청년 오픈API, 없으면 건너뜀)
           YOUTUBE_KEY: ${{ secrets.YOUTUBE_KEY }} # 반려동물 추천 영상 장르 검색 (pet.py 가 하루 한 번만, 11-26)
           FEATURES: ${{ github.event.schedule == '40 22,3,9 * * *' && 'gas,events,pet' || ((github.event.schedule == '20 12 * * 6' || github.event.schedule == '7 0 * * 0') && 'lotto' || inputs.features) }}
         run: |
