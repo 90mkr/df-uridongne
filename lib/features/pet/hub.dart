@@ -10,7 +10,10 @@ import '../../core/remote.dart';
 import '../../core/theme.dart';
 import '../../core/ui.dart';
 import 'data.dart';
+import 'calc.dart';
+import 'funeral.dart';
 import 'guide.dart';
+import 'lost.dart';
 import 'kids.dart';
 import 'kids_page.dart';
 import 'places.dart';
@@ -85,6 +88,10 @@ class _PetHubState extends State<PetHub> {
       ('pet_pharm', '동물약국', cnt(PetKind.pharm), () => PetPlacesPage(complex: c, kind: PetKind.pharm)),
       ('pet_trip', '같이 갈 곳', '여행·카페', () => PetTripPage(complex: c)),
       ('pet_kids', '우리 아이 수첩', kids.value.isEmpty ? '접종 알림' : '${kids.value.length}마리', () => const PetKidsPage()),
+      // 새 칸 (11-26 껍데기) — 3D 아이콘 받기 전까지 선 아이콘
+      ('calc', '사료·물 계산', '몸무게 기록', () => const PetCalcPage()),
+      ('lost', '실종·구조', '우리 동네', () => PetLostPage(complex: c)),
+      ('funeral', '장례·추모', '허가 장례식장', () => PetFuneralPage(complex: c)),
     ];
     return DetailPage(
       title: '우리 동네 반려동물',
@@ -107,7 +114,7 @@ class _PetHubState extends State<PetHub> {
             decoration: cardBox(),
             padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
             child: LayoutBuilder(builder: (ctx, box) {
-              final per = box.maxWidth > 520 ? 9 : 5; // 대표님 시안: 휴대폰 5칸씩 (5+4)
+              final per = box.maxWidth > 520 ? 6 : 4; // 칸 12개: 휴대폰 4칸씩 3줄, 넓은 화면 6칸씩 2줄
               final w = box.maxWidth / per;
               return Wrap(children: [
                 for (final t in tiles)
@@ -119,7 +126,10 @@ class _PetHubState extends State<PetHub> {
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
                         child: Column(children: [
-                          Image.asset('assets/art/${t.$1}.png', width: 46, height: 46, filterQuality: FilterQuality.medium),
+                          if (t.$1.startsWith('pet_'))
+                            Image.asset('assets/art/${t.$1}.png', width: 46, height: 46, filterQuality: FilterQuality.medium)
+                          else
+                            SizedBox(width: 46, height: 46, child: Center(child: LineIcon(const {'calc': 'food', 'lost': 'search', 'funeral': 'flower'}[t.$1] ?? 'pet', size: 40))),
                           const SizedBox(height: 6),
                           // 작은 휴대폰에서도 잘리지 않게 줄여서 맞춤
                           FittedBox(fit: BoxFit.scaleDown, child: Text(t.$2, maxLines: 1, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, letterSpacing: -0.4))),
