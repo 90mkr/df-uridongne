@@ -29,7 +29,7 @@ class SubwayFeature extends Feature {
   @override
   int get order => 20;
   @override
-  String get version => '0.4.0';
+  String get version => '0.4.1';
   @override
   bool get ready => true;
 

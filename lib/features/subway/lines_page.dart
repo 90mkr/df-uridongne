@@ -324,7 +324,13 @@ class _LinesPageState extends State<LinesPage> {
   }
 
   void _hit(Offset p, List<SubLine> a, _World w) {
-    final r = 18 / tc.value.getMaxScaleOnAxis();
+    // 역 이름 글자를 눌렀으면 그 역
+    for (final (n, rect) in _Painter.hitLabels) {
+      if (!rect.contains(p)) continue;
+      final l = (byName[n] ?? const <SubLine>[]).where(_strong).firstOrNull ?? (byName[n] ?? const <SubLine>[]).firstOrNull;
+      if (l != null) return _tapStation(n, l);
+    }
+    final r = 28 / tc.value.getMaxScaleOnAxis();
     (String, SubLine)? best;
     var bd = r;
     var bestStrong = false;
@@ -462,6 +468,7 @@ class _Painter extends CustomPainter {
   }) : super(repaint: tc);
 
   static final Map<String, TextPainter> _tp = {};
+  static List<(String, Rect)> hitLabels = []; // 그린 역 이름 자리 (이름을 눌러도 그 역)
   TextPainter _text(String s, {double size = 11, FontWeight w = FontWeight.w600, Color color = kInk}) {
     final key = '$s|$size|${w.index}|${color.toARGB32()}';
     return _tp[key] ??= (TextPainter(
@@ -483,7 +490,10 @@ class _Painter extends CustomPainter {
 
     final faint = [for (final l in lines) if (!_strong(l)) l];
     final bold = [for (final l in lines) if (_strong(l)) l];
-    final lw = (pick != null ? 5.0 : 3.6) / s;
+    // 키울수록 글자·점·선도 같이 커짐 (지도 카드처럼) — 1km 가 30점일 때 기준, 최대 2.2배
+    final px = s * _World.perKm; // 1km 가 화면 몇 점
+    final g = math.pow(px / 30, 0.6).clamp(1.0, 2.2).toDouble();
+    final lw = (pick != null ? 5.0 : 4.0) * math.min(g, 1.6) / s;
 
     void drawLine(SubLine l, Color col, double w) {
       final p = Paint()
@@ -494,12 +504,12 @@ class _Painter extends CustomPainter {
         ..strokeJoin = StrokeJoin.round;
       for (final path in l.paths) {
         if (path.length < 2) continue;
-        final g = Path();
+        final pth = Path();
         for (var i = 0; i < path.length; i++) {
           final o = world.px(path[i]);
-          i == 0 ? g.moveTo(o.dx, o.dy) : g.lineTo(o.dx, o.dy);
+          i == 0 ? pth.moveTo(o.dx, o.dy) : pth.lineTo(o.dx, o.dy);
         }
-        canvas.drawPath(g, p);
+        canvas.drawPath(pth, p);
       }
     }
 
@@ -515,7 +525,7 @@ class _Painter extends CustomPainter {
     final placed = <Rect>[];
     final ring = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2 / s;
+      ..strokeWidth = 1.4 / s;
     final fill = Paint()..color = Colors.white;
     final labels = <(String, Offset, int)>[]; // 이름, 위치, 우선순위 (0 누른 역 · 1 환승 · 2 보통)
     final drawn = <String>{};
@@ -526,12 +536,12 @@ class _Painter extends CustomPainter {
         final multi = (byName[st.$1] ?? const <SubLine>[]).where(_strong).length > 1;
         if (multi) {
           if (!drawn.add('T|${st.$1}')) continue;
-          final r = RRect.fromRectAndRadius(Rect.fromCenter(center: o, width: 13 / s, height: 9 / s), Radius.circular(4.5 / s));
+          final r = RRect.fromRectAndRadius(Rect.fromCenter(center: o, width: 15 * g / s, height: 10 * g / s), Radius.circular(5 * g / s));
           canvas.drawRRect(r, fill);
           canvas.drawRRect(r, ring..color = const Color(0xFF3A3F4A));
         } else {
-          canvas.drawCircle(o, 3.6 / s, fill);
-          canvas.drawCircle(o, 3.6 / s, ring..color = l.color);
+          canvas.drawCircle(o, 4.2 * g / s, fill);
+          canvas.drawCircle(o, 4.2 * g / s, ring..color = l.color);
         }
         if (drawn.add('L|${st.$1}')) labels.add((st.$1, o, st.$1 == tapped ? 0 : (multi ? 1 : 2)));
       }
@@ -559,20 +569,22 @@ class _Painter extends CustomPainter {
     placed.add(hr);
 
     // 역 이름: 중요한 것부터, 겹치면 건너뜀. 멀리서 볼 땐 환승역만
-    final px = s * _World.perKm; // 1km 가 화면 몇 점
+    final hits = <(String, Rect)>[];
     labels.sort((a, b) => a.$3.compareTo(b.$3));
     for (final (n, o, pri) in labels) {
       if (pri == 2 && px < 22) continue;
       if (pri == 1 && px < 9) continue;
       final sel = pri == 0;
-      final tp = _text(n, size: sel ? 12.5 : (pri == 1 ? 11.5 : 10.5), w: sel || pri == 1 ? FontWeight.w700 : FontWeight.w500, color: sel ? kBlue : kInk);
+      double fs(double b) => ((b * g) * 2).round() / 2; // 0.5 단위 (글자 그림 다시 쓰기)
+      final tp = _text(n, size: fs(sel ? 14 : (pri == 1 ? 13 : 12)), w: sel || pri == 1 ? FontWeight.w700 : FontWeight.w600, color: sel ? kBlue : kInk);
       final w = tp.width / s, h = tp.height / s;
       // 오른쪽 → 왼쪽 → 위 → 아래 중 빈 곳
+      final gap = (6 + 4 * g) / s;
       final cands = [
-        Rect.fromLTWH(o.dx + 7 / s, o.dy - h / 2, w, h),
-        Rect.fromLTWH(o.dx - 7 / s - w, o.dy - h / 2, w, h),
-        Rect.fromLTWH(o.dx - w / 2, o.dy - 7 / s - h, w, h),
-        Rect.fromLTWH(o.dx - w / 2, o.dy + 7 / s, w, h),
+        Rect.fromLTWH(o.dx + gap, o.dy - h / 2, w, h),
+        Rect.fromLTWH(o.dx - gap - w, o.dy - h / 2, w, h),
+        Rect.fromLTWH(o.dx - w / 2, o.dy - gap - h, w, h),
+        Rect.fromLTWH(o.dx - w / 2, o.dy + gap, w, h),
       ];
       Rect? at;
       for (final r in cands) {
@@ -584,6 +596,7 @@ class _Painter extends CustomPainter {
       if (at == null && !sel) continue;
       at ??= cands.first;
       placed.add(at.inflate(2 / s));
+      hits.add((n, at.inflate(4 / s)));
       // 선 위에서도 읽히게 반투명 흰 바탕
       canvas.drawRRect(RRect.fromRectAndRadius(at.inflate(1.5 / s), Radius.circular(3 / s)), Paint()..color = const Color(0xD9FFFFFF));
       canvas.save();
@@ -592,6 +605,7 @@ class _Painter extends CustomPainter {
       tp.paint(canvas, Offset.zero);
       canvas.restore();
     }
+    hitLabels = hits;
   }
 
   @override
@@ -615,7 +629,7 @@ class _Strip extends StatefulWidget {
 
 class _StripState extends State<_Strip> {
   final sc = ScrollController();
-  static const cw = 62.0;
+  static const cw = 70.0;
 
   @override
   void initState() {
@@ -653,7 +667,7 @@ class _StripState extends State<_Strip> {
       ),
       const SizedBox(height: 6),
       SizedBox(
-        height: 74,
+        height: 80,
         child: ListView.builder(
           controller: sc,
           scrollDirection: Axis.horizontal,
@@ -693,7 +707,7 @@ class _StripState extends State<_Strip> {
                     n,
                     maxLines: 2,
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: n.length > 6 ? 10 : 11, height: 1.15, fontWeight: big ? FontWeight.w800 : FontWeight.w500, color: sel ? kBlue : kInk, letterSpacing: -0.4),
+                    style: TextStyle(fontSize: n.length > 6 ? 11 : 12.5, height: 1.15, fontWeight: big ? FontWeight.w800 : FontWeight.w500, color: sel ? kBlue : kInk, letterSpacing: -0.4),
                   ),
                   if (me) const Text('우리 역', style: TextStyle(fontSize: 9.5, color: kBlue, fontWeight: FontWeight.w700)),
                   if (!me && tr.isNotEmpty)
