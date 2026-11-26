@@ -184,7 +184,7 @@ class _Splash extends StatelessWidget {
         body: SafeArea(
           child: Column(crossAxisAlignment: CrossAxisAlignment.center, children: [
             const Spacer(flex: 3),
-            const Text('우리 단지 생활정보, 한 번에', style: TextStyle(fontSize: 15, color: Color(0xD9FFFFFF), fontWeight: FontWeight.w500, letterSpacing: -0.3)),
+            const Text('우리 동네, 필요한 것만 콕', style: TextStyle(fontSize: 15, color: Color(0xD9FFFFFF), fontWeight: FontWeight.w500, letterSpacing: -0.3)),
             const SizedBox(height: 8),
             Text.rich(
               const TextSpan(children: [

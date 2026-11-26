@@ -23,7 +23,7 @@ class DongneApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-        title: '$kAppName – 우리 단지 생활정보',
+        title: '$kAppName – 우리 동네, 필요한 것만 콕',
         debugShowCheckedModeBanner: false,
         theme: dongneTheme(),
         // 휴대폰 글자 크기를 아주 크게 해 둔 분도 화면이 깨지지 않게 조금만 따라감
