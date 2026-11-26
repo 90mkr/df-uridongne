@@ -278,6 +278,8 @@ class _LinesPageState extends State<LinesPage> {
       if (first) WidgetsBinding.instance.addPostFrameCallback((_) => _resetView());
       return ClipRect(
         child: Stack(children: [
+          // 손가락 움직임만 받는 판 — 그림은 그 위에 화면 기준으로 따로 그림
+          // (대표님 11-26: 확대·축소하면 글자가 깨알처럼 작아짐 → 글자는 늘 화면에서 같은 크기)
           Positioned.fill(
             child: InteractiveViewer(
               transformationController: tc,
@@ -286,9 +288,16 @@ class _LinesPageState extends State<LinesPage> {
               maxScale: 6,
               boundaryMargin: const EdgeInsets.all(800),
               child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
                 onTapUp: (d) => _hit(d.localPosition, a, w),
+                child: SizedBox(width: w.size.width, height: w.size.height),
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: RepaintBoundary(
                 child: CustomPaint(
-                  size: w.size,
                   painter: _Painter(
                     world: w,
                     lines: a,
@@ -482,6 +491,13 @@ class _Painter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    canvas.save();
+    canvas.transform(tc.value.storage); // 화면 기준 판에 지도 좌표로 그림
+    _paint(canvas);
+    canvas.restore();
+  }
+
+  void _paint(Canvas canvas) {
     final s = tc.value.getMaxScaleOnAxis();
     // 지금 보이는 곳 (가장자리 여유)
     final inv = Matrix4.inverted(tc.value);
@@ -493,7 +509,7 @@ class _Painter extends CustomPainter {
     final bold = [for (final l in lines) if (_strong(l)) l];
     // 키울수록 글자·점·선도 같이 커짐 (지도 카드처럼) — 1km 가 30점일 때 기준, 최대 2.2배
     final px = s * _World.perKm; // 1km 가 화면 몇 점
-    final g = math.pow(px / 30, 0.7).clamp(1.0, 2.8).toDouble(); // 대표님 11-26: 키울 때 글자가 더 확실히 커지게
+    final g = math.pow(px / 30, 0.35).clamp(1.0, 1.5).toDouble(); // 대표님 11-26: 글자는 너무 크지도 작지도 않게 — 확대해도 조금만 커짐
     final lw = (pick != null ? 5.0 : 4.0) * math.min(g, 1.6) / s;
 
     void drawLine(SubLine l, Color col, double w) {
@@ -582,7 +598,7 @@ class _Painter extends CustomPainter {
       if (pri == 1 && px < 9) continue;
       final sel = pri == 0;
       double fs(double b) => ((b * g) * 2).round() / 2; // 0.5 단위 (글자 그림 다시 쓰기)
-      final tp = _text(n, size: fs(sel ? 16 : (pri == 1 ? 14 : 13)), w: sel ? FontWeight.w800 : (pri == 1 ? FontWeight.w700 : FontWeight.w600), color: sel ? Colors.white : kInk); // 대표님 11-26: 글자 더 크게
+      final tp = _text(n, size: fs(sel ? 15 : (pri == 1 ? 13.5 : 12.5)), w: sel ? FontWeight.w800 : (pri == 1 ? FontWeight.w700 : FontWeight.w600), color: sel ? Colors.white : kInk); // 대표님 11-26: 글자 더 크게
       final w = tp.width / s, h = tp.height / s;
       // 오른쪽 → 왼쪽 → 위 → 아래 중 빈 곳
       final gap = (sel ? 12 + 4 * g : 6 + 4 * g) / s;
