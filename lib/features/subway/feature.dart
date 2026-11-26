@@ -10,6 +10,7 @@ import '../../core/feature.dart';
 import '../../core/icons.dart';
 import '../../core/theme.dart';
 import '../../core/ui.dart';
+import '../bus/go_page.dart' show GoBar; // 길찾기 칸은 버스 방 것을 같이 씀
 import 'data.dart';
 import '../../core/remote.dart';
 
@@ -399,6 +400,9 @@ class _Page extends StatelessWidget {
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 720),
                   child: ListView(padding: const EdgeInsets.fromLTRB(kPad, 14, kPad, 28), children: [
+                    // 「어디로 가세요?」 길찾기 — 버스 화면과 같은 칸 (대표님 11-26: 버스에 있으면 지하철에도)
+                    GoBar(c: c),
+                    const SizedBox(height: 14),
                     for (final s in l) ...[
                       Container(
                         decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFE6EBF3)), boxShadow: const [BoxShadow(color: Color(0x101C3A6E), blurRadius: 10)]),
