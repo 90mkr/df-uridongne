@@ -314,7 +314,8 @@ class WalkDay {
   final (DateTime, DateTime, int)? best; // 오늘 가장 좋은 시간대 (시작, 끝, 단계)
   final (DateTime, DateTime, int)? bestTomorrow;
   final List<(String, String)> tips; // (아이콘, 글)
-  const WalkDay({this.now, this.nowJudge, this.today = const [], this.tomorrow = const [], this.best, this.bestTomorrow, this.tips = const []});
+  final int dust; // 지금 미세먼지 등급 1~4, 0 모름
+  const WalkDay({this.dust = 0, this.now, this.nowJudge, this.today = const [], this.tomorrow = const [], this.best, this.bestTomorrow, this.tips = const []});
 }
 
 bool _daytime(DateTime t) => t.hour >= 6 && t.hour <= 21;
@@ -400,6 +401,7 @@ WalkDay walkDay(WalkData d, WalkProfile p) {
   if (tips.isEmpty) tips.add(('pet', '걷기 좋은 날이에요. 새로운 길로 냄새 맡기 산책을 해 보세요. 머리를 쓰는 산책이 더 지치게 해요.'));
 
   return WalkDay(
+    dust: d.dust,
     now: cur,
     nowJudge: nowJ,
     today: today,

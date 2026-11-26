@@ -223,7 +223,7 @@ class _Today extends StatelessWidget {
   }
 
   static String _bestShort((DateTime, DateTime, int) b) => '${b.$1.hour}~${b.$2.hour}시';
-  static String _dustShort(WalkData d) => d.dust <= 0 ? '' : const ['', '좋음', '보통', '나쁨', '매우나쁨'][d.dust.clamp(0, 4)];
+  static String _dustShort(WalkDay d) => d.dust <= 0 ? '' : const ['', '좋음', '보통', '나쁨', '매우나쁨'][d.dust.clamp(0, 4)];
 }
 
 class _Stat extends StatelessWidget {
