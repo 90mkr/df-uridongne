@@ -180,6 +180,8 @@ GENRES = [
     ("first", "처음 키울 때", "both", ["입양", "처음", "퍼피", "아기 강아지", "아기 고양이", "새끼", "초보", "첫날"], "입양"),
 ]
 KEEP_PER_GENRE = 40
+# 정보 영상이 아닌 것 (브이로그·라이브·해명·광고 등)은 빼기
+SKIP = ["브이로그", "vlog", "Vlog", "VLOG", "일상", "라이브", "LIVE", "Live", "죄송", "해명", "공지", "이벤트", "협찬", "광고", "진료비", "구독자"]
 NS = {"a": "http://www.w3.org/2005/Atom", "yt": "http://www.youtube.com/xml/schemas/2015", "media": "http://search.yahoo.com/mrss/"}
 
 
@@ -228,6 +230,8 @@ def parse_rss(xml_text):
 
 
 def genres_of(title, pet):
+    if any(w in title for w in SKIP):
+        return []
     g = []
     for gid, _, gp, words, _ in GENRES:
         if gp != "both" and gp != pet:
@@ -291,7 +295,13 @@ def videos():
     except Exception:  # noqa: BLE001
         pass
     known_ids = {c.get("key"): c.get("id") for c in old.get("channels", [])}
-    items = {x["v"]: x for x in old.get("items", [])}  # 쌓인 영상
+    pet_of = {c["key"]: c["pet"] for c in CHANNELS}
+    items = {}
+    for x in old.get("items", []):  # 쌓인 영상 — RSS 로 들어온 것은 지금 기준으로 다시 나눔
+        if x.get("rk", 50) >= 50:
+            x["g"] = genres_of(x.get("t", ""), pet_of.get(x.get("ch"), "dog"))
+        if x.get("g") and not any(w in x.get("t", "") for w in SKIP):
+            items[x["v"]] = x
     chans = []
     for ch in CHANNELS:
         ch = dict(ch)
@@ -316,7 +326,7 @@ def videos():
             x = items.get(r["v"]) or {"v": r["v"], "ch": ch["key"], "rk": 50}
             if r["v"] not in items:
                 new += 1
-            x.update(t=r["t"], d=r["d"], s=bool(r["s"]), g=sorted(set(x.get("g", [])) | set(g)))
+            x.update(t=r["t"], d=r["d"], s=bool(r["s"]), g=sorted(set(x.get("g", [])) | set(g)) if x.get("rk", 50) < 50 else g)
             items[r["v"]] = x
         print(f"  {name}: 새 글 {len(rows)}개 중 장르 맞는 새 영상 {new}개")
 
