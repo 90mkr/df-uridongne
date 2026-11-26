@@ -3,9 +3,9 @@
  "name": "우리 동네 반려동물 (테마 방)",
  "folder": "lib/features/pet · collector/features/pet.py · web/data/pet",
  "room": "반려동물 테마 방",
- "state": "작업 중",
- "doing": "0.7.0 반려동물 유튜브 추천 영상 (장르별 묶음 · 공식 플레이어 · 채널 RSS 하루 1번 · 우리 아이 맞춤)",
- "version": "0.6.0",
- "updated": "2026-11-26 21:26",
+ "state": "대기",
+ "doing": "0.7.0 올림 — 주제별 추천 영상(videos.dart · 첫 화면 띠 + 전체 화면, 우리 아이 맞춤 장르 순서). 수집: pet.py 가 보듬TV·놀로와·미야옹철 채널 RSS → web/data/pet/videos.json (지금 5편). 기다리는 것: 본부 requests/pet-1126-영상-플레이어-하루모으기 (유튜브 플레이어 패키지·하루 모으기·YOUTUBE_KEY·화면 사진 장면), 대표님 YOUTUBE_KEY, 소통방은 대표님 「시작」 기다림. 그 전 것: 공공데이터 활용신청(동물약국·장묘업·분실·구조)",
+ "version": "0.7.0",
+ "updated": "2026-11-26 22:05",
  "order": 30
 }
