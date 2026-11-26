@@ -157,25 +157,43 @@ class _GoBarState extends State<GoBar> {
   @override
   Widget build(BuildContext context) {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
-      InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: _open,
-        child: Container(
-          height: 46,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: kLine),
-            boxShadow: const [BoxShadow(color: Color(0x0F1B2B4B), blurRadius: 12)],
+      // 대표님 11-26: 많이 쓸 기능인데 묻혀 보임 → 파란 테두리·조금 더 크게·오른쪽 「길찾기」 파란 단추로 눌러 보이게
+      Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: _open,
+          child: Container(
+            height: 54,
+            padding: const EdgeInsets.fromLTRB(16, 0, 7, 0),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: kBlue.withValues(alpha: 0.55)),
+              boxShadow: [BoxShadow(color: kBlue.withValues(alpha: 0.14), blurRadius: 16)],
+            ),
+            child: Row(children: [
+              const Icon(Icons.search_rounded, size: 22, color: kBlue),
+              const SizedBox(width: 9),
+              const Expanded(
+                child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('어디로 가세요?', style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800, letterSpacing: -0.4, height: 1.2, color: kInk)),
+                  Text('버스·지하철 길찾기', overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, color: kSub, height: 1.3)),
+                ]),
+              ),
+              Container(
+                height: 40,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(color: kBlue, borderRadius: BorderRadius.circular(10)),
+                child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                  Text('길찾기', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.3)),
+                  SizedBox(width: 2),
+                  Icon(Icons.chevron_right_rounded, size: 18, color: Colors.white),
+                ]),
+              ),
+            ]),
           ),
-          child: const Row(children: [
-            Icon(Icons.search_rounded, size: 20, color: kBlue),
-            SizedBox(width: 8),
-            Text('어디로 가세요?', style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700, letterSpacing: -0.3)),
-            SizedBox(width: 6),
-            Expanded(child: Text('버스·지하철 길찾기', overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: kMute))),
-          ]),
         ),
       ),
       if (favs.isNotEmpty) ...[
