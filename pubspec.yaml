@@ -28,6 +28,7 @@ dependencies:
   timezone: any
   android_intent_plus: any
   klc: ^0.1.0
+  youtube_player_iframe: ^5.2.0 # 유튜브 공식 플레이어 앱 안 재생 (반려동물 추천 영상 등 공용, 11-26)
 
 dev_dependencies:
   flutter_test:
