@@ -140,7 +140,8 @@ class PetTodayCard extends StatelessWidget {
   final WalkDay? walk;
   final VoidCallback onWalk, onKids, onGuide;
   final String? head; // 맨 위 작은 글 앞머리 (홈 배너: 「우리 동네 반려동물」)
-  const PetTodayCard({super.key, required this.walk, required this.onWalk, required this.onKids, required this.onGuide, this.head});
+  final bool light; // 홈 배너: 흰 카드 (맨 위 파랑 카드와 겹쳐 무겁지 않게)
+  const PetTodayCard({super.key, required this.walk, required this.onWalk, required this.onKids, required this.onGuide, this.head, this.light = false});
 
   static const _wd = ['월', '화', '수', '목', '금', '토', '일'];
 
@@ -187,14 +188,16 @@ class PetTodayCard extends StatelessWidget {
     ];
 
     return Container(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF1570EA), Color(0xFF0B4DBA)]),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: const Color(0xFF0B4DBA).withValues(alpha: 0.16), blurRadius: 18)],
-      ),
+      decoration: light
+          ? cardBox(r: 20)
+          : BoxDecoration(
+              gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF1570EA), Color(0xFF0B4DBA)]),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [BoxShadow(color: const Color(0xFF0B4DBA).withValues(alpha: 0.16), blurRadius: 18)],
+            ),
       clipBehavior: Clip.antiAlias,
       child: Stack(children: [
-        Positioned(right: -14, top: -10, child: LineIcon('pet', size: 120, line: Colors.white.withValues(alpha: 0.16), fill: Colors.white.withValues(alpha: 0.06))),
+        Positioned(right: -14, top: -10, child: light ? LineIcon('pet', size: 120, line: kBlue.withValues(alpha: 0.10), fill: kBlue.withValues(alpha: 0.04)) : LineIcon('pet', size: 120, line: Colors.white.withValues(alpha: 0.16), fill: Colors.white.withValues(alpha: 0.06))),
         Material(
           color: Colors.transparent,
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -203,11 +206,11 @@ class PetTodayCard extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('${head ?? '오늘의 반려 생활'} · ${now.month}월 ${now.day}일 ${_wd[now.weekday - 1]}요일', style: const TextStyle(fontSize: 12, color: Color(0xD9FFFFFF), fontWeight: FontWeight.w600)),
+                  Text('${head ?? '오늘의 반려 생활'} · ${now.month}월 ${now.day}일 ${_wd[now.weekday - 1]}요일', style: TextStyle(fontSize: 12, color: light ? kSub : const Color(0xD9FFFFFF), fontWeight: FontWeight.w600)),
                   const SizedBox(height: 10),
-                  Text(big, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.7, height: 1.2)),
+                  Text(big, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: light ? kInk : Colors.white, letterSpacing: -0.7, height: 1.2)),
                   const SizedBox(height: 4),
-                  Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, color: Color(0xE6FFFFFF))),
+                  Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, color: light ? kBlue : const Color(0xE6FFFFFF), fontWeight: light ? FontWeight.w600 : FontWeight.w400)),
                 ]),
               ),
             ),
@@ -216,7 +219,7 @@ class PetTodayCard extends StatelessWidget {
               child: Row(children: [
                 for (var i = 0; i < stats.length; i++) ...[
                   if (i > 0) const SizedBox(width: 6),
-                  Expanded(child: _Stat(label: stats[i].$1, value: stats[i].$2, sub: stats[i].$3, onTap: stats[i].$4)),
+                  Expanded(child: _Stat(label: stats[i].$1, value: stats[i].$2, sub: stats[i].$3, onTap: stats[i].$4, light: light)),
                 ],
               ]),
             ),
@@ -233,24 +236,25 @@ class PetTodayCard extends StatelessWidget {
 class _Stat extends StatelessWidget {
   final String label, value, sub;
   final VoidCallback onTap;
-  const _Stat({required this.label, required this.value, required this.sub, required this.onTap});
+  final bool light;
+  const _Stat({required this.label, required this.value, required this.sub, required this.onTap, this.light = false});
   @override
   Widget build(BuildContext context) => InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Ink(
           padding: const EdgeInsets.fromLTRB(10, 9, 8, 9),
-          decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(12)),
+          decoration: BoxDecoration(color: light ? const Color(0xFFF3F6FC) : Colors.white.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(12)),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(label, maxLines: 1, style: const TextStyle(fontSize: 10.5, color: Color(0xCCFFFFFF), fontWeight: FontWeight.w600)),
+            Text(label, maxLines: 1, style: TextStyle(fontSize: 10.5, color: light ? kSub : const Color(0xCCFFFFFF), fontWeight: FontWeight.w600)),
             const SizedBox(height: 3),
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
-              child: Text(value, maxLines: 1, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.5)),
+              child: Text(value, maxLines: 1, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: light ? kInk : Colors.white, letterSpacing: -0.5)),
             ),
             const SizedBox(height: 1),
-            Text(sub.isEmpty ? ' ' : sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, color: Color(0xB3FFFFFF))),
+            Text(sub.isEmpty ? ' ' : sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 10, color: light ? kSub : const Color(0xB3FFFFFF))),
           ]),
         ),
       );

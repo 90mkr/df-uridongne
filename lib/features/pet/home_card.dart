@@ -42,6 +42,7 @@ class _PetHomeBannerState extends State<PetHomeBanner> {
     final c = widget.complex;
     return PetTodayCard(
       head: '우리 동네 반려동물',
+      light: true,
       walk: walk,
       onWalk: () => _go(PetHub(complex: c)),
       onKids: () => _go(const PetKidsPage()),
