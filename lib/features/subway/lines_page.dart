@@ -16,6 +16,7 @@ import '../../core/icons.dart';
 import '../../core/theme.dart';
 import '../../core/ui.dart';
 import 'data.dart';
+import 'route.dart';
 
 class SubLine {
   final String name;
@@ -126,6 +127,28 @@ class _LinesPageState extends State<LinesPage> {
   bool showAll = false; // 「전체」
   bool onMap = false; // 「지도 위에 보기」
   (String, SubLine)? tapped; // 누른 역
+  // 「간단 경로」 (지하철 방 요청 11-26): 출발역·도착역 → 갈아타기 적은 길
+  bool routeMode = false;
+  String? rFrom, rTo;
+  SubRoute? route;
+
+  void _setRoute({String? from, String? to}) {
+    setState(() {
+      rFrom = from;
+      rTo = to;
+      route = (from != null && to != null) ? findRoute(all ?? const [], from, to) : null;
+    });
+    final r = route;
+    if (r == null || onMap) return;
+    // 경로가 다 보이게
+    final w = world, b = box;
+    if (w == null || b == null) return;
+    final ps = [for (final l in r.legs) for (final st in l.stops) w.px(st.$2)];
+    final xs = ps.map((p) => p.dx), ys = ps.map((p) => p.dy);
+    final rc = Rect.fromLTRB(xs.reduce(math.min), ys.reduce(math.min), xs.reduce(math.max), ys.reduce(math.max));
+    final sc = math.min((b.width - 80) / math.max(rc.width, 1), (b.height - 80) / math.max(rc.height, 1)).clamp(0.04, 2.5);
+    _setView(rc.center, sc, fy: 0.5);
+  }
   List<Station> local = const []; // 동네 역 시간표 (다음 열차)
   final ctl = DnMapCtl();
   final tc = TransformationController();
@@ -221,6 +244,14 @@ class _LinesPageState extends State<LinesPage> {
   }
 
   void _tapStation(String name, SubLine l, {bool move = false}) {
+    if (routeMode) {
+      if (rFrom == null || (rFrom != null && rTo != null)) {
+        _setRoute(from: name);
+      } else if (name != rFrom) {
+        _setRoute(from: rFrom, to: name);
+      }
+      return;
+    }
     setState(() => tapped = (name, l));
     if (!move) return;
     final p = l.stations.firstWhere((s) => s.$1 == name).$2;
@@ -301,8 +332,10 @@ class _LinesPageState extends State<LinesPage> {
                   painter: _Painter(
                     world: w,
                     lines: a,
-                    strongSet: {for (final l in a) if (_strong(l)) l.name},
+                    strongSet: routeMode && route != null ? const <String>{} : {for (final l in a) if (_strong(l)) l.name},
                     pick: pick,
+                    route: routeMode ? route : null,
+                    routeEnds: routeMode ? [if (rFrom != null) rFrom!, if (rTo != null) rTo!] : const [],
                     byName: byName,
                     home: w.px(widget.c.pos),
                     homeName: widget.c.name,
@@ -377,6 +410,15 @@ class _LinesPageState extends State<LinesPage> {
             DnLine(p, color: l.color, width: w),
           ],
     ];
+    // 「간단 경로」: 지나는 구간을 굵게 위에 덧그림
+    final rr = routeMode ? route : null;
+    if (rr != null) {
+      for (final leg in rr.legs) {
+        final pts = [for (final st in leg.stops) st.$2];
+        lines.add(DnLine(pts, color: Colors.white, width: 13));
+        lines.add(DnLine(pts, color: leg.line.color, width: 9));
+      }
+    }
     final marks = <DnMark>[];
     final seen = <String>{};
     for (final l in base) {
@@ -409,13 +451,33 @@ class _LinesPageState extends State<LinesPage> {
         SizedBox(
           height: 32,
           child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: kPad), children: [
-            _Chip(label: '우리 동네', color: kInk, on: pick == null && !showAll, onTap: () => _choose(null)),
+            _Chip(label: '경로 찾기', color: kBlue, on: routeMode, onTap: () => setState(() {
+                  routeMode = !routeMode;
+                  tapped = null;
+                  if (!routeMode) {
+                    rFrom = null;
+                    rTo = null;
+                    route = null;
+                  }
+                })),
+            _Chip(label: '우리 동네', color: kInk, on: !routeMode && pick == null && !showAll, onTap: () => _choose(null)),
             _Chip(label: '전체', color: kInk, on: pick == null && showAll, onTap: () => _choose(null, all: true)),
             for (final l in [...near, ...a.where((x) => !near.contains(x))])
               _Chip(label: l.name, color: l.color, on: pick == l.name, onTap: () => _choose(pick == l.name ? null : l.name)),
           ]),
         ),
-        if (sl != null) ...[
+        if (routeMode) ...[
+          const SizedBox(height: 10),
+          _RoutePanel(
+            from: rFrom,
+            to: rTo,
+            route: route,
+            names: {for (final l in a) for (final st in l.stations) st.$1}.toList()..sort(),
+            onPick: (isFrom, n) => isFrom ? _setRoute(from: n, to: rTo == n ? null : rTo) : _setRoute(from: rFrom, to: n),
+            onSwap: () => _setRoute(from: rTo, to: rFrom),
+            onClear: () => _setRoute(),
+          ),
+        ] else if (sl != null) ...[
           const SizedBox(height: 10),
           _Strip(
             key: ValueKey('strip_${sl.name}'),
@@ -427,7 +489,7 @@ class _LinesPageState extends State<LinesPage> {
             onTap: (n) => _tapStation(n, sl, move: true),
           ),
         ],
-        if (t != null) ...[
+        if (!routeMode && t != null) ...[
           const SizedBox(height: 8),
           _StationCard(
             name: t.$1,
@@ -464,7 +526,11 @@ class _Painter extends CustomPainter {
   final String homeName;
   final TransformationController tc;
   final Size Function() view;
+  final SubRoute? route;
+  final List<String> routeEnds;
   _Painter({
+    this.route,
+    this.routeEnds = const [],
     required this.world,
     required this.lines,
     required this.strongSet,
@@ -538,6 +604,86 @@ class _Painter extends CustomPainter {
       drawLine(l, l.color, lw);
     }
 
+    // 「간단 경로」: 지나는 구간만 진하게 + 진행 방향 화살표 (나머지 노선은 위에서 흐리게)
+    final r = route;
+    final routeLabels = <(String, Offset, int)>[];
+    if (r != null) {
+      final rw = 7.0 * math.min(g, 1.4) / s;
+      for (final leg in r.legs) {
+        final pth = Path();
+        for (var i = 0; i < leg.stops.length; i++) {
+          final o = world.px(leg.stops[i].$2);
+          i == 0 ? pth.moveTo(o.dx, o.dy) : pth.lineTo(o.dx, o.dy);
+        }
+        Paint pen(Color c, double w) => Paint()
+          ..color = c
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = w
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round;
+        canvas.drawPath(pth, pen(Colors.white, rw + 4 / s));
+        canvas.drawPath(pth, pen(leg.line.color, rw));
+        // 화살표: 구간마다 몇 개 (진행 방향)
+        final step = math.max(1, leg.count ~/ 3);
+        for (var i = 0; i < leg.stops.length - 1; i += step) {
+          final a = world.px(leg.stops[i].$2), b = world.px(leg.stops[i + 1].$2);
+          final d = b - a;
+          if (d.distance * s < 26) continue;
+          final m = Offset((a.dx + b.dx) / 2, (a.dy + b.dy) / 2);
+          final u = d / d.distance, nrm = Offset(-u.dy, u.dx);
+          final h = 5.5 * g / s;
+          final tri = Path()
+            ..moveTo(m.dx + u.dx * h, m.dy + u.dy * h)
+            ..lineTo(m.dx - u.dx * h + nrm.dx * h * 0.8, m.dy - u.dy * h + nrm.dy * h * 0.8)
+            ..lineTo(m.dx - u.dx * h - nrm.dx * h * 0.8, m.dy - u.dy * h - nrm.dy * h * 0.8)
+            ..close();
+          canvas.drawPath(tri, Paint()..color = Colors.white);
+        }
+        for (final st in leg.stops) {
+          final o = world.px(st.$2);
+          canvas.drawCircle(o, 3.2 * g / s, Paint()..color = Colors.white);
+          routeLabels.add((st.$1, o, 2));
+        }
+      }
+      // 갈아타는 역: 흰 알약 + 진한 테두리 · 출발·도착: 파란 큰 점
+      final ringP = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.6 / s
+        ..color = const Color(0xFF1F2430);
+      for (var i = 1; i < r.legs.length; i++) {
+        final o = world.px(r.legs[i].stops.first.$2);
+        final rr = RRect.fromRectAndRadius(Rect.fromCenter(center: o, width: 18 * g / s, height: 12 * g / s), Radius.circular(6 * g / s));
+        canvas.drawRRect(rr, Paint()..color = Colors.white);
+        canvas.drawRRect(rr, ringP);
+        routeLabels.add(('${r.legs[i].from} 환승', o, 1));
+      }
+      for (final (n, o) in [(r.from, world.px(r.fromPos)), (r.to, world.px(r.toPos))]) {
+        canvas.drawCircle(o, 9 * g / s, Paint()..color = kBlue.withValues(alpha: 0.2));
+        canvas.drawCircle(o, 6 * g / s, Paint()..color = kBlue);
+        canvas.drawCircle(
+            o,
+            6 * g / s,
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 1.5 / s
+              ..color = Colors.white);
+        routeLabels.add((n == r.from ? '출발 $n' : '도착 $n', o, 0));
+      }
+    } else {
+      // 출발역만 고른 상태
+      for (final n in routeEnds) {
+        for (final l in lines) {
+          final st = l.stations.where((x) => x.$1 == n).firstOrNull;
+          if (st == null) continue;
+          final o = world.px(st.$2);
+          canvas.drawCircle(o, 9 * g / s, Paint()..color = kBlue.withValues(alpha: 0.2));
+          canvas.drawCircle(o, 6 * g / s, Paint()..color = kBlue);
+          routeLabels.add(('출발 $n', o, 0));
+          break;
+        }
+      }
+    }
+
     // 역: 환승역은 흰 알약, 보통 역은 흰 점 + 노선 색 테두리
     final placed = <Rect>[];
     final ring = Paint()
@@ -592,6 +738,12 @@ class _Painter extends CustomPainter {
 
     // 역 이름: 중요한 것부터, 겹치면 건너뜀. 멀리서 볼 땐 환승역만
     final hits = <(String, Rect)>[];
+    if (routeLabels.isNotEmpty) {
+      final named = {for (final x in routeLabels) if (x.$3 < 2) x.$1.replaceAll(RegExp(r'^(출발|도착) | 환승$'), '')};
+      labels
+        ..removeWhere((x) => named.contains(x.$1))
+        ..addAll([for (final x in routeLabels) if (x.$3 < 2 || !named.contains(x.$1)) (x.$1, x.$2, x.$3 == 2 ? 1 : x.$3)]);
+    }
     labels.sort((a, b) => a.$3.compareTo(b.$3));
     for (final (n, o, pri) in labels) {
       if (pri == 2 && px < 22) continue;
@@ -640,7 +792,7 @@ class _Painter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _Painter o) =>
-      o.pick != pick || o.tapped != tapped || o.lines != lines || !setEquals(o.strongSet, strongSet) || o.homeName != homeName;
+      o.route != route || o.routeEnds.join() != routeEnds.join() || o.pick != pick || o.tapped != tapped || o.lines != lines || !setEquals(o.strongSet, strongSet) || o.homeName != homeName;
 }
 
 // ---------------- 노선 띠 ----------------
@@ -881,6 +1033,149 @@ Future<void> _route(Complex c, String to, LatLng p) async {
     }
   }
   await launchUrl(Uri.parse(web), mode: LaunchMode.externalApplication);
+}
+
+// 출발역 → 도착역 지도 앱 대중교통 길찾기 (카카오맵 없으면 웹 · 네이버 지도도 고를 수 있게)
+Future<void> _openRouteApp(String app, SubRoute r) async {
+  final sn = Uri.encodeComponent('${r.from}역'), dn = Uri.encodeComponent('${r.to}역');
+  final s = r.fromPos, d = r.toPos;
+  final kakaoWeb = 'https://map.kakao.com/link/by/traffic/$sn,${s.latitude},${s.longitude}/$dn,${d.latitude},${d.longitude}';
+  final naverWeb = 'https://map.naver.com/p/directions/${s.longitude},${s.latitude},$sn/${d.longitude},${d.latitude},$dn/-/transit';
+  if (!kIsWeb) {
+    final u = app == 'naver'
+        ? 'nmap://route/public?slat=${s.latitude}&slng=${s.longitude}&sname=$sn&dlat=${d.latitude}&dlng=${d.longitude}&dname=$dn&appname=kr.designfeel.dongne'
+        : 'kakaomap://route?sp=${s.latitude},${s.longitude}&ep=${d.latitude},${d.longitude}&by=PUBLICTRANSIT';
+    try {
+      if (await launchUrl(Uri.parse(u), mode: LaunchMode.externalApplication)) return;
+    } catch (_) {}
+  }
+  await launchUrl(Uri.parse(app == 'naver' ? naverWeb : kakaoWeb), mode: LaunchMode.externalApplication);
+}
+
+// 「간단 경로」 아래 칸: 출발·도착 고르기 · 요약 · 지도 앱 자세히
+class _RoutePanel extends StatelessWidget {
+  final String? from, to;
+  final SubRoute? route;
+  final List<String> names;
+  final void Function(bool isFrom, String name) onPick;
+  final VoidCallback onSwap, onClear;
+  const _RoutePanel({required this.from, required this.to, required this.route, required this.names, required this.onPick, required this.onSwap, required this.onClear});
+
+  Future<void> _search(BuildContext context, bool isFrom) async {
+    final n = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => _StationSearch(title: isFrom ? '출발역' : '도착역', names: names),
+    );
+    if (n != null) onPick(isFrom, n);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final r = route;
+    Widget field(String label, String? v, bool isFrom) => Expanded(
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => _search(context, isFrom),
+            child: Container(
+              height: 46,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: v == null ? kLine : kBlue.withValues(alpha: 0.5))),
+              child: Row(children: [
+                Text(label, style: const TextStyle(fontSize: 11.5, color: kSub, fontWeight: FontWeight.w600)),
+                const SizedBox(width: 8),
+                Expanded(child: Text(v ?? '역 검색·노선도에서 누르기', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: v == null ? 12.5 : 15, fontWeight: v == null ? FontWeight.w500 : FontWeight.w800, color: v == null ? kMute : kInk, letterSpacing: -0.4))),
+              ]),
+            ),
+          ),
+        );
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: kPad),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+        Row(children: [
+          field('출발', from, true),
+          IconButton(tooltip: '출발·도착 바꾸기', onPressed: from == null && to == null ? null : onSwap, icon: const Icon(Icons.swap_horiz_rounded, color: kBlue)),
+          field('도착', to, false),
+        ]),
+        if (from != null && to != null && r == null)
+          const Padding(padding: EdgeInsets.only(top: 10), child: Text('두 역을 잇는 길을 찾지 못했어요 (다른 권역이거나 자료가 없어요)', style: T.small)),
+        if (r != null) ...[
+          const SizedBox(height: 10),
+          Text(r.summary, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: kInk, letterSpacing: -0.3, height: 1.35)),
+          const SizedBox(height: 6),
+          for (final leg in r.legs)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 3),
+              child: Row(children: [
+                Container(width: 10, height: 10, decoration: BoxDecoration(color: leg.line.color, shape: BoxShape.circle)),
+                const SizedBox(width: 7),
+                Expanded(child: Text('${leg.line.name}  ${leg.from} → ${leg.to}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, color: kInk))),
+                Text('${leg.count}정거장', style: const TextStyle(fontSize: 12, color: kSub, fontWeight: FontWeight.w600)),
+              ]),
+            ),
+          const SizedBox(height: 10),
+          Row(children: [
+            Expanded(child: _Btn(label: '네이버 지도', onTap: () => _openRouteApp('naver', r))),
+            const SizedBox(width: 10),
+            Expanded(flex: 2, child: _Btn(label: '자세히 보기 (카카오맵)', strong: true, onTap: () => _openRouteApp('kakao', r))),
+          ]),
+        ] else if (from == null)
+          const Padding(padding: EdgeInsets.only(top: 10), child: Text('노선도에서 출발역을 누르고, 이어서 도착역을 누르세요.', style: T.small)),
+        if (from != null && to == null)
+          const Padding(padding: EdgeInsets.only(top: 10), child: Text('이제 도착역을 누르세요.', style: T.small)),
+        const SizedBox(height: 6),
+        const Text('대략적인 경로입니다. 실제 소요 시간은 지도 앱에서 확인하세요.', style: T.tiny),
+      ]),
+    );
+  }
+}
+
+// 역 이름 검색
+class _StationSearch extends StatefulWidget {
+  final String title;
+  final List<String> names;
+  const _StationSearch({required this.title, required this.names});
+  @override
+  State<_StationSearch> createState() => _StationSearchState();
+}
+
+class _StationSearchState extends State<_StationSearch> {
+  String q = '';
+  @override
+  Widget build(BuildContext context) {
+    final l = q.isEmpty ? widget.names : widget.names.where((n) => n.contains(q)).toList();
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+        child: SizedBox(
+          height: MediaQuery.sizeOf(context).height * 0.7,
+          child: Column(children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(kPad, 16, kPad, 8),
+              child: TextField(
+                autofocus: true,
+                onChanged: (v) => setState(() => q = v.trim().replaceAll('역', '')),
+                decoration: InputDecoration(
+                  hintText: '${widget.title} 이름',
+                  prefixIcon: const Icon(Icons.search_rounded, color: kBlue),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: kLine)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: kLine)),
+                ),
+              ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                itemCount: l.length,
+                itemBuilder: (_, i) => ListTile(dense: true, title: Text('${l[i]}역', style: const TextStyle(fontSize: 15)), onTap: () => Navigator.pop(context, l[i])),
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
 }
 
 // ---------------- 작은 부품 ----------------
