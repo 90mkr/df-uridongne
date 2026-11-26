@@ -95,3 +95,15 @@ Future<void> deleteMine(String key) async {
   } catch (_) {}
   await prefSet('my.${u.uid}.$key', '');
 }
+
+/// 조용히 저장 — 로그인해 있을 때만 (로그인 창 없이). 설정 백업용
+Future<void> putMine(String key, Object? value) async {
+  if (!fbOn) return;
+  final u = me;
+  if (u == null) return;
+  final j = jsonEncode(value);
+  try {
+    await _doc(u.uid, key).set({'j': j, 'at': fs.FieldValue.serverTimestamp()});
+    await prefSet('my.${u.uid}.$key', j);
+  } catch (_) {}
+}

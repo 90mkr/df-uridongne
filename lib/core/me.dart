@@ -130,7 +130,7 @@ class _LoginState extends State<_Login> {
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           const MixTitle('요기콕', '로그인', size: 17),
           const SizedBox(height: 4),
-          const Text('콕플 계정이 있으면 그대로 쓸 수 있어요', style: T.small),
+          const Text('콕플 계정이 있으면 그대로 쓸 수 있어요. 로그인하면 우리 단지·홈 배치·내 기록이 저장돼 다시 깔아도 그대로예요', style: T.small),
           const SizedBox(height: 16),
           Material(
             color: const Color(0xFFFEE500),

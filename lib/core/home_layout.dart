@@ -41,6 +41,22 @@ Future<void> _save() async {
   await prefSet('home.on', jsonEncode(_on.toList()));
   await prefSet('home.size', jsonEncode(_size));
   homeLayoutTick.value++;
+  homeLayoutSaved?.call(homeLayoutJson());
+}
+
+/// 홈 배치 한 묶음 (로그인한 분 설정 백업·되살리기, settings_sync.dart)
+void Function(Map<String, dynamic>)? homeLayoutSaved;
+Map<String, dynamic> homeLayoutJson() => {'order': _order, 'hide': _hide.toList(), 'on': _on.toList(), 'size': _size};
+bool get homeLayoutTouched => _order.isNotEmpty || _hide.isNotEmpty || _on.isNotEmpty || _size.isNotEmpty;
+Future<void> applyHomeLayout(Map j) async {
+  _order = List<String>.from(j['order'] ?? const []);
+  _hide = Set<String>.from(j['hide'] ?? const []);
+  _on = Set<String>.from(j['on'] ?? const []);
+  _size = Map<String, String>.from(j['size'] ?? const {});
+  final keep = homeLayoutSaved;
+  homeLayoutSaved = null; // 되살릴 때는 다시 올리지 않음
+  await _save();
+  homeLayoutSaved = keep;
 }
 
 // 11-26 홈 두 단계: 한 줄 카드(r:)도 처음부터 보임 — 대부분 아이콘 줄에 들어가 홈이 길어지지 않음
