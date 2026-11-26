@@ -18,6 +18,7 @@ import 'kids.dart';
 import 'kids_page.dart';
 import 'places.dart';
 import 'trip.dart';
+import 'videos.dart';
 import 'walk.dart';
 
 class PetHub extends StatefulWidget {
@@ -141,7 +142,10 @@ class _PetHubState extends State<PetHub> {
               ]);
             }),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 22),
+          // 주제별 추천 영상 (대표님 11-26) — 칩만 누르면 바로
+          PetVideoStrip(complex: c),
+          const SizedBox(height: 18),
           // 밤·휴일 응급 병원 — 맨 위 대신 아래 한 줄로 (대표님 11-26)
           _EmergencyRow(night: petNightNow(DateTime.now()), nearNight: nearNight, nearHosp: nearHosp, loaded: loaded, onTap: () => _go(PetEmergencyPage(complex: c))),
           for (final p in promos) ...[const SizedBox(height: 14), _Promo(p: p)],

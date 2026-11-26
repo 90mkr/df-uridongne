@@ -27,7 +27,7 @@ class PetFeature extends Feature {
   @override
   int get order => 5;
   @override
-  String get version => '0.6.0';
+  String get version => '0.7.0'; // 0.7.0 주제별 추천 영상 (videos.dart)
   @override
   bool get ready => true;
   @override
