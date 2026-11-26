@@ -2,6 +2,8 @@
 // 아이마다: 이름·종류·생일(나이)·몸무게·다니는 병원 + 챙길 것(심장사상충·구충·접종…) 다음 날짜와 D-day, 「오늘 했어요」
 import 'package:flutter/material.dart';
 
+import '../../core/home_layout.dart';
+
 import '../../core/icons.dart';
 import '../../core/notify.dart';
 import '../../core/theme.dart';
@@ -37,6 +39,7 @@ class _PetKidsPageState extends State<PetKidsPage> {
     }
     await askNotePermission();
     await saveKids(list);
+    if (list.isNotEmpty) await setHomeCardOn('m:pet'); // 우리 아이를 등록하면 홈 첫 화면에 「오늘의 반려 생활」
     if (mounted) setState(() {});
   }
 

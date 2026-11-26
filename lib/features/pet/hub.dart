@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/data.dart';
+import '../../core/home_layout.dart';
 import '../../core/icons.dart';
 import '../../core/theme.dart';
 import '../../core/ui.dart';
@@ -84,12 +85,14 @@ class _PetHubState extends State<PetHub> {
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(padding: const EdgeInsets.fromLTRB(kPad, 16, kPad, 30), children: [
-          _Today(
+          PetTodayCard(
               walk: walk,
               onWalk: () => _go(PetWalkPage(complex: c)),
               onKids: () => _go(const PetKidsPage()),
               onGuide: () => _go(PetGuidePage(complex: c))),
-          const SizedBox(height: 22),
+          const SizedBox(height: 8),
+          const _HomeToggle(),
+          const SizedBox(height: 14),
           const MixTitle('반려동물', '생활', size: 15),
           const SizedBox(height: 10),
           Container(
@@ -133,10 +136,11 @@ class _PetHubState extends State<PetHub> {
 
 // 맨 위 「오늘의 반려 생활」 — 단지 홈 맨 위 카드처럼 몇 가지 정보를 한눈에 (대표님 11-26)
 // 큰 줄: 지금 산책 단계 + 추천 시간 · 작은 칸 넷: 산책 / 체감 / 미세먼지 / 우리 아이 수첩 다음 할 일
-class _Today extends StatelessWidget {
+class PetTodayCard extends StatelessWidget {
   final WalkDay? walk;
   final VoidCallback onWalk, onKids, onGuide;
-  const _Today({required this.walk, required this.onWalk, required this.onKids, required this.onGuide});
+  final String? head; // 맨 위 작은 글 앞머리 (홈 배너: 「우리 동네 반려동물」)
+  const PetTodayCard({super.key, required this.walk, required this.onWalk, required this.onKids, required this.onGuide, this.head});
 
   static const _wd = ['월', '화', '수', '목', '금', '토', '일'];
 
@@ -199,7 +203,7 @@ class _Today extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('오늘의 반려 생활 · ${now.month}월 ${now.day}일 ${_wd[now.weekday - 1]}요일', style: const TextStyle(fontSize: 12, color: Color(0xD9FFFFFF), fontWeight: FontWeight.w600)),
+                  Text('${head ?? '오늘의 반려 생활'} · ${now.month}월 ${now.day}일 ${_wd[now.weekday - 1]}요일', style: const TextStyle(fontSize: 12, color: Color(0xD9FFFFFF), fontWeight: FontWeight.w600)),
                   const SizedBox(height: 10),
                   Text(big, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.7, height: 1.2)),
                   const SizedBox(height: 4),
@@ -326,5 +330,44 @@ class _Promo extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+// 「홈 첫 화면에 띄우기」 — 켜면 단지 홈 맨 위 카드 바로 아래에 「오늘의 반려 생활」 배너 (대표님 11-26)
+class _HomeToggle extends StatefulWidget {
+  const _HomeToggle();
+  @override
+  State<_HomeToggle> createState() => _HomeToggleState();
+}
+
+class _HomeToggleState extends State<_HomeToggle> {
+  @override
+  Widget build(BuildContext context) {
+    final on = !isHidden('m:pet');
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () => _set(!on),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(6, 2, 0, 2),
+        child: Row(children: [
+          Expanded(
+            child: Text(on ? '홈 첫 화면에 이 카드가 보여요' : '이 카드를 홈 첫 화면에 띄우기',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: on ? kInk : kSub, letterSpacing: -0.3)),
+          ),
+          Switch.adaptive(value: on, onChanged: _set),
+        ]),
+      ),
+    );
+  }
+
+  Future<void> _set(bool v) async {
+    if (v) {
+      await setHomeCardOn('m:pet');
+    } else {
+      await setHomeCardOff('m:pet');
+    }
+    if (!mounted) return;
+    setState(() {});
+    toast(context, v ? '홈 첫 화면에 띄웠어요' : '홈에서 뺐어요');
   }
 }

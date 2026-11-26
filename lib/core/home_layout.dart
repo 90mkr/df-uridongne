@@ -41,7 +41,7 @@ Future<void> _save() async {
 
 // 한 줄 카드(r:)는 처음엔 꺼 둔다 — 홈이 너무 길어지지 않게. 꾸미기에서 켜면 보인다
 const _defaultOn = {'r:alarm'}; // 한 줄 카드 중 처음부터 켜 둘 것 (11-24: 알람을 못 찾으셔서)
-const _defaultOff = {'m:school'}; // 큰 카드 중 처음엔 꺼 둘 것 (학교: 아이 학교를 등록하면 저절로 켜짐)
+const _defaultOff = {'m:school', 'm:pet'}; // 큰 카드 중 처음엔 꺼 둘 것 (학교: 아이 학교를 등록하면 저절로 켜짐 · 반려동물: 테마 첫 화면에서 켜거나 우리 아이를 등록하면 켜짐)
 bool isHidden(String id) =>
     _hide.contains(id) || ((id.startsWith('r:') && !_defaultOn.contains(id) || _defaultOff.contains(id)) && !_on.contains(id));
 
@@ -49,6 +49,17 @@ bool isHidden(String id) =>
 Future<void> setHomeCardOn(String id) async {
   if (!isHidden(id)) return;
   _setOn(id, true);
+  if (_order.isNotEmpty) {
+    _order.remove(id);
+    _order.insert(1.clamp(0, _order.length), id); // 켜면 맨 위 카드 바로 아래 (첫 화면에 보이게)
+  }
+  await _save();
+}
+
+/// 기능 화면에서 「홈에서 빼기」 (예: 반려동물 테마 첫 화면의 「홈에 띄우기」 끄기)
+Future<void> setHomeCardOff(String id) async {
+  if (isHidden(id)) return;
+  _setOn(id, false);
   await _save();
 }
 
@@ -97,8 +108,10 @@ class _RowCard extends StatelessWidget {
   }
 }
 
+const _topMain = {'pet'};
+
 // 본문 큰 카드 이름 (mainCard 는 기능 이름과 다르게 부름)
-const _mainNames = {'parking': '내 차 어디 댔지', 'charger': '충전소 찾기', 'gas': '제일 싼 주유소', 'anniv': '다가오는 기념일', 'school': '우리 아이 학교 급식', 'events': '주변 행사·축제', 'board': '우리 단지 이야기'};
+const _mainNames = {'parking': '내 차 어디 댔지', 'charger': '충전소 찾기', 'gas': '제일 싼 주유소', 'anniv': '다가오는 기념일', 'school': '우리 아이 학교 급식', 'events': '주변 행사·축제', 'board': '우리 단지 이야기', 'pet': '오늘의 반려 생활'};
 
 /// 홈 한 칸
 class HomeBlock {
@@ -117,6 +130,11 @@ List<HomeBlock> defaultBlocks(BuildContext context, Complex c, {required Widget 
     out.add(HomeBlock('f:${f.id}', f.name, f.icon, (_) => card(f)));
   }
   if (at(Slot.hero).isEmpty) out.add(HomeBlock('today', '지금 우리 단지', 'weather', (_) => today()));
+  // 켜면 첫 화면 맨 위 카드 바로 아래에 오는 배너형 큰 카드 (반려동물 「오늘의 반려 생활」, 대표님 11-26)
+  for (final f in features.where((f) => _topMain.contains(f.id))) {
+    final w = f.mainCard(context, c);
+    if (w != null) out.add(HomeBlock('m:${f.id}', _mainNames[f.id] ?? f.name, f.icon, (_) => w));
+  }
   for (final f in at(Slot.half)) {
     out.add(HomeBlock('f:${f.id}', f.name, f.icon, (_) => card(f), half: true));
   }
@@ -126,6 +144,7 @@ List<HomeBlock> defaultBlocks(BuildContext context, Complex c, {required Widget 
     }
   }
   for (final f in [...features]..sort((a, b) => a.mainOrder.compareTo(b.mainOrder))) {
+    if (_topMain.contains(f.id)) continue;
     final w = f.mainCard(context, c);
     if (w != null) out.add(HomeBlock('m:${f.id}', _mainNames[f.id] ?? f.name, f.icon, (_) => w));
   }

@@ -9,6 +9,7 @@ import '../../core/data.dart';
 import '../../core/feature.dart';
 import '../../core/theme.dart';
 import 'data.dart';
+import 'home_card.dart';
 import 'hub.dart';
 import 'kids.dart';
 import 'places.dart';
@@ -26,7 +27,7 @@ class PetFeature extends Feature {
   @override
   int get order => 5;
   @override
-  String get version => '0.3.1';
+  String get version => '0.4.0';
   @override
   bool get ready => true;
   @override
@@ -34,6 +35,10 @@ class PetFeature extends Feature {
 
   @override
   Widget page(BuildContext context, Complex c) => PetHub(complex: c);
+
+  // 단지 홈 배너 「오늘의 반려 생활」 — 처음엔 꺼 둠 (홈 편집·테마 첫 화면에서 켬, 대표님 11-26)
+  @override
+  Widget? mainCard(BuildContext context, Complex c) => PetHomeBanner(complex: c);
 
   @override
   List<MapFilter> mapFilters() => [for (final k in kPetKinds) MapFilter(k.$1.name, k.$2, kindIcon(k.$1))];
