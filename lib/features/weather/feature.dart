@@ -27,7 +27,7 @@ class WeatherFeature extends Feature {
   @override
   int get order => 10;
   @override
-  String get version => '0.3.1';
+  String get version => '0.3.2';
   @override
   bool get ready => true;
   @override

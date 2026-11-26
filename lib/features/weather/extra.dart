@@ -169,7 +169,7 @@ Future<int?> _livingIdx(String op, String sido) async {
     for (var back = 0; back < 2; back++) {
       final t = now.subtract(Duration(hours: back * 3));
       final h = t.hour - t.hour % 3;
-      final j = await _get('$_base/LivingWthrIdxServiceV4/$op?serviceKey=$_key&pageNo=1&numOfRows=10&dataType=JSON&areaNo=$area&time=${_ymd(t)}${_2(h)}');
+      final j = await _get('$_base/LivingWthrIdxServiceV5/$op?serviceKey=$_key&pageNo=1&numOfRows=10&dataType=JSON&areaNo=$area&time=${_ymd(t)}${_2(h)}');
       final it = _items(j);
       if (it.isEmpty) continue;
       final m = it.first as Map;
@@ -249,8 +249,8 @@ Future<void> _attachExtras(Weather w, Complex c) async {
   final r = await Future.wait<Object?>([
     _mid(sido),
     _alert(sido, gu),
-    _livingIdx('getUVIdxV4', sido),
-    _isFreezeSeason ? _livingIdx('getFreezeIdxV4', sido) : Future.value(null),
+    _livingIdx('getUVIdxV5', sido), // 11-26: V4 는 폐기됨
+    Future.value(null), // 동파지수는 V5 에 없음 → 최저기온으로 판단
     _dustDays(sido),
   ]);
   final mid = r[0] as List<Day>? ?? const [];
@@ -269,10 +269,6 @@ Future<void> _attachExtras(Weather w, Complex c) async {
   }
 }
 
-bool get _isFreezeSeason {
-  final m = _nowKst.month;
-  return m == 12 || m <= 2;
-}
 
 // ---------------- 아침 알림 글 ----------------
 // 특별한 게 없는 날은 null (알림을 보내지 않음). 본부의 알림 기능이 이 글을 그대로 보낸다.
