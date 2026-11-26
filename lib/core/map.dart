@@ -290,21 +290,20 @@ class _IconPin extends StatelessWidget {
   const _IconPin(this.icon, {this.on = false});
   @override
   Widget build(BuildContext context) {
-    // 버스 정류장: 상자 없이 통통한 버스 + 정류장 기둥 (대표님 11-23)
-    if (icon == 'bus') {
-      return Column(mainAxisSize: MainAxisSize.min, children: [
-        AnimatedScale(
-          scale: on ? 1.25 : 1,
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOutBack,
-          child: Container(
-            decoration: BoxDecoration(shape: BoxShape.circle, boxShadow: [BoxShadow(color: (on ? kBlue : const Color(0xFF1C3A6E)).withValues(alpha: on ? 0.35 : 0.18), blurRadius: 10)]),
-            child: const LineIcon('bus', size: 30),
-          ),
+    // 그림 핀 (pin_ 으로 시작): 상자 없이 그림 그대로 (requests/bus-1126)
+    // 버스 정류장('bus')도 대표님이 고른 정류장 쉼터 그림으로 (11-26: 지도의 버스 그림이 버스인지 정류장인지 헷갈림)
+    if (icon == 'bus' || icon.startsWith('pin_')) {
+      final file = icon == 'bus' ? 'pin_busstop' : icon;
+      return AnimatedScale(
+        scale: on ? 1.22 : 1,
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutBack,
+        alignment: Alignment.bottomCenter,
+        child: Container(
+          decoration: BoxDecoration(boxShadow: [BoxShadow(color: (on ? kBlue : const Color(0xFF1C3A6E)).withValues(alpha: on ? 0.22 : 0.10), blurRadius: 12, spreadRadius: -4)]),
+          child: Image.asset('assets/icons/$file.png', width: 46, height: 46, filterQuality: FilterQuality.medium),
         ),
-        Container(width: 3, height: 7, decoration: BoxDecoration(color: on ? kBlue : const Color(0xFF24539F), borderRadius: BorderRadius.circular(2))),
-        Container(width: 10, height: 3, decoration: BoxDecoration(color: (on ? kBlue : const Color(0xFF24539F)).withValues(alpha: 0.35), borderRadius: BorderRadius.circular(2))),
-      ]);
+      );
     }
     return _box();
   }

@@ -712,7 +712,7 @@ class _BusPageState extends State<BusPage> {
 class LineIconBus extends StatelessWidget {
   const LineIconBus({super.key});
   @override
-  Widget build(BuildContext context) => Image.asset('assets/art/bus_stop.png', width: 30, height: 30, filterQuality: FilterQuality.medium); // 정류장 = 대표님 쉼터 그림 (11-26)
+  Widget build(BuildContext context) => Image.asset('assets/art/bus_stop.png', width: 36, height: 36, filterQuality: FilterQuality.medium); // 정류장 = 대표님 쉼터 그림 (11-26)
 }
 
 // 노선 하나 도착 카드: 파란 번호 칸 | 도착 예정 큰 분 · 남은 정거장 막대
