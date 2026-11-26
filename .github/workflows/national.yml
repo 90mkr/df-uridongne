@@ -16,6 +16,10 @@ on:
         description: '아파트 만들기 (1/0)'
         required: false
         default: '1'
+      toilets:
+        description: '화장실 만들기 (1/0) — 5시간쯤 걸림'
+        required: false
+        default: '1'
   schedule:
     - cron: '17 18 * * 0'   # 매주 월요일 새벽 3시 17분(한국) 전국 다시
 concurrency: { group: national, cancel-in-progress: false }
@@ -46,6 +50,7 @@ jobs:
           SIDO: ${{ github.event.inputs.sido }}
           REUSE: ${{ github.event.inputs.reuse }}
           APTS: ${{ github.event.inputs.apts || '1' }}
+          TOILETS: ${{ github.event.inputs.toilets || '1' }}
           OUT: /tmp/store
       - name: store 가지에 올리기 (기록 없이 한 장)
         run: |
