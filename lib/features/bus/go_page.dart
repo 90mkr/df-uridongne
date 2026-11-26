@@ -370,7 +370,30 @@ class _GoPageState extends State<GoPage> {
           ]),
         ),
         Expanded(
-          child: list.isEmpty
+          child: list.isEmpty && q.text.trim().isEmpty
+              ? ListView(padding: const EdgeInsets.fromLTRB(kPad, 4, kPad, 30), children: [
+                  // 빠른 찾기: 누르면 그 말로 바로 찾음
+                  Wrap(spacing: 6, runSpacing: 8, children: [
+                    for (final k in const ['지하철역', '버스터미널', '공항', '대학병원', '시청', '구청', '기차역', '대형마트'])
+                      InkWell(
+                        borderRadius: BorderRadius.circular(16),
+                        onTap: () {
+                          q.text = k;
+                          setState(() {});
+                          _search(k);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(color: const Color(0xFFF4F7FC), borderRadius: BorderRadius.circular(16), border: Border.all(color: kLine)),
+                          child: Text(k, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+                        ),
+                      ),
+                  ]),
+                  const SizedBox(height: 22),
+                  const Text('가고 싶은 곳을 찾아 「길찾기」를 누르면\n카카오맵·네이버 지도에서 버스·지하철 길이 바로 열려요.\n☆ 을 누르면 자주 가는 곳에 저장되고, 버스 화면에서 한 번에 눌러 갈 수 있어요.',
+                      textAlign: TextAlign.center, style: TextStyle(fontSize: 12.5, color: kSub, height: 1.5)),
+                ])
+              : list.isEmpty
               ? Padding(
                   padding: const EdgeInsets.fromLTRB(kPad, 20, kPad, 20),
                   child: Text(
