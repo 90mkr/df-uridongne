@@ -110,12 +110,13 @@ class _PetHubState extends State<PetHub> {
                       borderRadius: BorderRadius.circular(12),
                       onTap: () => _go(t.$4()),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
                         child: Column(children: [
                           Image.asset('assets/art/${t.$1}.png', width: 46, height: 46, filterQuality: FilterQuality.medium),
                           const SizedBox(height: 6),
-                          Text(t.$2, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, letterSpacing: -0.4)),
-                          Text(t.$3, maxLines: 1, style: T.tiny),
+                          // 작은 휴대폰에서도 잘리지 않게 줄여서 맞춤
+                          FittedBox(fit: BoxFit.scaleDown, child: Text(t.$2, maxLines: 1, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, letterSpacing: -0.4))),
+                          FittedBox(fit: BoxFit.scaleDown, child: Text(t.$3, maxLines: 1, style: T.tiny)),
                         ]),
                       ),
                     ),
@@ -269,7 +270,7 @@ class PetTodayCard extends StatelessWidget {
           right: 0,
           top: 0,
           child: LayoutBuilder(builder: (ctx, _) {
-            final w = (MediaQuery.of(ctx).size.width - kPad * 2) * 0.5;
+            final w = (MediaQuery.of(ctx).size.width - kPad * 2) * 0.47;
             return SizedBox(width: w.clamp(150.0, 300.0), child: artImage('assets/art/pet_hero.png', fit: BoxFit.fitWidth, alignment: Alignment.topRight));
           }),
         ),
@@ -281,7 +282,7 @@ class PetTodayCard extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
                 child: FractionallySizedBox(
-                  widthFactor: 0.66, // 오른쪽은 강아지·고양이 자리
+                  widthFactor: 0.6, // 오른쪽은 강아지·고양이 자리
                   alignment: Alignment.centerLeft,
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text('${head ?? '오늘의 반려 생활'} · ${now.month}월 ${now.day}일 ${_wd[now.weekday - 1]}요일',
