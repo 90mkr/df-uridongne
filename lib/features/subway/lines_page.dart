@@ -629,7 +629,8 @@ class _Strip extends StatefulWidget {
 
 class _StripState extends State<_Strip> {
   final sc = ScrollController();
-  static const cw = 70.0;
+  // 역마다 이름 길이만큼 칸 너비 (대표님 11-26: 따닥따닥 붙고 두 줄로 갈라짐 → 넓게, 한 줄로)
+  static double wOf(String n) => (n.length * 13.5 + 26).clamp(74, 190).toDouble();
 
   @override
   void initState() {
@@ -637,7 +638,11 @@ class _StripState extends State<_Strip> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final i = widget.stations.indexWhere((s) => s.$1 == widget.mine);
       if (i < 0 || !sc.hasClients) return;
-      final to = (kPad + i * cw + cw / 2 - sc.position.viewportDimension / 2).clamp(0.0, sc.position.maxScrollExtent);
+      var x = kPad;
+      for (final s in widget.stations.take(i)) {
+        x += wOf(s.$1);
+      }
+      final to = (x + wOf(widget.stations[i].$1) / 2 - sc.position.viewportDimension / 2).clamp(0.0, sc.position.maxScrollExtent);
       sc.jumpTo(to);
     });
   }
@@ -667,7 +672,7 @@ class _StripState extends State<_Strip> {
       ),
       const SizedBox(height: 6),
       SizedBox(
-        height: 80,
+        height: 86,
         child: ListView.builder(
           controller: sc,
           scrollDirection: Axis.horizontal,
@@ -681,35 +686,49 @@ class _StripState extends State<_Strip> {
             return InkWell(
               onTap: () => widget.onTap(n),
               child: SizedBox(
-                width: cw,
+                width: wOf(n),
                 child: Column(children: [
                   SizedBox(
-                    height: 22,
+                    height: 26,
                     child: Stack(alignment: Alignment.center, children: [
                       Row(children: [
                         Expanded(child: Container(height: 4, color: i == 0 ? Colors.transparent : col)),
                         Expanded(child: Container(height: 4, color: i == st.length - 1 ? Colors.transparent : col)),
                       ]),
-                      Container(
-                        width: big ? 18 : (tr.isNotEmpty ? 16 : 12),
-                        height: big ? 18 : 12,
+                      // 고른 역: 진하고 크게 (노선 색으로 꽉 찬 점 + 흰 테 + 둘레 빛)
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 160),
+                        width: sel ? 24 : (me ? 18 : (tr.isNotEmpty ? 16 : 12)),
+                        height: sel ? 24 : (me ? 18 : 12),
                         decoration: BoxDecoration(
-                          color: me ? col : Colors.white,
-                          borderRadius: BorderRadius.circular(tr.isNotEmpty ? 6 : 9),
-                          border: Border.all(color: me ? Colors.white : (tr.isNotEmpty ? const Color(0xFF3A3F4A) : col), width: 1),
-                          boxShadow: me ? [BoxShadow(color: col.withValues(alpha: 0.35), blurRadius: 6)] : null,
+                          color: (me || sel) ? col : Colors.white,
+                          borderRadius: BorderRadius.circular(tr.isNotEmpty && !sel ? 6 : 12),
+                          border: Border.all(color: (me || sel) ? Colors.white : (tr.isNotEmpty ? const Color(0xFF3A3F4A) : col), width: 1),
+                          boxShadow: sel
+                              ? [BoxShadow(color: col.withValues(alpha: 0.55), blurRadius: 10, spreadRadius: 2)]
+                              : me
+                                  ? [BoxShadow(color: col.withValues(alpha: 0.35), blurRadius: 6)]
+                                  : null,
                         ),
                       ),
                     ]),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    n,
-                    maxLines: 2,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: n.length > 6 ? 11 : 12.5, height: 1.15, fontWeight: big ? FontWeight.w800 : FontWeight.w500, color: sel ? kBlue : kInk, letterSpacing: -0.4),
+                  const SizedBox(height: 5),
+                  // 이름은 한 줄 — 고른 역은 노선 색 알약에 흰 굵은 글자
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 160),
+                    padding: EdgeInsets.symmetric(horizontal: sel ? 9 : 2, vertical: sel ? 3 : 1),
+                    decoration: BoxDecoration(color: sel ? col : Colors.transparent, borderRadius: BorderRadius.circular(12)),
+                    child: Text(
+                      n,
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.visible,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 12.5, height: 1.2, fontWeight: (me || sel) ? FontWeight.w800 : FontWeight.w500, color: sel ? Colors.white : kInk, letterSpacing: -0.4),
+                    ),
                   ),
-                  if (me) const Text('우리 역', style: TextStyle(fontSize: 9.5, color: kBlue, fontWeight: FontWeight.w700)),
+                  if (me) const Padding(padding: EdgeInsets.only(top: 2), child: Text('우리 역', style: TextStyle(fontSize: 10, color: kBlue, fontWeight: FontWeight.w700))),
                   if (!me && tr.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 3),
