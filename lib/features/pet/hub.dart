@@ -17,6 +17,7 @@ import 'lost.dart';
 import 'kids.dart';
 import 'kids_page.dart';
 import 'places.dart';
+import 'talk.dart';
 import 'trip.dart';
 import 'videos.dart';
 import 'walk.dart';
@@ -142,6 +143,9 @@ class _PetHubState extends State<PetHub> {
               ]);
             }),
           ),
+          const SizedBox(height: 22),
+          // 우리 구 멍냥 소통방 (대표님 11-26)
+          PetTalkStrip(complex: c),
           const SizedBox(height: 22),
           // 주제별 추천 영상 (대표님 11-26) — 칩만 누르면 바로
           PetVideoStrip(complex: c),
