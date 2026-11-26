@@ -3,9 +3,9 @@
  "name": "우리 동네 반려동물 (테마 방)",
  "folder": "lib/features/pet · collector/features/pet.py · web/data/pet",
  "room": "반려동물 테마 방",
- "state": "대기",
- "doing": "0.6.0 올림 — 새 칸: 사료·물 계산기+몸무게 기록(calc.dart, 바로 작동), 실종·구조(lost.dart, web/data/pet/lost.json 기다림), 장례·추모(funeral.dart, web/data/pet/funeral.json·promo.json memorial 기다림). 홈 배너도 강아지·고양이 카드. 칸 숫자 드문 칸 8km. 기다리는 것: 공공데이터포털 활용신청(동물약국·동물장묘업·분실동물·구조동물) → collector 작성, 실종 3D 아이콘",
+ "state": "작업 중",
+ "doing": "0.7.0 반려동물 유튜브 추천 영상 (장르별 묶음 · 공식 플레이어 · 채널 RSS 하루 1번 · 우리 아이 맞춤)",
  "version": "0.6.0",
- "updated": "2026-11-26 20:00",
+ "updated": "2026-11-26 21:26",
  "order": 30
 }
