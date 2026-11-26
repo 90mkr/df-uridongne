@@ -69,6 +69,7 @@ class _LinesPageState extends State<LinesPage> {
   List<SubLine>? all;
   List<SubLine> near = const [];
   String? pick; // 골라 본 호선 (없으면 동네 노선 전부)
+  bool showAll = false; // 「전체」 노선 보기
   (String, String)? tapped; // 누른 역 (이름, 호선)
   final ctl = DnMapCtl();
 
@@ -98,16 +99,17 @@ class _LinesPageState extends State<LinesPage> {
     return a;
   }
 
-  void _focus(String? name) {
+  void _focus(String? name, {bool all = false}) {
     setState(() {
       pick = name;
+      showAll = all;
       tapped = null;
     });
     final l = name == null ? null : (all ?? const <SubLine>[]).where((x) => x.name == name).firstOrNull;
     if (l != null && l.stations.length >= 2) {
       ctl.fit([for (final s in l.stations) s.$2], const EdgeInsets.fromLTRB(40, 60, 40, 140));
     } else {
-      ctl.move(widget.c.pos, 13);
+      ctl.move(widget.c.pos, all ? 11 : 13);
     }
   }
 
@@ -115,14 +117,17 @@ class _LinesPageState extends State<LinesPage> {
   Widget build(BuildContext context) {
     final a = all;
     final focus = pick;
+    // 보이는 노선: 골랐으면 그 노선만 · 기본은 우리 동네 노선만 · 「전체」면 모두 (대표님 11-26: 겹쳐서 색이 안 보임)
+    final base = focus != null ? shown : (showAll ? (a ?? const <SubLine>[]) : near);
+    final w = focus != null ? 7.0 : (showAll ? 4.0 : 6.0);
     final lines = <DnLine>[
-      // 골랐을 땐 다른 노선은 옅게 깔아 두고 고른 노선만 진하게
-      for (final l in a ?? const <SubLine>[])
+      // 노선마다 흰 테두리를 먼저 깔아 지도 위에서도, 겹치는 곳에서도 색이 또렷하게
+      for (final l in base.reversed)
         for (final p in l.paths)
-          if (p.length >= 2)
-            DnLine(p,
-                color: focus == null || focus == l.name ? l.color : l.color.withValues(alpha: 0.18),
-                width: focus == l.name ? 6 : (focus == null ? 4 : 3)),
+          if (p.length >= 2) ...[
+            DnLine(p, color: Colors.white, width: w + 4),
+            DnLine(p, color: l.color, width: w),
+          ],
     ];
     // 역 점: 고른 노선은 모든 역, 아니면 동네 노선 역 중 단지 6km 안
     final marks = <DnMark>[];
@@ -182,7 +187,8 @@ class _LinesPageState extends State<LinesPage> {
                         SizedBox(
                           height: 34,
                           child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: kPad), children: [
-                            _Chip(label: '전체', color: kInk, on: focus == null, onTap: () => _focus(null)),
+                            _Chip(label: '우리 동네', color: kInk, on: focus == null && !showAll, onTap: () => _focus(null)),
+                            _Chip(label: '전체', color: kInk, on: focus == null && showAll, onTap: () => _focus(null, all: true)),
                             for (final l in [...near, ...a.where((x) => !near.contains(x))])
                               _Chip(label: l.name, color: l.color, on: focus == l.name, onTap: () => _focus(focus == l.name ? null : l.name)),
                           ]),
