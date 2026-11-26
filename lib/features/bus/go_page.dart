@@ -289,129 +289,221 @@ class _GoPageState extends State<GoPage> {
     if (mounted) setState(() => favs = l);
   }
 
+  static const _quick = [
+    ('지하철역', 'subway'),
+    ('버스터미널', 'terminal'),
+    ('공항', 'airport'),
+    ('대학병원', 'hospital'),
+    ('시청', 'cityhall'),
+    ('구청', 'office'),
+    ('기차역', 'train'),
+    ('대형마트', 'mart'),
+  ];
+
+  void _quickFind(String k) {
+    q.text = k;
+    setState(() {});
+    _search(k);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final list = q.text.trim().isEmpty ? favs : found;
-    return DetailPage(
-      title: '어디로 가세요?',
-      white: true,
-      body: Column(children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(kPad, 12, kPad, 0),
-          child: Container(
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: kLine)),
-            child: Column(children: [
-              // 출발
-              InkWell(
-                onTap: () => setState(() => fromHere = !fromHere),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
-                  child: Row(children: [
-                    const _Dot(color: kBlue),
-                    const SizedBox(width: 10),
-                    const Text('출발', style: TextStyle(fontSize: 12, color: kSub)),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(fromHere ? '지금 내 위치' : widget.c.name,
-                          maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, letterSpacing: -0.3)),
-                    ),
-                    Text(fromHere ? '우리 단지로 바꾸기' : '내 위치로 바꾸기', style: const TextStyle(fontSize: 11.5, color: kBlue, fontWeight: FontWeight.w600)),
-                  ]),
+    final typing = q.text.trim().isNotEmpty;
+    final top = MediaQuery.paddingOf(context).top;
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: LayoutBuilder(builder: (context, box) {
+        final w = box.maxWidth;
+        final imgH = w * 388 / 1080;
+        final cardTop = math.max(top + 58, imgH * 0.47);
+        return Stack(children: [
+          // 하늘 그림 머리 (아래쪽은 흰색으로 이어져 경계 없음)
+          Positioned(top: 0, left: 0, right: 0, child: Image.asset('assets/art/go_head.jpg', width: w, fit: BoxFit.fitWidth)),
+          Positioned(
+            top: top + 4,
+            left: 4,
+            right: 4,
+            child: Row(children: [
+              IconButton(onPressed: () => Navigator.maybePop(context), icon: const Icon(Icons.arrow_back_rounded, size: 25, color: Color(0xFF10213F))),
+              const Text('어디로 가세요?', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800, letterSpacing: -0.7, color: Color(0xFF10213F))),
+            ]),
+          ),
+          Positioned.fill(
+            top: cardTop,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 720),
+                child: Column(children: [
+                  Padding(padding: const EdgeInsets.symmetric(horizontal: kPad), child: _routeCard()),
+                  Expanded(child: typing ? _results() : _home()),
+                ]),
+              ),
+            ),
+          ),
+        ]);
+      }),
+    );
+  }
+
+  // 출발 · 도착 카드
+  Widget _routeCard() => Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFFE3EAF5)),
+          boxShadow: const [BoxShadow(color: Color(0x1A2F6FD6), blurRadius: 24)],
+        ),
+        child: Column(children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+            child: Row(children: [
+              const Icon(Icons.location_on_rounded, size: 24, color: kBlue),
+              const SizedBox(width: 6),
+              const Text('출발', style: TextStyle(fontSize: 13, color: kSub)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(fromHere ? '지금 내 위치' : widget.c.name,
+                    maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: -0.4)),
+              ),
+              const SizedBox(width: 8),
+              // 잘 보이는 바꾸기 버튼 (대표님 11-26)
+              Material(
+                color: fromHere ? kBlue : Colors.white,
+                shape: StadiumBorder(side: BorderSide(color: kBlue.withValues(alpha: fromHere ? 1 : 0.7))),
+                child: InkWell(
+                  customBorder: const StadiumBorder(),
+                  onTap: () => setState(() => fromHere = !fromHere),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(11, 7, 14, 7),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(fromHere ? Icons.apartment_rounded : Icons.near_me_rounded, size: 16, color: fromHere ? Colors.white : kBlue),
+                      const SizedBox(width: 5),
+                      Text(fromHere ? '우리 단지로' : '내 위치로 바꾸기',
+                          style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: fromHere ? Colors.white : kBlue, letterSpacing: -0.2)),
+                    ]),
+                  ),
                 ),
               ),
-              Container(height: 1, color: const Color(0xFFEDF0F4), margin: const EdgeInsets.only(left: 14)),
-              // 도착 찾기
-              Padding(
-                padding: const EdgeInsets.fromLTRB(14, 2, 6, 2),
-                child: Row(children: [
-                  const _Dot(color: Color(0xFFE8505B)),
-                  const SizedBox(width: 10),
-                  const Text('도착', style: TextStyle(fontSize: 12, color: kSub)),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextField(
-                      controller: q,
-                      autofocus: true,
-                      onChanged: (v) {
-                        setState(() {});
-                        _typed(v);
-                      },
-                      onSubmitted: _search,
-                      textInputAction: TextInputAction.search,
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                      decoration: const InputDecoration(
-                        hintText: '역·병원·가게·주소 찾기',
-                        hintStyle: TextStyle(fontSize: 14, color: kMute, fontWeight: FontWeight.w400),
-                        border: InputBorder.none,
-                        isDense: true,
-                        contentPadding: EdgeInsets.symmetric(vertical: 12),
-                      ),
-                    ),
+            ]),
+          ),
+          Container(height: 1, color: const Color(0xFFEDF0F4), margin: const EdgeInsets.symmetric(horizontal: 14)),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 2, 6, 2),
+            child: Row(children: [
+              const Icon(Icons.location_on_rounded, size: 24, color: Color(0xFFEF4F4F)),
+              const SizedBox(width: 6),
+              const Text('도착', style: TextStyle(fontSize: 13, color: kSub)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextField(
+                  controller: q,
+                  onChanged: (v) {
+                    setState(() {});
+                    _typed(v);
+                  },
+                  onSubmitted: _search,
+                  textInputAction: TextInputAction.search,
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  decoration: const InputDecoration(
+                    hintText: '역·병원·가게·주소 찾기',
+                    hintStyle: TextStyle(fontSize: 15, color: kMute, fontWeight: FontWeight.w400),
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: EdgeInsets.symmetric(vertical: 14),
                   ),
-                  if (busy)
-                    const Padding(padding: EdgeInsets.all(10), child: SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 1.6)))
-                  else if (q.text.isNotEmpty)
-                    IconButton(
-                      onPressed: () {
-                        q.clear();
-                        _search('');
-                      },
-                      icon: const Icon(Icons.close_rounded, size: 18, color: kMute),
-                    ),
+                ),
+              ),
+              if (busy)
+                const Padding(padding: EdgeInsets.all(10), child: SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 1.6)))
+              else if (q.text.isNotEmpty)
+                IconButton(
+                  onPressed: () {
+                    q.clear();
+                    _search('');
+                  },
+                  icon: const Icon(Icons.close_rounded, size: 18, color: kMute),
+                ),
+            ]),
+          ),
+        ]),
+      );
+
+  // 찾기 전: 저장한 곳 · 자주 가는 곳(3D 아이콘) · 안내 띠
+  Widget _home() => ListView(padding: const EdgeInsets.fromLTRB(kPad, 22, kPad, 30), children: [
+        if (favs.isNotEmpty) ...[
+          _title(Icons.star_rounded, '저장한 곳', const Color(0xFFF5B400)),
+          const SizedBox(height: 4),
+          for (final p in favs) _row(p),
+          const SizedBox(height: 22),
+        ],
+        _title(Icons.location_on_rounded, '자주 가는 곳', kBlue),
+        const SizedBox(height: 12),
+        LayoutBuilder(builder: (context, box) {
+          final per = box.maxWidth >= 600 ? 8 : 4;
+          const gap = 10.0;
+          final tw = (box.maxWidth - gap * (per - 1)) / per;
+          return Wrap(spacing: gap, runSpacing: gap, children: [
+            for (final k in _quick) SizedBox(width: tw, child: _QuickTile(k.$1, 'assets/art/go_${k.$2}.png', onTap: () => _quickFind(k.$1))),
+          ]);
+        }),
+        const SizedBox(height: 22),
+        _guide(),
+      ]);
+
+  Widget _title(IconData ic, String t, Color c) => Row(children: [
+        Icon(ic, size: 24, color: c),
+        const SizedBox(width: 4),
+        Text(t, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: -0.6)),
+      ]);
+
+  Widget _guide() => Container(
+        decoration: BoxDecoration(color: const Color(0xFFE7F2FD), borderRadius: BorderRadius.circular(18)),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(children: [
+          Positioned(right: 0, bottom: 0, child: Image.asset('assets/art/go_city.png', height: 86, opacity: const AlwaysStoppedAnimation(0.9))),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 16, 16, 16),
+            child: Row(children: [
+              Image.asset('assets/art/go_map.png', width: 96),
+              Container(width: 1, height: 64, color: const Color(0xFFC9D8EE), margin: const EdgeInsets.symmetric(horizontal: 12)),
+              const Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text.rich(
+                    TextSpan(children: [
+                      TextSpan(text: '가고 싶은 곳을 찾아 '),
+                      TextSpan(text: '‘길찾기’', style: TextStyle(color: kBlue, fontSize: 17, fontWeight: FontWeight.w900)),
+                      TextSpan(text: '를 누르면'),
+                    ]),
+                    style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, letterSpacing: -0.5, height: 1.3, color: Color(0xFF10213F)),
+                  ),
+                  SizedBox(height: 5),
+                  Text('카카오맵·네이버 지도에서 버스·지하철 길이 바로 열려요.', style: TextStyle(fontSize: 12, color: kInk, height: 1.4)),
+                  SizedBox(height: 3),
+                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Padding(padding: EdgeInsets.only(top: 1), child: Icon(Icons.star_outline_rounded, size: 15, color: kBlue)),
+                    SizedBox(width: 3),
+                    Expanded(child: Text('을 누르면 자주 가는 곳에 저장돼요.', style: TextStyle(fontSize: 12, color: kInk, height: 1.4))),
+                  ]),
                 ]),
               ),
             ]),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(kPad, 14, kPad, 6),
-          child: Row(children: [
-            Text(q.text.trim().isEmpty ? '자주 가는 곳' : '찾은 곳', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: -0.3)),
-          ]),
-        ),
-        Expanded(
-          child: list.isEmpty && q.text.trim().isEmpty
-              ? ListView(padding: const EdgeInsets.fromLTRB(kPad, 4, kPad, 30), children: [
-                  // 빠른 찾기: 누르면 그 말로 바로 찾음
-                  Wrap(spacing: 6, runSpacing: 8, children: [
-                    for (final k in const ['지하철역', '버스터미널', '공항', '대학병원', '시청', '구청', '기차역', '대형마트'])
-                      InkWell(
-                        borderRadius: BorderRadius.circular(16),
-                        onTap: () {
-                          q.text = k;
-                          setState(() {});
-                          _search(k);
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                          decoration: BoxDecoration(color: const Color(0xFFF4F7FC), borderRadius: BorderRadius.circular(16), border: Border.all(color: kLine)),
-                          child: Text(k, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
-                        ),
-                      ),
-                  ]),
-                  const SizedBox(height: 22),
-                  const Text('가고 싶은 곳을 찾아 「길찾기」를 누르면\n카카오맵·네이버 지도에서 버스·지하철 길이 바로 열려요.\n☆ 을 누르면 자주 가는 곳에 저장되고, 버스 화면에서 한 번에 눌러 갈 수 있어요.',
-                      textAlign: TextAlign.center, style: TextStyle(fontSize: 12.5, color: kSub, height: 1.5)),
-                ])
-              : list.isEmpty
-              ? Padding(
-                  padding: const EdgeInsets.fromLTRB(kPad, 20, kPad, 20),
-                  child: Text(
-                    q.text.trim().isEmpty
-                        ? '가고 싶은 곳을 찾아 길찾기를 누르면\n카카오맵·네이버 지도에서 버스·지하철 길이 바로 열려요.\n☆ 을 누르면 자주 가는 곳에 저장돼요.'
-                        : (searched ? '찾는 곳이 없어요. 이름을 조금 다르게 써 보세요.' : ''),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 12.5, color: kSub, height: 1.5),
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(kPad, 0, kPad, 30),
-                  itemCount: list.length,
-                  itemBuilder: (_, i) => _row(list[i]),
-                ),
-        ),
-      ]),
-    );
+        ]),
+      );
+
+  // 찾은 곳
+  Widget _results() {
+    if (found.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(kPad, 30, kPad, 20),
+        child: Text(searched && !busy ? '찾는 곳이 없어요. 이름을 조금 다르게 써 보세요.' : '', textAlign: TextAlign.center, style: const TextStyle(fontSize: 13, color: kSub, height: 1.5)),
+      );
+    }
+    return ListView(padding: const EdgeInsets.fromLTRB(kPad, 18, kPad, 30), children: [
+      _title(Icons.search_rounded, '찾은 곳', kBlue),
+      const SizedBox(height: 4),
+      for (final p in found) _row(p),
+    ]);
   }
 
   Widget _row(GoPlace p) {
@@ -449,14 +541,6 @@ class _GoPageState extends State<GoPage> {
   }
 }
 
-class _Dot extends StatelessWidget {
-  final Color color;
-  const _Dot({required this.color});
-  @override
-  Widget build(BuildContext context) =>
-      Container(width: 9, height: 9, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: color, width: 2.4), color: Colors.white));
-}
-
 class _MiniBtn extends StatelessWidget {
   final String t;
   final bool primary;
@@ -476,6 +560,35 @@ class _MiniBtn extends StatelessWidget {
             border: Border.all(color: primary ? kBlue : kLine),
           ),
           child: Text(t, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: primary ? Colors.white : kInk)),
+        ),
+      );
+}
+
+// 자주 가는 곳 칸 (대표님 3D 아이콘)
+class _QuickTile extends StatelessWidget {
+  final String t, img;
+  final VoidCallback onTap;
+  const _QuickTile(this.t, this.img, {required this.onTap});
+  @override
+  Widget build(BuildContext context) => Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(4, 12, 4, 11),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE3EAF5)),
+              boxShadow: const [BoxShadow(color: Color(0x142F6FD6), blurRadius: 14)],
+            ),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Image.asset(img, width: 46, height: 46, filterQuality: FilterQuality.medium),
+              const SizedBox(height: 7),
+              FittedBox(fit: BoxFit.scaleDown, child: Text(t, maxLines: 1, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: -0.4))),
+            ]),
+          ),
         ),
       );
 }
