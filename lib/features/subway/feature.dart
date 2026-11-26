@@ -12,6 +12,7 @@ import '../../core/theme.dart';
 import '../../core/ui.dart';
 import '../bus/go_page.dart' show GoBar; // 길찾기 칸은 버스 방 것을 같이 씀
 import 'data.dart';
+import 'lines_page.dart';
 import '../../core/remote.dart';
 
 const _ink = Color(0xFF5B4BD6);
@@ -28,7 +29,7 @@ class SubwayFeature extends Feature {
   @override
   int get order => 20;
   @override
-  String get version => '0.2.0';
+  String get version => '0.3.0';
   @override
   bool get ready => true;
 
@@ -379,6 +380,23 @@ class _Page extends StatelessWidget {
                 const LineIcon('subway', size: 30),
                 const SizedBox(width: 8),
                 const Text('가까운 역 지하철', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: -0.6, color: Colors.white)),
+                const Spacer(),
+                // 노선도 (대표님 11-26)
+                Padding(
+                  padding: const EdgeInsets.only(right: kPad),
+                  child: Material(
+                    color: const Color(0x26FFFFFF),
+                    shape: const StadiumBorder(side: BorderSide(color: Color(0x99FFFFFF))),
+                    child: InkWell(
+                      customBorder: const StadiumBorder(),
+                      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => LinesPage(c: c))),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                        child: Text('노선도', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Colors.white)),
+                      ),
+                    ),
+                  ),
+                ),
               ]),
             ),
             Positioned(
