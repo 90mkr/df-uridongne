@@ -449,7 +449,7 @@ class _PetTalkPageState extends State<PetTalkPage> {
       body: Stack(children: [
         RefreshIndicator(
           onRefresh: _load,
-          child: ListView(padding: const EdgeInsets.fromLTRB(0, 16, 0, 100), children: [
+          child: ListView(padding: EdgeInsets.fromLTRB(0, 16, 0, 100 + MediaQuery.of(context).viewPadding.bottom), children: [
             // 머리: 스티커가 모여 있는 인사
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: kPad),
@@ -461,6 +461,7 @@ class _PetTalkPageState extends State<PetTalkPage> {
                     Text('자랑도, 질문도, 산책 친구 찾기도 여기서', style: T.small),
                   ]),
                 ),
+                Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
                 const SizedBox(
                   width: 118,
                   height: 56,
@@ -470,6 +471,21 @@ class _PetTalkPageState extends State<PetTalkPage> {
                     Positioned(left: 70, top: 6, child: Emo('c_lol', size: 48)),
                   ]),
                 ),
+                const SizedBox(height: 6),
+                InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: _write,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                    decoration: BoxDecoration(color: kBlue, borderRadius: BorderRadius.circular(16)),
+                    child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(Icons.edit_rounded, size: 14, color: Colors.white),
+                      SizedBox(width: 5),
+                      Text('글쓰기', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white)),
+                    ]),
+                  ),
+                ),
+                ]),
               ]),
             ),
             const SizedBox(height: 12),
@@ -520,7 +536,8 @@ class _PetTalkPageState extends State<PetTalkPage> {
         ),
         Positioned(
           right: kPad,
-          bottom: 22,
+          // 휴대폰 아래 단추 줄(내비게이션 바)에 가리지 않게 (대표님 11-26 「너무 밑」)
+          bottom: 18 + MediaQuery.of(context).viewPadding.bottom,
           child: Material(
             color: kBlue,
             borderRadius: BorderRadius.circular(26),
@@ -693,7 +710,7 @@ class _PostPageState extends State<_PostPage> {
         // 입력 줄
         Container(
           decoration: const BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: kLine))),
-          padding: EdgeInsets.fromLTRB(10, 8, 10, 8 + MediaQuery.of(context).padding.bottom),
+          padding: EdgeInsets.fromLTRB(10, 8, 10, 8 + MediaQuery.of(context).viewPadding.bottom),
           child: Row(children: [
             InkWell(
               borderRadius: BorderRadius.circular(20),

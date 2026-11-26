@@ -5,7 +5,7 @@
  "room": "반려동물 테마 방",
  "state": "대기",
  "doing": "0.8.0 올림 — 우리 구 멍냥 소통방(talk.dart: 반려동물 첫 화면 띠 + 전체 화면 + 글쓰기·사진 3장·스티커 댓글, 냥이·멍이 스티커 28개 assets/art/pet_emo_*). dn_posts cid=p_<구>. 0.7.0 추천 영상. 기다리는 것: requests/pet-1126-멍냥소통방-게시판칸 · requests/pet-1126-영상-플레이어-하루모으기 · YOUTUBE_KEY · 공공데이터 활용신청(동물약국·장묘업·분실·구조)",
- "version": "0.8.1",
+ "version": "0.8.2",
  "updated": "2026-11-26 22:50",
  "order": 30
 }
