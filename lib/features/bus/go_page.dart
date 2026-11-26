@@ -164,7 +164,7 @@ class _GoBarState extends State<GoBar> {
         child: InkWell(
           borderRadius: BorderRadius.circular(14),
           onTap: _open,
-          child: Container(
+          child: Ink(
             height: 54,
             padding: const EdgeInsets.fromLTRB(16, 0, 7, 0),
             decoration: BoxDecoration(
