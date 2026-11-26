@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>우편번호 찾기 – 요기콕</title>
+<title>우편번호 찾기 – 니즈콕</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
 <style>
   * { box-sizing: border-box; }
@@ -83,7 +83,7 @@
   </div>
 
   <div class="btns">
-    <button class="b1" id="saveBtn" onclick="saveToApp()">요기콕에 저장</button>
+    <button class="b1" id="saveBtn" onclick="saveToApp()">니즈콕에 저장</button>
     <button class="b2" onclick="again()">다른 주소 찾기</button>
   </div>
   <div class="hint" id="saveHint" style="text-align:center;margin-top:8px">저장을 누르고 앱으로 돌아가면 이름을 붙여 저장해요</div>
@@ -143,7 +143,7 @@
   // 앱의 「저장 주소」「영문 주소」 화면이 돌아올 때 읽어 가는 글 (머리글 + JSON)
   function saveToApp() {
     var p = { zip: R.zip, road: R.road, jibun: R.jibun, eng: R.eng, bname: R.bname, dong: $('dong').value.trim(), ho: $('ho').value.trim() };
-    copy('[요기콕 주소] ' + JSON.stringify(p), '저장할 주소를');
+    copy('[니즈콕 주소] ' + JSON.stringify(p), '저장할 주소를');
     $('saveHint').textContent = '이제 앱으로 돌아가세요 (뒤로 가기)';
   }
 

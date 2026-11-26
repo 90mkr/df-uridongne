@@ -4,8 +4,8 @@
  "folder": "lib/core · lib/main.dart · lib/features/registry.dart · .github · collector/collect.py",
  "room": "우리동네 본부 방",
  "state": "대기",
- "doing": "내 정보·기록 로그인 저장 공통 함수(core/mydata.dart: saveMine/loadMine/deleteMine/needLogin, 서버 dn_my) — 기능 방 안내 requests/all-1126-…, 규칙 게시 대기. 「어디 기준」 알약(우리 단지 / 지금 내 위치): 근처 찾는 기능 12개 화면 아래에 뜨고, 단지에서 1.5km 넘게 나와 있으면 저절로 내 위치 기준. 기능 방은 고칠 것 없음(가상 단지 here_…). 11-25 작업 목록: ① 반려동물 테마 방(requests/pet-1125) ② 커뮤니티 포털식 첫 화면 + 일자리 마당(고용24 키 대기, requests/board-1125) · 진행 중: 전국 자료(가게·아파트·인허가 전화·화장실),",
+ "doing": "11-26 앱 이름 「니즈콕」으로 바꿈(앱 이름·첫 화면·로그인·알람·공유 글·주소 저장·설치 파일 제목, 고유 번호는 그대로). 내 정보·기록 로그인 저장 공통 함수(core/mydata.dart: saveMine/loadMine/deleteMine/needLogin, 서버 dn_my) — 기능 방 안내 requests/all-1126-…, 규칙 게시 대기. 「어디 기준」 알약(우리 단지 / 지금 내 위치): 근처 찾는 기능 12개 화면 아래에 뜨고, 단지에서 1.5km 넘게 나와 있으면 저절로 내 위치 기준. 기능 방은 고칠 것 없음(가상 단지 here_…). 11-25 작업 목록: ① 반려동물 테마 방(requests/pet-1125) ② 커뮤니티 포털식 첫 화면 + 일자리 마당(고용24 키 대기, requests/board-1125) · 진행 중: 전국 자료(가게·아파트·인허가 전화·화장실),",
  "version": "0.3.0",
- "updated": "2026-11-26 21:25",
+ "updated": "2026-11-26 23:10",
  "order": 0
 }

@@ -83,7 +83,7 @@ class _AlarmPageState extends State<AlarmPage> {
       builder: (_) => _Form(preset: preset),
     );
     if (r == null || !mounted) return;
-    final ok = await setPhoneAlarm(r.h, r.m, r.label.isEmpty ? '요기콕 알람' : r.label, r.days);
+    final ok = await setPhoneAlarm(r.h, r.m, r.label.isEmpty ? '니즈콕 알람' : r.label, r.days);
     if (!mounted) return;
     if (!ok) {
       toast(context, '알람은 안드로이드 휴대폰 앱에서만 넣을 수 있어요');

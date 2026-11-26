@@ -88,7 +88,7 @@ class _BoardNotiPageState extends State<BoardNotiPage> {
           _sw('job', '일자리 마당 새 공고', '하루 한 번 모아서 「새 공고 ○건」'),
           _sw('mycomment', '내 글에 댓글이 달리면', me == null ? '로그인하면 받을 수 있어요' : ''),
         ]),
-        const Text('휴대폰 설정에서 요기콕 알림을 꺼 두면 여기서 켜도 오지 않아요.', style: T.tiny),
+        const Text('휴대폰 설정에서 니즈콕 알림을 꺼 두면 여기서 켜도 오지 않아요.', style: T.tiny),
       ]),
     );
   }

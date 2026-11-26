@@ -175,7 +175,7 @@ class _ShellState extends State<Shell> {
 }
 
 
-// 첫 화면 (대표님 11-24 요기콕): 아이콘과 같은 파랑 바탕 + 웃는 집 그림, 위에 앱 이름
+// 첫 화면 (대표님 11-24 니즈콕): 아이콘과 같은 파랑 바탕 + 웃는 집 그림, 위에 앱 이름
 class _Splash extends StatelessWidget {
   const _Splash();
   @override
@@ -188,7 +188,7 @@ class _Splash extends StatelessWidget {
             const SizedBox(height: 8),
             Text.rich(
               const TextSpan(children: [
-                TextSpan(text: '요기', style: TextStyle(fontWeight: FontWeight.w300)),
+                TextSpan(text: '니즈', style: TextStyle(fontWeight: FontWeight.w300)),
                 TextSpan(text: '콕', style: TextStyle(fontWeight: FontWeight.w800)),
               ]),
               style: const TextStyle(fontSize: 46, color: Colors.white, letterSpacing: -1.5, height: 1.1),

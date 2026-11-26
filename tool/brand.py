@@ -6,7 +6,7 @@ import shutil
 import sys
 
 what = set(sys.argv[1:]) or {"web", "android"}
-APP = "요기콕"  # 앱 이름 (대표님 11-24)
+APP = "니즈콕"  # 앱 이름 (대표님 11-26 요기콕 → 니즈콕)
 BLUE = "#015DFD"  # 새 아이콘 바탕 (대표님 11-24 웃는 집 아이콘)
 
 if "web" in what and os.path.isdir("web"):
