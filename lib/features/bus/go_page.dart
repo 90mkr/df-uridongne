@@ -159,7 +159,7 @@ class _GoBarState extends State<GoBar> {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
       // 대표님 11-26: 많이 쓸 기능인데 묻혀 보임 → 파란 테두리·조금 더 크게·오른쪽 「길찾기」 파란 단추로 눌러 보이게
       Material(
-        color: Colors.white,
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(14),
         child: InkWell(
           borderRadius: BorderRadius.circular(14),
@@ -168,6 +168,7 @@ class _GoBarState extends State<GoBar> {
             height: 54,
             padding: const EdgeInsets.fromLTRB(16, 0, 7, 0),
             decoration: BoxDecoration(
+              color: Colors.white, // 바탕은 흰색 그대로 (그림자가 안으로 비쳐 푸르게 보이지 않게)
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: kBlue.withValues(alpha: 0.55)),
               boxShadow: [BoxShadow(color: kBlue.withValues(alpha: 0.14), blurRadius: 16)],
