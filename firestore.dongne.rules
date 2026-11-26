@@ -108,6 +108,14 @@
         allow delete: if (request.auth != null && resource.data.uid == request.auth.uid) || isAdmin();
       }
     }
+    // 내 정보·기록 (반려동물 아이·몸무게 등): 로그인한 본인만 읽고 씀 · 한 칸 400KB 까지 (11-26)
+    match /dn_my/{uid}/d/{key} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow write: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['j', 'at'])
+        && request.resource.data.j is string && request.resource.data.j.size() < 400000;
+    }
+
     // 게시판 신고: 누구나(로그인) 보내기만 · 보기는 관리자
     match /dn_post_reports/{id} {
       allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;

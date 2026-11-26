@@ -141,3 +141,8 @@
 - 동네 = 시군구, 가게가 1만5천 곳 넘는 곳은 행정동 묶음으로 나눔. id 는 `k<시군구코드>` 또는 `k<시군구코드>_<번호>`, 연수구만 예전대로 `songdo`.
 - 저장 위치: `store` 가지 (나중에 클라우드플레어 R2). 앱은 `core/data.dart` 의 **`storeBase`** 로 받는다 — `regions.json`, `<동네>.json`, `apt_<동네>.json`. R2 로 옮길 때는 서버 설정 `web/data/app.json` 의 `"store"` 만 바꾸면 앱 업데이트 없이 넘어간다.
 - 기능 방이 동네별 자료를 만들 때도 동네 목록은 `storeBase` 의 `regions.json` 을 기준으로 한다 (예전 `web/data/regions.json` 은 곧 지움).
+
+
+## 내 정보·기록 저장 (11-26)
+- 내 정보·기록을 적는 곳만 로그인한 사람에게 저장, 나머지는 로그인 없이. 공통 함수 `lib/core/mydata.dart` 의 `saveMine / loadMine / deleteMine / needLogin` 만 쓴다.
+- 키는 「기능이름.무엇」. 자세한 사용법: requests/all-1126-내정보-로그인-저장-사용법.md
