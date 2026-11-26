@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../core/data.dart';
 import '../../core/home_layout.dart';
 import '../../core/icons.dart';
+import '../../core/remote.dart';
 import '../../core/theme.dart';
 import '../../core/ui.dart';
 import 'data.dart';
@@ -68,15 +69,15 @@ class _PetHubState extends State<PetHub> {
     String cnt(PetKind k) => !loaded ? '' : '${count[k] ?? 0}곳';
     final wl = walk?.nowJudge?.level;
     final tiles = <(String, String, String, Widget Function())>[
-      ('weather', '오늘의 산책', wl == null ? '산책 지수' : kWalkShort[wl], () => PetWalkPage(complex: c)),
-      ('board', '생활 가이드', '건강·먹이·훈련', () => PetGuidePage(complex: c)),
-      ('hosp', '동물병원', cnt(PetKind.hosp), () => PetPlacesPage(complex: c, kind: PetKind.hosp)),
-      ('hair', '미용', cnt(PetKind.groom), () => PetPlacesPage(complex: c, kind: PetKind.groom)),
-      ('home', '호텔·돌봄', cnt(PetKind.hotel), () => PetPlacesPage(complex: c, kind: PetKind.hotel)),
-      ('mart', '용품', cnt(PetKind.shop), () => PetPlacesPage(complex: c, kind: PetKind.shop)),
-      ('pharm', '동물약국', cnt(PetKind.pharm), () => PetPlacesPage(complex: c, kind: PetKind.pharm)),
-      ('event', '같이 갈 곳', '여행·카페', () => PetTripPage(complex: c)),
-      ('book', '우리 아이 수첩', kids.value.isEmpty ? '접종 알림' : '${kids.value.length}마리', () => const PetKidsPage()),
+      ('pet_walk', '오늘의 산책', wl == null ? '산책 지수' : kWalkShort[wl], () => PetWalkPage(complex: c)),
+      ('pet_guide', '생활 가이드', '건강·먹이·훈련', () => PetGuidePage(complex: c)),
+      ('pet_hosp', '동물병원', cnt(PetKind.hosp), () => PetPlacesPage(complex: c, kind: PetKind.hosp)),
+      ('pet_groom', '미용', cnt(PetKind.groom), () => PetPlacesPage(complex: c, kind: PetKind.groom)),
+      ('pet_hotel', '호텔·돌봄', cnt(PetKind.hotel), () => PetPlacesPage(complex: c, kind: PetKind.hotel)),
+      ('pet_shop', '용품', cnt(PetKind.shop), () => PetPlacesPage(complex: c, kind: PetKind.shop)),
+      ('pet_pharm', '동물약국', cnt(PetKind.pharm), () => PetPlacesPage(complex: c, kind: PetKind.pharm)),
+      ('pet_trip', '같이 갈 곳', '여행·카페', () => PetTripPage(complex: c)),
+      ('pet_kids', '우리 아이 수첩', kids.value.isEmpty ? '접종 알림' : '${kids.value.length}마리', () => const PetKidsPage()),
     ];
     return DetailPage(
       title: '우리 동네 반려동물',
@@ -99,7 +100,7 @@ class _PetHubState extends State<PetHub> {
             decoration: cardBox(),
             padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
             child: LayoutBuilder(builder: (ctx, box) {
-              final per = box.maxWidth > 520 ? 5 : 3; // 9칸: 휴대폰 3×3
+              final per = box.maxWidth > 520 ? 9 : 5; // 대표님 시안: 휴대폰 5칸씩 (5+4)
               final w = box.maxWidth / per;
               return Wrap(children: [
                 for (final t in tiles)
@@ -111,9 +112,9 @@ class _PetHubState extends State<PetHub> {
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         child: Column(children: [
-                          LineIcon(t.$1, size: 38),
+                          Image.asset('assets/art/${t.$1}.png', width: 46, height: 46, filterQuality: FilterQuality.medium),
                           const SizedBox(height: 6),
-                          Text(t.$2, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, letterSpacing: -0.3)),
+                          Text(t.$2, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, letterSpacing: -0.4)),
                           Text(t.$3, maxLines: 1, style: T.tiny),
                         ]),
                       ),
@@ -187,6 +188,7 @@ class PetTodayCard extends StatelessWidget {
       ('우리 아이', kidVal, kidSub, onKids),
     ];
 
+    if (!light) return _hero(context, now, j, best, cats, f, t, dust, kidVal, kidSub);
     return Container(
       decoration: light
           ? cardBox(r: 20)
@@ -229,6 +231,105 @@ class PetTodayCard extends StatelessWidget {
     );
   }
 
+
+  // 테마 첫 화면 맨 위 — 대표님 시안 (11-26): 강아지·고양이 배경 그림 + 큰 한 줄 + 추천 시간 알약 + 색 칸 넷
+  static const _say = ['좋아요!', '괜찮아요', '짧게만 해요', '쉬어 가요'];
+  Widget _hero(BuildContext context, DateTime now, WalkJudge? j, (DateTime, DateTime, int)? best, bool cats, double? f, double? t, String dust, String kidVal, String kidSub) {
+    final String lead, hot, pill;
+    if (cats) {
+      lead = '오늘도 사냥 놀이 ';
+      hot = '10분!';
+      pill = '짧은 놀이를 하루 여러 번';
+    } else if (j == null) {
+      lead = '산책하기 좋은 시간을 ';
+      hot = '찾는 중';
+      pill = '날씨를 살피고 있어요';
+    } else {
+      lead = '지금 산책하기 ';
+      hot = _say[j.level];
+      pill = best == null ? '오늘 낮 산책 시간은 지났어요' : '추천 시간  ${runText(best)}';
+    }
+    final dustLv = walk?.dust ?? 0;
+    final cards = <_HeroStat>[
+      _HeroStat(Icons.directions_walk_rounded, '산책', j == null ? '-' : kWalkShort[j.level], best == null ? '' : _bestShort(best), const Color(0xFFE8F8EE), j == null || j.level == 0 ? const Color(0xFF16A34A) : (j.level >= 2 ? const Color(0xFFE5484D) : const Color(0xFFD97706)), onWalk),
+      _HeroStat(Icons.thermostat_rounded, '체감', f == null ? '-' : '${f.round()}℃', t == null ? '' : '기온 ${t.round()}℃', const Color(0xFFFDEEF0), const Color(0xFFE5484D), onWalk),
+      _HeroStat(Icons.air_rounded, '미세먼지', dust.isEmpty ? '-' : dust, '', const Color(0xFFE9F2FF), dustLv >= 3 ? const Color(0xFFE5484D) : kBlue, onWalk),
+      _HeroStat(Icons.medical_services_outlined, '우리 아이', kidVal, kidSub, const Color(0xFFF1EEFD), const Color(0xFF6D4AE0), onKids),
+    ];
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF0187FD), Color(0xFF1A9DFE)]),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: const Color(0xFF0B4DBA).withValues(alpha: 0.14), blurRadius: 18)],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(children: [
+        // 강아지·고양이 (대표님 그림, 왼쪽·아래 가장자리는 파랑에 녹아들게 흐리게 잘라 둠)
+        Positioned(
+          right: 0,
+          top: 0,
+          child: LayoutBuilder(builder: (ctx, _) {
+            final w = (MediaQuery.of(ctx).size.width - kPad * 2) * 0.5;
+            return SizedBox(width: w.clamp(150.0, 300.0), child: artImage('assets/art/pet_hero.png', fit: BoxFit.fitWidth, alignment: Alignment.topRight));
+          }),
+        ),
+        Material(
+          color: Colors.transparent,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            InkWell(
+              onTap: cats ? onGuide : onWalk,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+                child: FractionallySizedBox(
+                  widthFactor: 0.66, // 오른쪽은 강아지·고양이 자리
+                  alignment: Alignment.centerLeft,
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('${head ?? '오늘의 반려 생활'} · ${now.month}월 ${now.day}일 ${_wd[now.weekday - 1]}요일',
+                        maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11.5, color: Color(0xE6FFFFFF), fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 8),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                        Text(lead, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.8, height: 1.2)),
+                        CustomPaint(
+                          foregroundPainter: _Squiggle(),
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 5),
+                            child: Text(hot, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFFFFD84D), letterSpacing: -0.8, height: 1.2)),
+                          ),
+                        ),
+                      ]),
+                    ),
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(10, 5, 14, 5),
+                      decoration: BoxDecoration(border: Border.all(color: const Color(0xCCFFFFFF)), borderRadius: BorderRadius.circular(20), color: const Color(0x1AFFFFFF)),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        const Icon(Icons.schedule_rounded, size: 13, color: Colors.white),
+                        const SizedBox(width: 5),
+                        Flexible(child: Text(pill, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11.5, color: Colors.white, fontWeight: FontWeight.w600))),
+                      ]),
+                    ),
+                  ]),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+              child: Row(children: [
+                for (var i = 0; i < cards.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 6),
+                  Expanded(child: cards[i]),
+                ],
+              ]),
+            ),
+          ]),
+        ),
+      ]),
+    );
+  }
+
   static String _bestShort((DateTime, DateTime, int) b) => '${b.$1.hour}~${b.$2.hour}시';
   static String _dustShort(WalkDay d) => d.dust <= 0 ? '' : const ['', '좋음', '보통', '나쁨', '매우나쁨'][d.dust.clamp(0, 4)];
 }
@@ -260,6 +361,66 @@ class _Stat extends StatelessWidget {
       );
 }
 
+
+// 맨 위 카드의 색 칸 하나 (아이콘 + 이름 + 값 + 작은 글)
+class _HeroStat extends StatelessWidget {
+  final IconData icon;
+  final String label, value, sub;
+  final Color bg, color;
+  final VoidCallback onTap;
+  const _HeroStat(this.icon, this.label, this.value, this.sub, this.bg, this.color, this.onTap);
+  @override
+  Widget build(BuildContext context) => Material(
+        color: bg,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(8, 9, 6, 9),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Icon(icon, size: 15, color: color),
+                const SizedBox(width: 3),
+                Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10.5, color: kInk, fontWeight: FontWeight.w600, letterSpacing: -0.3))),
+              ]),
+              const SizedBox(height: 4),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(value, maxLines: 1, style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: color, letterSpacing: -0.6, height: 1.1)),
+              ),
+              const SizedBox(height: 2),
+              Text(sub.isEmpty ? ' ' : sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, color: kSub, letterSpacing: -0.2)),
+            ]),
+          ),
+        ),
+      );
+}
+
+// 강조 낱말 밑 노란 물결 밑줄
+class _Squiggle extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final y = size.height - 2;
+    final p = Path()..moveTo(2, y);
+    final n = (size.width / 14).ceil().clamp(2, 12);
+    final step = (size.width - 4) / n;
+    for (var i = 0; i < n; i++) {
+      final x = 2 + step * i;
+      p.quadraticBezierTo(x + step / 2, y + (i.isEven ? -3 : 3), x + step, y);
+    }
+    canvas.drawPath(p, Paint()
+      ..color = const Color(0xFFFFD84D)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.2
+      ..strokeCap = StrokeCap.round);
+  }
+
+  @override
+  bool shouldRepaint(_Squiggle o) => false;
+}
+
 // 밤·휴일 응급 동물병원 — 흰 카드 한 줄 (밤·일요일엔 문구만 바뀜)
 class _EmergencyRow extends StatelessWidget {
   final bool night, loaded;
@@ -284,7 +445,7 @@ class _EmergencyRow extends StatelessWidget {
           decoration: cardBox(),
           padding: const EdgeInsets.fromLTRB(16, 13, 12, 13),
           child: Row(children: [
-            const LineIcon('night', size: 32),
+            Image.asset('assets/art/pet_call.png', width: 40, height: 40, filterQuality: FilterQuality.medium),
             const SizedBox(width: 12),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
