@@ -104,12 +104,19 @@ class _BusPageState extends State<BusPage> {
   Future<void> _fetchOne(Stop s) async {
     busy.add(s.id);
     if (mounted) setState(() {});
-    final a = await arrivals(s);
+    var a = await arrivals(s);
+    if (a == null) {
+      // 공공 자료가 잠깐 막히는 일(동시 접속 한도 등)이 잦아 — 2초 쉬고 한 번 더 (대표님 11-26 「불러오지 못했어요」)
+      await Future.delayed(const Duration(seconds: 2));
+      if (!mounted) return;
+      a = await arrivals(s);
+    }
     busy.remove(s.id);
     if (!mounted) return;
     setState(() {
-      arrOf[s.id] = a;
-      atOf[s.id] = DateTime.now();
+      // 그래도 못 받으면 직전에 받은 도착 정보를 그대로 둔다 (빈 오류 칸보다 낫게)
+      if (a != null || arrOf[s.id] == null) arrOf[s.id] = a;
+      if (a != null) atOf[s.id] = DateTime.now();
     });
   }
 

@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <defs>
+    <linearGradient id="roof" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6FA6FF"/><stop offset="1" stop-color="#2F6FE0"/></linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#EAF4FF"/><stop offset="1" stop-color="#BFDcFF"/></linearGradient>
+    <linearGradient id="post" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#9FB3D6"/><stop offset="1" stop-color="#6C84B4"/></linearGradient>
+    <linearGradient id="bench" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFC24A"/><stop offset="1" stop-color="#F59A1B"/></linearGradient>
+    <linearGradient id="sign" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE27A"/><stop offset="1" stop-color="#FFC531"/></linearGradient>
+    <radialGradient id="sh" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#1C3A6E" stop-opacity="0.28"/><stop offset="1" stop-color="#1C3A6E" stop-opacity="0"/></radialGradient>
+  </defs>
+  <ellipse cx="92" cy="170" rx="70" ry="10" fill="url(#sh)"/>
+  <!-- 뒤 유리판 -->
+  <rect x="34" y="66" width="104" height="80" rx="10" fill="url(#glass)" stroke="#1E3A6E" stroke-width="5"/>
+  <path d="M48 76 L72 76 L50 132 L44 132 Z" fill="#fff" opacity="0.75"/>
+  <path d="M80 76 L88 76 L66 132 L60 132 Z" fill="#fff" opacity="0.55"/>
+  <!-- 얼굴 -->
+  <circle cx="74" cy="104" r="5.5" fill="#1E3A6E"/>
+  <path d="M96 104 q6 -7 12 0" fill="none" stroke="#1E3A6E" stroke-width="5" stroke-linecap="round"/>
+  <path d="M78 116 q12 12 24 0" fill="#FF7B7B" stroke="#1E3A6E" stroke-width="4.5" stroke-linejoin="round" stroke-linecap="round"/>
+  <ellipse cx="64" cy="117" rx="7" ry="4.5" fill="#FF9FB0" opacity="0.8"/>
+  <ellipse cx="116" cy="117" rx="7" ry="4.5" fill="#FF9FB0" opacity="0.8"/>
+  <!-- 기둥 -->
+  <rect x="28" y="56" width="11" height="104" rx="5" fill="url(#post)" stroke="#1E3A6E" stroke-width="5"/>
+  <rect x="133" y="56" width="11" height="104" rx="5" fill="url(#post)" stroke="#1E3A6E" stroke-width="5"/>
+  <!-- 의자 -->
+  <rect x="50" y="138" width="72" height="12" rx="5" fill="url(#bench)" stroke="#1E3A6E" stroke-width="5"/>
+  <rect x="58" y="150" width="6" height="12" rx="2" fill="#1E3A6E"/>
+  <rect x="108" y="150" width="6" height="12" rx="2" fill="#1E3A6E"/>
+  <!-- 지붕 -->
+  <path d="M12 62 Q86 14 160 50 Q166 54 162 62 L157 70 Q86 40 20 76 Q10 72 12 62 Z" fill="url(#roof)" stroke="#1E3A6E" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M30 58 Q80 34 130 42" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity="0.7"/>
+  <!-- 정류장 표지 -->
+  <rect x="160" y="70" width="8" height="92" rx="4" fill="url(#post)" stroke="#1E3A6E" stroke-width="4.5"/>
+  <rect x="146" y="30" width="36" height="46" rx="8" fill="url(#sign)" stroke="#1E3A6E" stroke-width="5"/>
+  <rect x="154" y="40" width="20" height="16" rx="4" fill="#2F6FE0" stroke="#1E3A6E" stroke-width="3"/>
+  <rect x="157" y="43" width="14" height="6" rx="1.5" fill="#fff"/>
+  <circle cx="158" cy="60" r="3" fill="#1E3A6E"/><circle cx="170" cy="60" r="3" fill="#1E3A6E"/>
+  <rect x="152" y="66" width="24" height="4" rx="2" fill="#1E3A6E" opacity="0.5"/>
+</svg>
