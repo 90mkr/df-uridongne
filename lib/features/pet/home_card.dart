@@ -42,7 +42,7 @@ class _PetHomeBannerState extends State<PetHomeBanner> {
     final c = widget.complex;
     return PetTodayCard(
       head: '우리 동네 반려동물',
-      light: true,
+      // 대표님 11-26: 홈 배너도 테마 첫 화면과 같은 강아지·고양이 카드로
       walk: walk,
       onWalk: () => _go(PetHub(complex: c)),
       onKids: () => _go(const PetKidsPage()),
