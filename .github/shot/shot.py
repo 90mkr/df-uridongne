@@ -17,6 +17,7 @@ def session(b, tag, W, H, steps):
     ctx = b.new_context(viewport={"width": W, "height": H}, device_scale_factor=2, locale="ko-KR")
     ctx.add_init_script(
         "localStorage.setItem('flutter.complex', %s);" % json.dumps(json.dumps(json.dumps(CPX, ensure_ascii=False)))
+        + ("" if "인트로" in tag else "localStorage.setItem('flutter.intro.seen', %s);" % json.dumps(json.dumps("1")))
         + "localStorage.setItem('flutter.school.mine', %s);" % json.dumps(json.dumps(json.dumps(["7341308"])))
         + "localStorage.setItem('flutter.anniv.list', %s);" % json.dumps(json.dumps(json.dumps(ANNIV, ensure_ascii=False)))
         + ("localStorage.setItem('flutter.home.on', %s);" % json.dumps(json.dumps(json.dumps(["m:pet"]))) if "반려" in tag else "")
@@ -198,6 +199,30 @@ def pethome(shot, tap, drag, sem, W, H):
     shot("반려_첫화면")
 
 
+def intro(shot, tap, drag, sem, W, H):
+    shot("안내1")
+    tap("다음", wait=3)
+    shot("안내2")
+    tap("다음", wait=3)
+    shot("안내3")
+    tap("시작하기", wait=6)
+    shot("안내뒤_홈")
+
+
+def guide(shot, tap, drag, sem, W, H):
+    tap_has("생활 도구", wait=4)
+    pg_wheel(1500)
+    shot("도구_앱설정")
+    tap_has("사용 방법", wait=5)
+    shot("사용방법1")
+    pg_wheel(700)
+    shot("사용방법2")
+    pg_wheel(700)
+    shot("사용방법3")
+    pg_wheel(1400)
+    shot("사용방법4")
+
+
 def tablet(shot, tap, drag, sem, W, H):
     shot("홈")
     for i in range(4):
@@ -210,7 +235,7 @@ def tablet(shot, tap, drag, sem, W, H):
 
 with sync_playwright() as p:
     b = p.chromium.launch(args=["--use-gl=swiftshader", "--enable-unsafe-swiftshader"])
-    for tag, W, H, f in [("폰반려홈", 430, 932, pethome), ("폰작은반려홈", 360, 740, pethome), ("폰화장실", 430, 932, toilet), ("폰작은화장실", 360, 740, toilet), ("폰작은", 360, 740, phone), ("폰큰", 430, 932, phone), ("폰택배", 430, 932, parcel), ("폰작은택배", 360, 740, parcel), ("폰쓰레기", 430, 932, trash), ("폰작은쓰레기", 360, 740, trash), ("폰주차", 430, 932, parking), ("폰작은주차", 360, 740, parking), ("폰알람", 430, 932, alarm), ("폰작은알람", 360, 740, alarm), ("탭알람", 1180, 820, alarm), ("폰주유소", 430, 932, gas), ("폰작은주유소", 360, 740, gas), ("탭", 1180, 820, tablet), ("탭세로", 820, 1180, tablet)]:
+    for tag, W, H, f in [("폰인트로", 390, 844, intro), ("폰작은인트로", 360, 740, intro), ("폰안내", 430, 932, guide), ("폰작은안내", 360, 740, guide), ("탭안내", 1180, 820, guide), ("폰반려홈", 430, 932, pethome), ("폰작은반려홈", 360, 740, pethome), ("폰화장실", 430, 932, toilet), ("폰작은화장실", 360, 740, toilet), ("폰작은", 360, 740, phone), ("폰큰", 430, 932, phone), ("폰택배", 430, 932, parcel), ("폰작은택배", 360, 740, parcel), ("폰쓰레기", 430, 932, trash), ("폰작은쓰레기", 360, 740, trash), ("폰주차", 430, 932, parking), ("폰작은주차", 360, 740, parking), ("폰알람", 430, 932, alarm), ("폰작은알람", 360, 740, alarm), ("탭알람", 1180, 820, alarm), ("폰주유소", 430, 932, gas), ("폰작은주유소", 360, 740, gas), ("탭", 1180, 820, tablet), ("탭세로", 820, 1180, tablet)]:
         try:
             session(b, tag, W, H, f)
         except Exception as e:

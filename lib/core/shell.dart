@@ -15,6 +15,7 @@ import 'map_tab.dart';
 import 'me.dart';
 import 'theme.dart';
 import 'tools_tab.dart';
+import 'guide.dart';
 import 'push.dart';
 import 'remote.dart';
 import 'settings_sync.dart';
@@ -68,9 +69,11 @@ class _ShellState extends State<Shell> {
       final c = complex.value;
       if (c != null) syncPush(c);
     });
-    if (complex.value == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => pickComplex(context, first: true));
-    }
+    // 처음 설치하고 켜면 1·2·3단계 안내 → 그다음 우리 단지 고르기 (대표님 11-27)
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await showIntroIfNew(context);
+      if (mounted && complex.value == null) pickComplex(context, first: true);
+    });
   }
 
   // 앱 아이콘을 길게 누르면 나오는 바로가기 (대표님 11-25: 급할 때 화장실 바로)

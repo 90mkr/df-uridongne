@@ -7,6 +7,12 @@ import 'feature.dart';
 import 'icons.dart';
 import 'theme.dart';
 import 'remote.dart';
+import 'data.dart';
+import 'complex_pick.dart';
+import 'guide.dart';
+import 'home.dart';
+import 'ui.dart';
+import '../features/board/noti.dart';
 
 // 아이콘 뒤 옅은 빛 (칸마다 조금씩 다른 색)
 // 칸이 좁아 이름은 짧게 (낱말 중간에서 줄 바뀜 없게)
@@ -67,7 +73,8 @@ class ToolsTab extends StatelessWidget {
             constraints: const BoxConstraints(maxWidth: 760),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(kPad, 4, kPad, 28),
-              child: LayoutBuilder(builder: (context, c) {
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              LayoutBuilder(builder: (context, c) {
                 final cols = c.maxWidth > 560 ? 6 : 4; // 대표님 11-24: 한 줄에 4개
                 const gap = 9.0;
                 final w = (c.maxWidth - gap * (cols - 1)) / cols;
@@ -120,11 +127,89 @@ class ToolsTab extends StatelessWidget {
                     ),
                 ]);
               }),
+              const SizedBox(height: 26),
+              const _AppSettings(),
+              ]),
             ),
           ),
         ),
       ]),
       ]),
     );
+  }
+}
+
+// 생활 도구 맨 아래 「앱 설정」 (대표님 11-27): 사용 방법 띠 + 자주 바꾸는 설정 네 칸
+class _AppSettings extends StatelessWidget {
+  const _AppSettings();
+  @override
+  Widget build(BuildContext context) {
+    final c = complex.value;
+    final items = <(IconData, String, VoidCallback?)>[
+      (Icons.dashboard_customize_outlined, '홈 꾸미기', c == null ? null : () => openHomeEditFor(context, c)),
+      (Icons.apartment_rounded, '우리 단지', () => pickComplex(context)),
+      (Icons.notifications_none_rounded, '알림 설정', c == null ? null : () => Navigator.push(context, MaterialPageRoute(builder: (_) => BoardNotiPage(c: c)))),
+      (Icons.menu_book_outlined, '사용 방법', () => openGuide(context)),
+    ];
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      const MixTitle('앱', '설정', size: 17),
+      const SizedBox(height: 10),
+      // 사용 방법 띠
+      Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: () => openGuide(context),
+          child: Ink(
+            padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: const Color(0xFFE6ECF5)),
+              boxShadow: const [BoxShadow(color: Color(0x141C3A6E), blurRadius: 10)],
+            ),
+            child: const Row(children: [
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text.rich(TextSpan(children: [
+                    TextSpan(text: '처음이세요? ', style: TextStyle(fontWeight: FontWeight.w300)),
+                    TextSpan(text: '$kAppName 사용 방법', style: TextStyle(fontWeight: FontWeight.w800)),
+                  ]), style: TextStyle(fontSize: 15, letterSpacing: -0.4)),
+                  SizedBox(height: 3),
+                  Text('단지 고르기부터 홈 꾸미기까지, 그림으로 쉽게', style: TextStyle(fontSize: 12, color: kSub)),
+                ]),
+              ),
+              LineIcon('book', size: 40),
+              Icon(Icons.chevron_right_rounded, color: kMute),
+            ]),
+          ),
+        ),
+      ),
+      const SizedBox(height: 9),
+      Row(children: [
+        for (final (k, it) in items.indexed) ...[
+          if (k > 0) const SizedBox(width: 9),
+          Expanded(
+            child: Material(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: it.$3,
+                child: Ink(
+                  height: 74,
+                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFE6ECF5))),
+                  child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Icon(it.$1, size: 24, color: it.$3 == null ? kMute : const Color(0xFF24539F)),
+                    const SizedBox(height: 6),
+                    Text(it.$2, maxLines: 1, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: -0.4)),
+                  ]),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ]),
+    ]);
   }
 }
