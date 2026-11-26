@@ -30,7 +30,24 @@ class DongneApp extends StatelessWidget {
         builder: (context, child) {
           final mq = MediaQuery.of(context);
           final s = mq.textScaler.scale(1).clamp(0.9, 1.15);
-          return MediaQuery(data: mq.copyWith(textScaler: TextScaler.linear(s)), child: child!);
+          // 휴대폰 아래 단추 줄(뒤로·홈·최근 앱)에 화면이 가려지지 않게 (대표님 11-27: 알람 넣기 창 단추가 가려짐)
+          // 안드로이드 15부터는 앱이 그 줄 밑까지 그려지므로, 앱 전체(모든 화면·아래에서 올라오는 창)를 그 높이만큼 위로 올린다.
+          // 글자판이 올라와 있을 때는 그 줄 높이가 0으로 오므로 두 번 올라가지 않는다.
+          final nav = mq.padding.bottom;
+          return ColoredBox(
+            color: Colors.white,
+            child: Padding(
+              padding: EdgeInsets.only(bottom: nav),
+              child: MediaQuery(
+                data: mq.copyWith(
+                  textScaler: TextScaler.linear(s),
+                  padding: mq.padding.copyWith(bottom: 0),
+                  viewPadding: mq.viewPadding.copyWith(bottom: (mq.viewPadding.bottom - nav).clamp(0, double.infinity)),
+                ),
+                child: child!,
+              ),
+            ),
+          );
         },
         home: const Shell(),
       );
