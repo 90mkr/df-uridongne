@@ -12,6 +12,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/data.dart';
 import '../../core/dnmap.dart';
+import '../../core/icons.dart';
 import '../../core/theme.dart';
 import '../../core/ui.dart';
 import 'data.dart';
@@ -514,7 +515,7 @@ class _Painter extends CustomPainter {
     }
 
     for (final l in faint) {
-      drawLine(l, l.color.withValues(alpha: 0.16), 2.4 / s);
+      drawLine(l, l.color.withValues(alpha: 0.42), 3.2 / s); // 대표님 11-26: 다른 노선이 너무 흐려 안 보임
     }
     for (final l in bold.reversed) {
       drawLine(l, Colors.white, lw + 3 / s);
@@ -976,4 +977,85 @@ class _StationTag extends StatelessWidget {
           ),
         ]),
       );
+}
+
+
+// ---------------- 홈 위젯 「우리 역 노선도」 (대표님 11-26) ----------------
+// 우리 단지에서 가장 가까운 노선의 띠 — 우리 역이 가운데, 역을 누르면 노선도 화면
+class LineHomeWidget extends StatefulWidget {
+  final Complex c;
+  const LineHomeWidget({super.key, required this.c});
+  @override
+  State<LineHomeWidget> createState() => _LineHomeWidgetState();
+}
+
+class _LineHomeWidgetState extends State<LineHomeWidget> {
+  SubLine? line;
+  String mine = '';
+  List<(String, LatLng)> strip = const [];
+  Map<String, List<SubLine>> byName = const {};
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final r = regionOf(widget.c.pos);
+    if (r == null) return;
+    final l = await linesOf(r);
+    if (l.isEmpty || !mounted) return;
+    double dist(SubLine x) => x.stations.map((s) => meters(widget.c.pos, s.$2)).fold(double.infinity, (a, b) => a < b ? a : b);
+    final best = [...l]..sort((a, b) => dist(a).compareTo(dist(b)));
+    final ln = best.first;
+    if (dist(ln) > 5000 || ln.stations.isEmpty) return;
+    var st = ln.stations.first;
+    for (final s in ln.stations) {
+      if (meters(widget.c.pos, s.$2) < meters(widget.c.pos, st.$2)) st = s;
+    }
+    final bn = <String, List<SubLine>>{};
+    for (final x in l) {
+      for (final s in x.stations) {
+        final v = bn[s.$1] ??= [];
+        if (!v.contains(x)) v.add(x);
+      }
+    }
+    setState(() {
+      line = ln;
+      mine = st.$1;
+      strip = lineStrip(ln, st.$1);
+      byName = bn;
+    });
+  }
+
+  void _open() => Navigator.of(context).push(MaterialPageRoute(builder: (_) => LinesPage(c: widget.c)));
+
+  @override
+  Widget build(BuildContext context) {
+    final l = line;
+    if (l == null || strip.length < 2) return const SizedBox.shrink();
+    return Container(
+      decoration: cardBox(r: 20),
+      padding: const EdgeInsets.fromLTRB(0, 14, 0, 10),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        InkWell(
+          onTap: _open,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(kPad, 0, kPad - 4, 8),
+            child: Row(children: [
+              const LineIcon('subway', size: 26),
+              const SizedBox(width: 8),
+              const Text('우리 역 ', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: -0.5, color: kInk)),
+              const Text('노선도', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w400, letterSpacing: -0.5, color: kInk)),
+              const Spacer(),
+              const Text('전체 노선도', style: TextStyle(fontSize: 12.5, color: kSub, fontWeight: FontWeight.w600)),
+              const Icon(Icons.chevron_right_rounded, size: 18, color: kSub),
+            ]),
+          ),
+        ),
+        _Strip(key: ValueKey('${l.name}|$mine'), line: l, stations: strip, mine: mine, tapped: null, byName: byName, onTap: (_) => _open()),
+      ]),
+    );
+  }
 }

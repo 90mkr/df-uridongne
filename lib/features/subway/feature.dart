@@ -29,12 +29,16 @@ class SubwayFeature extends Feature {
   @override
   int get order => 20;
   @override
-  String get version => '0.4.2';
+  String get version => '0.5.0';
   @override
   bool get ready => true;
 
   @override
   Widget? homeCard(BuildContext context, Complex c) => _HomeCard(f: this, c: c);
+
+  // 홈 위젯 「우리 역 노선도」 (대표님 11-26) — 홈 편집에서 빼고 넣기
+  @override
+  Widget? mainCard(BuildContext context, Complex c) => LineHomeWidget(c: c);
 
   @override
   Widget page(BuildContext context, Complex c) => _Page(c: c);
