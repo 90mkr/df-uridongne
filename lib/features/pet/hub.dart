@@ -25,7 +25,8 @@ class PetHub extends StatefulWidget {
 }
 
 class _PetHubState extends State<PetHub> {
-  Map<PetKind, int> count = {};
+  Map<PetKind, int> count = {}; // 3km 안
+  Map<PetKind, int> wide = {}; // 3km 안이 5곳 미만인 칸은 8km 안 (안쪽 화면과 같은 기준)
   (PetPlace, double)? nearHosp, nearNight;
   List<Map> promos = const [];
   bool loaded = false;
@@ -41,12 +42,18 @@ class _PetHubState extends State<PetHub> {
   }
 
   Future<void> _load() async {
-    final r = await Future.wait([petNear(widget.complex.pos, km: 3), getJson('${dataBase}pet/promo.json')]);
-    final v = r[0] as List<(PetPlace, double)>;
+    // 8km까지 한 번에 받고, 칸 숫자는 안쪽 화면과 똑같이 셈 (3km 안 5곳 미만이면 8km까지 넓혀서)
+    final r = await Future.wait([petNear(widget.complex.pos, km: 8), getJson('${dataBase}pet/promo.json')]);
+    final v8 = r[0] as List<(PetPlace, double)>;
+    final v = v8.where((x) => x.$2 <= 3000).toList();
     final p = r[1];
     if (!mounted) return;
     setState(() {
       count = {for (final k in PetKind.values) k: v.where((x) => x.$1.kind == k).length};
+      wide = {
+        for (final k in PetKind.values)
+          if ((count[k] ?? 0) < 5) k: v8.where((x) => x.$1.kind == k).length,
+      };
       nearHosp = v.where((x) => x.$1.kind == PetKind.hosp).firstOrNull;
       nearNight = v.where((x) => x.$1.night).firstOrNull;
       promos = [for (final x in (p is Map ? (p['items'] as List? ?? const []) : const [])) if (x is Map && x['on'] != false) x];
@@ -66,7 +73,7 @@ class _PetHubState extends State<PetHub> {
   @override
   Widget build(BuildContext context) {
     final c = widget.complex;
-    String cnt(PetKind k) => !loaded ? '' : '${count[k] ?? 0}곳';
+    String cnt(PetKind k) => !loaded ? '' : (wide.containsKey(k) ? '8km ${wide[k]}곳' : '${count[k] ?? 0}곳');
     final wl = walk?.nowJudge?.level;
     final tiles = <(String, String, String, Widget Function())>[
       ('pet_walk', '오늘의 산책', wl == null ? '산책 지수' : kWalkShort[wl], () => PetWalkPage(complex: c)),
@@ -129,7 +136,7 @@ class _PetHubState extends State<PetHub> {
           _EmergencyRow(night: petNightNow(DateTime.now()), nearNight: nearNight, nearHosp: nearHosp, loaded: loaded, onTap: () => _go(PetEmergencyPage(complex: c))),
           for (final p in promos) ...[const SizedBox(height: 14), _Promo(p: p)],
           const SizedBox(height: 18),
-          Text('${c.name} 둘레 3km 기준 · 소상공인 상가정보·인허가 자료', style: T.tiny),
+          Text('${c.name} 둘레 3km 기준 (드문 칸은 8km) · 소상공인 상가정보·인허가 자료', style: T.tiny),
         ]),
       ),
     );
