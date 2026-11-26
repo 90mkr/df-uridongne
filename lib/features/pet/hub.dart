@@ -197,7 +197,7 @@ class PetTodayCard extends StatelessWidget {
             ),
       clipBehavior: Clip.antiAlias,
       child: Stack(children: [
-        Positioned(right: -14, top: -10, child: light ? LineIcon('pet', size: 120, line: kBlue.withValues(alpha: 0.10), fill: kBlue.withValues(alpha: 0.04)) : LineIcon('pet', size: 120, line: Colors.white.withValues(alpha: 0.16), fill: Colors.white.withValues(alpha: 0.06))),
+        Positioned(right: -14, top: -10, child: light ? const Opacity(opacity: 0.12, child: LineIcon('pet', size: 120)) : LineIcon('pet', size: 120, line: Colors.white.withValues(alpha: 0.16), fill: Colors.white.withValues(alpha: 0.06))),
         Material(
           color: Colors.transparent,
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
