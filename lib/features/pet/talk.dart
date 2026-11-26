@@ -86,8 +86,18 @@ String talkName() {
   return myName;
 }
 
+/// 글 본문 맨 앞 줄의 감정 캐릭터 (':emo:c_love:\n본문')
+(String?, String) splitMood(String b) {
+  final m = RegExp(r'^:emo:([cd]_[a-z]+):\n?').firstMatch(b);
+  if (m == null) return (null, b);
+  return (m.group(1), b.substring(m.end));
+}
+
 class TalkPost {
   final String id, cat, title, body, uid, name, area;
+  String? get mood => splitMood(body).$1;
+  String get text => splitMood(body).$2;
+  String get face => mood ?? avatarOf(uid);
   final DateTime at;
   final List<String> photos, thumbs;
   final int comments;
@@ -355,7 +365,7 @@ class _TalkRow extends StatelessWidget {
       padding: EdgeInsets.symmetric(vertical: compact ? 10 : 12),
       decoration: BoxDecoration(border: last ? null : const Border(bottom: BorderSide(color: kLine))),
       child: Row(children: [
-        Emo(avatarOf(p.uid), size: compact ? 40 : 46),
+        Emo(p.face, size: compact ? 40 : 46),
         const SizedBox(width: 10),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -545,10 +555,10 @@ class _Chip extends StatelessWidget {
         borderRadius: BorderRadius.circular(17),
         onTap: onTap,
         child: Container(
+          height: 34,
           padding: const EdgeInsets.symmetric(horizontal: 14),
-          alignment: Alignment.center,
           decoration: BoxDecoration(borderRadius: BorderRadius.circular(17), color: on ? kInk : Colors.white, border: Border.all(color: on ? kInk : kLine)),
-          child: Text(text, style: TextStyle(fontSize: 12.5, color: on ? Colors.white : kInk, fontWeight: on ? FontWeight.w700 : FontWeight.w500, letterSpacing: -0.3)),
+          child: Center(widthFactor: 1, child: Text(text, style: TextStyle(fontSize: 12.5, color: on ? Colors.white : kInk, fontWeight: on ? FontWeight.w700 : FontWeight.w500, letterSpacing: -0.3))),
         ),
       );
 }
@@ -643,7 +653,7 @@ class _PostPageState extends State<_PostPage> {
         Expanded(
           child: ListView(padding: const EdgeInsets.fromLTRB(kPad, 18, kPad, 20), children: [
             Row(children: [
-              Emo(avatarOf(p.uid), size: 52),
+              Emo(p.face, size: 52),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -658,7 +668,7 @@ class _PostPageState extends State<_PostPage> {
             if (p.done) ...[Text(p.cat == 'lost' ? '찾았어요' : '완료', style: const TextStyle(fontSize: 12, color: kBlue, fontWeight: FontWeight.w700)), const SizedBox(height: 4)],
             Text(p.title, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, letterSpacing: -0.6, height: 1.3)),
             const SizedBox(height: 10),
-            if (p.body.isNotEmpty) Text(p.body, style: const TextStyle(fontSize: 14, height: 1.55)),
+            if (p.text.isNotEmpty) Text(p.text, style: const TextStyle(fontSize: 14, height: 1.55)),
             for (var i = 0; i < p.photoCount; i++) ...[
               const SizedBox(height: 12),
               ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.memory(p.photo(i), fit: BoxFit.cover, gaplessPlayback: true)),
@@ -815,6 +825,8 @@ class _WritePage extends StatefulWidget {
 
 class _WritePageState extends State<_WritePage> {
   late String cat = widget.cat;
+  late String mood = '${kids.value.isNotEmpty && kids.value.first.kind == '고양이' ? 'c' : 'd'}_wow';
+  late String moodKind = mood.substring(0, 1);
   final title = TextEditingController();
   final body = TextEditingController();
   final pics = <_Pic>[];
@@ -857,7 +869,7 @@ class _WritePageState extends State<_WritePage> {
       return;
     }
     setState(() => busy = true);
-    final e = await talkWrite(widget.complex, cat: cat, title: t, body: body.text.trim(), photos: [for (final p in pics) p.full], thumbs: [for (final p in pics) p.thumb]);
+    final e = await talkWrite(widget.complex, cat: cat, title: t, body: ':emo:$mood:\n${body.text.trim()}', photos: [for (final p in pics) p.full], thumbs: [for (final p in pics) p.thumb]);
     if (!mounted) return;
     setState(() => busy = false);
     if (e != null) {
@@ -870,24 +882,62 @@ class _WritePageState extends State<_WritePage> {
 
   @override
   Widget build(BuildContext context) {
-    final uid = me?.uid ?? '';
     return DetailPage(
       title: '소통방 글쓰기',
       icon: 'pet',
       body: ListView(padding: const EdgeInsets.fromLTRB(kPad, 16, kPad, 30), children: [
         Row(children: [
-          Emo(avatarOf(uid), size: 48),
+          Emo(mood, size: 56),
           const SizedBox(width: 10),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(talkName(), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
-              Text('${talkRoomName(widget.complex)} 이웃에게 보여요', style: T.tiny),
+              Text('${talkRoomName(widget.complex)} 이웃에게 보여요 · 지금 기분: ${kEmoLabel[mood.substring(2)] ?? ''}', style: T.tiny),
             ]),
           ),
         ]),
+        const SizedBox(height: 14),
+        // 지금 기분 고르기 — 글 목록에 이 캐릭터가 얼굴로 나옴 (콕플 후기처럼)
+        Container(
+          decoration: cardBox(r: 12),
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              const Expanded(child: Text('지금 기분은?', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800))),
+              for (final k in [('c', '냥이'), ('d', '멍이')]) ...[
+                const SizedBox(width: 6),
+                _Chip(k.$2, on: moodKind == k.$1, onTap: () => setState(() {
+                  moodKind = k.$1;
+                  mood = '${k.$1}_${mood.substring(2)}';
+                })),
+              ],
+            ]),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 64,
+              child: ListView(scrollDirection: Axis.horizontal, children: [
+                for (final n in kEmoNames)
+                  InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () => setState(() => mood = '${moodKind}_$n'),
+                    child: Container(
+                      width: 60,
+                      margin: const EdgeInsets.only(right: 4),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        color: mood == '${moodKind}_$n' ? const Color(0xFFEEF3FF) : null,
+                        border: Border.all(color: mood == '${moodKind}_$n' ? kBlue : Colors.transparent),
+                      ),
+                      child: Center(child: Emo('${moodKind}_$n', size: 48)),
+                    ),
+                  ),
+              ]),
+            ),
+          ]),
+        ),
         const SizedBox(height: 16),
         Wrap(spacing: 6, runSpacing: 6, children: [
-          for (final x in kTalkCats) SizedBox(height: 34, child: _Chip(x.$2, on: cat == x.$1, onTap: () => setState(() => cat = x.$1))),
+          for (final x in kTalkCats) _Chip(x.$2, on: cat == x.$1, onTap: () => setState(() => cat = x.$1)),
         ]),
         const SizedBox(height: 14),
         Container(
