@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 
 import '../../core/data.dart';
 import '../../core/feature.dart' show MapPoint;
-import '../../core/icons.dart';
 import '../../core/map.dart';
 import '../../core/theme.dart';
 import '../../core/ui.dart';
