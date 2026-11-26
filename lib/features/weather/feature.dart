@@ -10,6 +10,7 @@ import '../../core/data.dart';
 import '../../core/feature.dart';
 import '../../core/icons.dart';
 import '../../core/theme.dart';
+import '../../core/remote.dart';
 import '../../core/ui.dart';
 import 'api.dart';
 import 'sky.dart';
@@ -26,7 +27,7 @@ class WeatherFeature extends Feature {
   @override
   int get order => 10;
   @override
-  String get version => '0.2.0';
+  String get version => '0.3.0';
   @override
   bool get ready => true;
   @override
@@ -110,7 +111,7 @@ class _HeadChipState extends State<_HeadChip> {
                   Text('날씨', style: TextStyle(fontSize: 11, color: kMute)),
                 ])
               : Row(mainAxisSize: MainAxisSize.min, children: [
-                  SkyIcon(w!.sky, size: 20, night: isNightHour(w!.at)),
+                  SkyIcon(w!.sky, size: 24, night: isNightHour(w!.at)),
                   const SizedBox(width: 3),
                   Text(_deg(w!.temp), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: -0.3)),
                   if (al != null) ...[
@@ -190,10 +191,18 @@ class _WeatherPageState extends State<_WeatherPage> {
                       ]),
                     ),
             )
-          : RefreshIndicator(
+          : Stack(children: [
+              // 하늘 바탕 (아래는 화면 바탕색으로 이음매 없이 이어짐) — 서버 그림으로 바꿀 수 있게 artImage
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: IgnorePointer(child: AspectRatio(aspectRatio: 1080 / 1182, child: artImage('assets/art/wx_bg.jpg', fit: BoxFit.cover, alignment: Alignment.topCenter))),
+              ),
+              RefreshIndicator(
               onRefresh: () => _load(force: true),
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(kPad, 16, kPad, 30),
+                padding: const EdgeInsets.fromLTRB(kPad, 40, kPad, 30),
                 children: [
                   if (w!.alert != null) ...[_AlertBar(a: w!.alert!), const SizedBox(height: 14)],
                   _Now(w: w!, c: widget.c),
@@ -213,6 +222,7 @@ class _WeatherPageState extends State<_WeatherPage> {
                 ],
               ),
             ),
+            ]),
     );
   }
 }
@@ -263,7 +273,7 @@ class _Now extends StatelessWidget {
               ])),
           ]),
         ),
-        SkyIcon(w.sky, size: 78, night: isNightHour(w.at)),
+        Transform.translate(offset: const Offset(6, -4), child: SkyIcon(w.sky, size: 108, night: isNightHour(w.at))),
       ]),
       const SizedBox(height: 12),
       // 습도·바람·강수 한 줄 (상자 대신 가는 칸막이)
@@ -675,7 +685,7 @@ class _HoursCard extends StatelessWidget {
                       Text(_label(hours, i),
                           style: TextStyle(fontSize: 11, color: i == 0 ? kInk : kSub, fontWeight: i == 0 || hours[i].t.hour == 0 ? FontWeight.w700 : FontWeight.w400)),
                       const SizedBox(height: 4),
-                      SkyIcon(hours[i].sky, size: 28, night: isNightHour(hours[i].t)),
+                      SkyIcon(hours[i].sky, size: 34, night: isNightHour(hours[i].t)),
                     ]),
                   ),
               ]),
@@ -788,9 +798,9 @@ class _DaysCard extends StatelessWidget {
                   TextSpan(text: ' ${days[i].date.month}.${days[i].date.day}', style: const TextStyle(fontSize: 10.5, color: kMute)),
                 ])),
               ),
-              SkyIcon(days[i].am, size: 24),
+              SkyIcon(days[i].am, size: 30),
               const SizedBox(width: 2),
-              SkyIcon(days[i].pm, size: 24),
+              SkyIcon(days[i].pm, size: 30),
               SizedBox(
                 width: 34,
                 child: Text(days[i].pop >= 20 ? '${days[i].pop}%' : '',
