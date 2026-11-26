@@ -190,7 +190,7 @@ extension on _BoardPageState {
   // 모아 보기 (대표님 11-25): 단체 홈페이지 첫 화면처럼 게시판마다 최근 글 몇 줄 → 「더보기」로 그 게시판
   Widget _portal() {
     final posts = all ?? const <Post>[];
-    final benefits = featureById('benefits');
+    final benefits = featureById('benefit');
     void openRead(Post p) => Navigator.push(context, MaterialPageRoute(builder: (_) => _ReadPage(p: p)));
     Widget section(String id) {
       final v = posts.where((p) => p.cat == id).take(4).toList();

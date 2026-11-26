@@ -4,6 +4,7 @@ import '../core/feature.dart';
 import '../core/remote.dart';
 import 'alarm/feature.dart';
 import 'anniv/feature.dart';
+import 'benefit/feature.dart';
 import 'board/feature.dart';
 import 'bus/feature.dart';
 import 'charger/feature.dart';
@@ -50,6 +51,7 @@ final List<Feature> allFeatures = [
   BoardFeature(), // 우리 단지 이야기 (소식·나눔·자유·업체 추천)
   EventsFeature(), // 생활 도구 + 홈 사진 카드: 주변 행사·축제 (주말엔 「지금 우리 단지」)
   SchoolFeature(), // 생활 도구 + 홈 한 줄(등록한 집만): 우리 아이 학교 급식·쉬는 날
+  BenefitFeature(), // 생활 도구 + 커뮤니티 카드: 우리 동네 지원금·혜택 (청년정책 포함, 11-27 등록)
 ];
 
 List<Feature> get features => [for (final f in allFeatures) if (!remoteOff(f.id)) f];

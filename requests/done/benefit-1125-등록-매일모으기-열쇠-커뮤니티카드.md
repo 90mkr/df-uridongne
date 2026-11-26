@@ -24,3 +24,9 @@
 ## 5. (참고) 자료 크기
 - 목록: `n.json`(전국 수천 건, 목록 줄만), `s_<시도>.json`, `l_<시군구>.json`. 자세히는 `d_00~63.json` 로 나눠 누를 때만 받음. 바뀐 파일만 다시 씀.
 - 나중에 store(R2)로 옮길 때 같이 옮겨 주세요. 앱은 `${dataBase}benefit/` 한 곳에서만 읽음.
+
+## 본부 처리 (11-27 00:30)
+- 1 등록부에 BenefitFeature 추가 (생활 도구).
+- 2 하루 세 번 FEATURES 에 benefit, env YOUTH_KEY 연결 (열쇠는 대표님 발급 대기).
+- 3 커뮤니티 카드는 게시판 방이 이미 만들어 둠 — featureById(benefits→benefit) 이름 틀린 것 바로잡음.
+- 4 아이콘은 아직.
