@@ -16,6 +16,7 @@ final homeLayoutTick = ValueNotifier<int>(0);
 List<String> _order = [];
 Set<String> _hide = {};
 Set<String> _on = {}; // 처음엔 꺼져 있는 한 줄 카드(r:) 중 사용자가 켠 것
+Map<String, String> _size = {}; // 사용자가 바꾼 크기: big · icon (11-26 홈 두 단계)
 bool _loaded = false;
 
 Future<void> loadHomeLayout() async {
@@ -28,6 +29,8 @@ Future<void> loadHomeLayout() async {
     if (h != null && h.isNotEmpty) _hide = Set<String>.from(jsonDecode(h));
     final t = await prefGet('home.on');
     if (t != null && t.isNotEmpty) _on = Set<String>.from(jsonDecode(t));
+    final z = await prefGet('home.size');
+    if (z != null && z.isNotEmpty) _size = Map<String, String>.from(jsonDecode(z));
   } catch (_) {}
   homeLayoutTick.value++;
 }
@@ -36,19 +39,41 @@ Future<void> _save() async {
   await prefSet('home.order', jsonEncode(_order));
   await prefSet('home.hide', jsonEncode(_hide.toList()));
   await prefSet('home.on', jsonEncode(_on.toList()));
+  await prefSet('home.size', jsonEncode(_size));
   homeLayoutTick.value++;
 }
 
-// 한 줄 카드(r:)는 처음엔 꺼 둔다 — 홈이 너무 길어지지 않게. 꾸미기에서 켜면 보인다
-const _defaultOn = {'r:alarm'}; // 한 줄 카드 중 처음부터 켜 둘 것 (11-24: 알람을 못 찾으셔서)
-const _defaultOff = {'m:school', 'm:pet'}; // 큰 카드 중 처음엔 꺼 둘 것 (학교: 아이 학교를 등록하면 저절로 켜짐 · 반려동물: 테마 첫 화면에서 켜거나 우리 아이를 등록하면 켜짐)
-bool isHidden(String id) =>
-    _hide.contains(id) || ((id.startsWith('r:') && !_defaultOn.contains(id) || _defaultOff.contains(id)) && !_on.contains(id));
+// 11-26 홈 두 단계: 한 줄 카드(r:)도 처음부터 보임 — 대부분 아이콘 줄에 들어가 홈이 길어지지 않음
+const _defaultOff = {'m:school', 'm:pet'}; // 처음엔 꺼 둘 것 (학교: 아이 학교를 등록하면 저절로 켜짐 · 반려동물: 테마 첫 화면에서 켜거나 우리 아이를 등록하면 켜짐)
+bool isHidden(String id) => _hide.contains(id) || (_defaultOff.contains(id) && !_on.contains(id));
+
+// ---- 크게 보기 / 아이콘으로 (11-26) ----
+// 기본값은 기능 등록부(registry.dart 의 kHomeBig)가 정함: 오늘 바뀌는 정보만 큰 카드, 나머지는 아이콘
+bool canBeBig(String id) => !id.startsWith('i:');
+bool isBig(String id) {
+  if (!canBeBig(id)) return false;
+  final u = _size[id];
+  if (u != null) return u == 'big';
+  return id == 'today' || kHomeBig.contains(id);
+}
+
+Future<void> setHomeSize(String id, bool big) async {
+  if (big && !canBeBig(id)) return;
+  _size[id] = big ? 'big' : 'icon';
+  await _save();
+}
+
+/// 아이콘 줄 이름 (칸이 좁아 짧게)
+const kHomeShort = {'weather': '날씨', 'board': '단지 이야기', 'events': '행사·축제', 'trash': '분리수거', 'pharmacy': '문 연 약국', 'postcode': '택배·우편', 'deals': '최근 거래', 'bus': '버스', 'roulette': '뭐 먹지?', 'school': '학교 급식', 'parking': '주차장', 'mycar': '내 차', 'toilet': '화장실', 'charger': '충전소', 'gas': '주유소', 'anniv': '기념일', 'subway': '지하철', 'phonebook': '전화번호부', 'pet': '반려동물', 'lotto': '로또', 'alarm': '알람', 'benefit': '지원금'};
+
+/// 홈 아래 「전체 보기」 → 생활 도구 탭 (셸이 들음)
+final homeToolsAsk = ValueNotifier<int>(0);
 
 /// 기능 화면에서 「홈에 보이게」 (예: 학교 등록하면 학교 카드 켜기)
 Future<void> setHomeCardOn(String id) async {
   if (!isHidden(id)) return;
   _setOn(id, true);
+  if (id == 'm:pet' && _size[id] == null) _size[id] = 'big'; // 반려 배너는 켜면 큰 카드
   if (_order.isNotEmpty) {
     _order.remove(id);
     _order.insert(1.clamp(0, _order.length), id); // 켜면 맨 위 카드 바로 아래 (첫 화면에 보이게)
@@ -115,11 +140,12 @@ const _mainNames = {'parking': '내 차 어디 댔지', 'charger': '충전소 �
 
 /// 홈 한 칸
 class HomeBlock {
-  final String id; // today · f:<기능> · m:<기능> · tools
+  final String id; // today · f:<기능> · m:<기능> · r:<기능> · i:<기능>(아이콘만)
   final String name, icon;
   final bool half;
   final Widget Function(BuildContext context) build;
   const HomeBlock(this.id, this.name, this.icon, this.build, {this.half = false});
+  String get fid => id.contains(':') ? id.substring(id.indexOf(':') + 1) : id;
 }
 
 /// 기본 순서의 홈 칸들 (만들 수 있는 것만)
@@ -156,6 +182,12 @@ List<HomeBlock> defaultBlocks(BuildContext context, Complex c, {required Widget 
   }
   for (final f in at(Slot.tail)) {
     out.add(HomeBlock('f:${f.id}', f.name, f.icon, (_) => card(f)));
+  }
+  // 홈 칸이 없는 기능은 아이콘 줄에만 (예: 화장실·로또·지원금)
+  final have = {for (final b in out) b.fid};
+  for (final f in [...features]..sort((a, b) => a.order.compareTo(b.order))) {
+    if (have.contains(f.id) || f.slot == Slot.header || f.slot == Slot.info) continue;
+    out.add(HomeBlock('i:${f.id}', f.name, f.icon, (_) => const SizedBox.shrink()));
   }
   return out;
 }
@@ -209,5 +241,6 @@ void resetHomeLayout() {
   _order = [];
   _hide = {};
   _on = {};
+  _size = {};
   _save();
 }

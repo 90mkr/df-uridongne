@@ -23,6 +23,10 @@ import 'toilet/feature.dart';
 import 'trash/feature.dart';
 import 'weather/feature.dart';
 
+// 단지 홈에서 처음부터 「크게 보기」인 칸 (11-26 홈 두 단계). 오늘 바뀌는 정보만 — 나머지는 아래 아이콘 줄.
+// today(지금 우리 단지)는 늘 큰 카드. 이용자가 바꾸면 그쪽이 이김.
+const kHomeBig = {'f:bus', 'm:gas', 'r:trash', 'm:pet'};
+
 // 전체 기능 — 실제로 쓰는 목록은 아래 features (서버 app.json 「off」로 급히 숨긴 기능은 빠짐)
 final List<Feature> allFeatures = [
   WeatherFeature(), // 머리 줄: 날씨·미세먼지

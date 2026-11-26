@@ -95,24 +95,34 @@ class _HomeTabState extends State<HomeTab> {
     // 홈 칸들: 기본 순서 → 사용자가 「홈 편집」에서 바꾼 순서·끈 칸 적용
     final base = defaultBlocks(context, c, today: () => TodayHero(key: ValueKey('today${c.id}$gen'), c: c), card: card);
     if (editing) return _editor(context, base);
-    final blocks = arrange(base);
+    final all = arrange(base);
+    // 11-26 홈 두 단계: 위 큰 카드(크게 보기) · 아래 아이콘 한 줄
+    final blocks = all.where((b) => isBig(b.id)).toList();
+    final seen = <String>{};
+    final icons = [for (final b in all) if (!isBig(b.id) && seen.add(b.fid) && featureById(b.fid) != null) b];
+    Widget hold(HomeBlock b, Widget child) => GestureDetector(onLongPress: () => _sizeMenu(context, b, big: true), child: child);
     final kids = <Widget>[];
     for (var i = 0; i < blocks.length; i++) {
       final b = blocks[i];
       // 반쪽 카드 둘이 이어지면 나란히, 하나면 가로 한 줄 전체
       if (b.half && i + 1 < blocks.length && blocks[i + 1].half) {
+        final b2 = blocks[i + 1];
         kids.add(IntrinsicHeight(
           child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Expanded(child: b.build(context)),
+            Expanded(child: hold(b, b.build(context))),
             const SizedBox(width: 10),
-            Expanded(child: blocks[i + 1].build(context)),
+            Expanded(child: hold(b2, b2.build(context))),
           ]),
         ));
         i++;
       } else {
-        kids.add(KeyedSubtree(key: ValueKey('b${b.id}$gen'), child: b.build(context)));
+        kids.add(hold(b, KeyedSubtree(key: ValueKey('b${b.id}$gen'), child: b.build(context))));
       }
       kids.add(const SizedBox(height: 12));
+    }
+    if (icons.isNotEmpty) {
+      kids.add(const SizedBox(height: 6));
+      kids.add(_IconRow(items: icons, onHold: (b) => _sizeMenu(context, b, big: false)));
     }
     return RefreshIndicator(
       onRefresh: _refresh,
@@ -168,11 +178,106 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
-  // 홈 편집: 휴대폰 「빠른 설정 편집」처럼 — 위는 보이는 카드(꾹 눌러 끌기 · ⊖ 끄기), 아래는 꺼 둔 카드(⊕ 켜기)
+  // 첫 화면에서 꾹 누르기 → 크게 보기로 올리기 / 아이콘으로 내리기 (11-26)
+  Future<void> _sizeMenu(BuildContext context, HomeBlock b, {required bool big}) async {
+    final f = featureById(b.fid);
+    final name = big ? b.name : (kHomeShort[b.fid] ?? f?.name ?? b.name);
+    final up = !big && canBeBig(b.id);
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(kPad, 18, kPad, 12),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Row(children: [
+              LineIcon(b.icon, size: 30),
+              const SizedBox(width: 10),
+              Expanded(child: Text(name, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, letterSpacing: -0.5))),
+            ]),
+            const SizedBox(height: 14),
+            if (big)
+              _MenuRow(icon: Icons.south_rounded, text: '아이콘으로 내리기', sub: '아래 아이콘 줄로 — 홈이 짧아져요', onTap: () {
+                Navigator.pop(ctx);
+                setHomeSize(b.id, false);
+              })
+            else if (up)
+              _MenuRow(icon: Icons.north_rounded, text: '크게 보기로 올리기', sub: '위 큰 카드로 — 정보가 바로 보여요', onTap: () {
+                Navigator.pop(ctx);
+                setHomeSize(b.id, true);
+              })
+            else
+              const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text('이 기능은 큰 카드가 없어 아이콘으로만 보여요', style: T.small)),
+            _MenuRow(icon: Icons.visibility_off_outlined, text: '홈에서 빼기', sub: '생활 도구 탭에는 그대로 있어요', onTap: () {
+              Navigator.pop(ctx);
+              final every = arrange(defaultBlocks(context, complex.value!, today: () => const SizedBox(), card: (_) => const SizedBox()), withHidden: true);
+              hideBlock(b.id, every.where((x) => !isHidden(x.id)).toList(), every.where((x) => isHidden(x.id)).toList());
+            }),
+            _MenuRow(icon: Icons.dashboard_customize_outlined, text: '홈 편집 열기', sub: '순서 바꾸기·켜고 끄기', onTap: () {
+              Navigator.pop(ctx);
+              setState(() => editing = true);
+            }),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  // 홈 편집 (11-26 두 묶음): 「크게 보기」 / 「아이콘으로」 — 화살표 한 번으로 묶음 사이 이동, 꾹 눌러 묶음 안 순서, ⊖ 끄기 · 아래 ⊕ 켜기
   Widget _editor(BuildContext context, List<HomeBlock> base) {
     final all = arrange(base, withHidden: true);
     final visible = all.where((b) => !isHidden(b.id)).toList();
     final hidden = all.where((b) => isHidden(b.id)).toList();
+    final big = visible.where((b) => isBig(b.id)).toList();
+    final small = visible.where((b) => !isBig(b.id)).toList();
+    void save(List<HomeBlock> bg, List<HomeBlock> sm) => setHomeOrder([...bg, ...sm], hidden);
+    Widget group(List<HomeBlock> list, bool isBigGroup) => ReorderableListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          buildDefaultDragHandles: false,
+          itemCount: list.length,
+          onReorder: (a, b) {
+            if (b > a) b--;
+            final v = [...list];
+            v.insert(b, v.removeAt(a));
+            isBigGroup ? save(v, small) : save(big, v);
+          },
+          proxyDecorator: (child, _, __) => Material(color: Colors.transparent, elevation: 8, shadowColor: const Color(0x33000000), borderRadius: BorderRadius.circular(14), child: child),
+          itemBuilder: (_, i) {
+            final b = list[i];
+            final canMove = isBigGroup || canBeBig(b.id);
+            return ReorderableDelayedDragStartListener(
+              key: ValueKey('e${b.id}'),
+              index: i,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: _EditBar(
+                  b: b,
+                  on: true,
+                  label: isBigGroup ? null : kHomeShort[b.fid],
+                  onToggle: () => hideBlock(b.id, visible, hidden),
+                  move: canMove
+                      ? IconButton(
+                          tooltip: isBigGroup ? '아이콘으로' : '크게 보기로',
+                          onPressed: () => setHomeSize(b.id, !isBigGroup),
+                          icon: Icon(isBigGroup ? Icons.south_rounded : Icons.north_rounded, color: kBlue, size: 22),
+                        )
+                      : null,
+                  handle: ReorderableDragStartListener(index: i, child: const Padding(padding: EdgeInsets.all(10), child: Icon(Icons.drag_indicator_rounded, color: kSub))),
+                ),
+              ),
+            );
+          },
+        );
+    Widget head(String a, String b, String sub) => Padding(
+          padding: const EdgeInsets.only(left: 2, top: 6, bottom: 8),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            MixTitle(a, b, size: 15),
+            const SizedBox(width: 8),
+            Expanded(child: Text(sub, style: T.tiny, maxLines: 1, overflow: TextOverflow.ellipsis)),
+          ]),
+        );
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 720),
@@ -187,56 +292,138 @@ class _HomeTabState extends State<HomeTab> {
             ]),
           ),
           const Padding(
-            padding: EdgeInsets.fromLTRB(kPad, 0, kPad, 8),
-            child: Align(alignment: Alignment.centerLeft, child: Text('꾹 눌러 위아래로 옮기고, ⊖ 로 끄고, 아래 ⊕ 로 다시 켜요. 이 휴대폰에만 저장돼요.', style: T.tiny)),
+            padding: EdgeInsets.fromLTRB(kPad, 0, kPad, 6),
+            child: Align(alignment: Alignment.centerLeft, child: Text('↑↓ 로 크게 보기·아이콘 사이를 옮기고, 꾹 눌러 순서를 바꿔요. 이 휴대폰에만 저장돼요.', style: T.tiny)),
           ),
           Expanded(
-            child: ReorderableListView.builder(
-              buildDefaultDragHandles: false,
-              padding: const EdgeInsets.fromLTRB(kPad, 4, kPad, 28),
-              itemCount: visible.length,
-              onReorder: (a, b) {
-                if (b > a) b--;
-                final v = [...visible];
-                v.insert(b, v.removeAt(a));
-                setHomeOrder(v, hidden);
-              },
-              proxyDecorator: (child, _, __) => Material(color: Colors.transparent, elevation: 8, shadowColor: const Color(0x33000000), borderRadius: BorderRadius.circular(14), child: child),
-              itemBuilder: (_, i) {
-                final b = visible[i];
-                return ReorderableDelayedDragStartListener(
-                  key: ValueKey('e${b.id}'),
-                  index: i,
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: _EditBar(
-                      b: b,
-                      on: true,
-                      onToggle: () => hideBlock(b.id, visible, hidden),
-                      handle: ReorderableDragStartListener(index: i, child: const Padding(padding: EdgeInsets.all(10), child: Icon(Icons.drag_indicator_rounded, color: kSub))),
-                    ),
-                  ),
-                );
-              },
-              footer: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                const SizedBox(height: 14),
-                const Padding(padding: EdgeInsets.only(left: 2, bottom: 8), child: MixTitle('꺼 둔', '카드', size: 15)),
-                if (hidden.isEmpty)
-                  const Padding(padding: EdgeInsets.symmetric(vertical: 14), child: Text('꺼 둔 카드가 없어요', style: T.small, textAlign: TextAlign.center)),
-                for (final b in hidden)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: _EditBar(b: b, on: false, onToggle: () => showBlock(b.id, visible, hidden)),
-                  ),
-                const SizedBox(height: 6),
-                const Text('꺼 둔 기능도 아래 「생활 도구」 탭에는 언제나 있어요.', style: T.tiny),
-              ]),
-            ),
+            child: ListView(padding: const EdgeInsets.fromLTRB(kPad, 4, kPad, 28), children: [
+              head('크게', '보기', '위에 큰 카드로 — 오늘 바뀌는 정보'),
+              if (big.isEmpty) const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Text('큰 카드가 없어요', style: T.small, textAlign: TextAlign.center)),
+              group(big, true),
+              const SizedBox(height: 10),
+              head('아이콘', '으로', '아래 한 줄 — 눌러서 바로 열기'),
+              if (small.isEmpty) const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Text('아이콘이 없어요', style: T.small, textAlign: TextAlign.center)),
+              group(small, false),
+              const SizedBox(height: 14),
+              head('꺼 둔', '칸', ''),
+              if (hidden.isEmpty) const Padding(padding: EdgeInsets.symmetric(vertical: 14), child: Text('꺼 둔 칸이 없어요', style: T.small, textAlign: TextAlign.center)),
+              for (final b in hidden)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: _EditBar(b: b, on: false, onToggle: () => showBlock(b.id, visible, hidden)),
+                ),
+              const SizedBox(height: 6),
+              const Text('꺼 둔 기능도 아래 「생활 도구」 탭에는 언제나 있어요.', style: T.tiny),
+            ]),
           ),
         ]),
       ),
     );
   }
+}
+
+// 꾹 누르기 메뉴 한 줄
+class _MenuRow extends StatelessWidget {
+  final IconData icon;
+  final String text, sub;
+  final VoidCallback onTap;
+  const _MenuRow({required this.icon, required this.text, required this.sub, required this.onTap});
+  @override
+  Widget build(BuildContext context) => InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+          child: Row(children: [
+            Icon(icon, size: 22, color: kBlue),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(text, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, letterSpacing: -0.3)),
+                Text(sub, style: T.tiny),
+              ]),
+            ),
+          ]),
+        ),
+      );
+}
+
+// 아이콘 한 줄 (11-26): 3D 아이콘 + 짧은 이름, 가로로 넘김. 휴대폰에선 4개 반이 보여 마지막이 잘려 보임 → 옆에 더 있다는 신호
+class _IconRow extends StatelessWidget {
+  final List<HomeBlock> items;
+  final void Function(HomeBlock b) onHold;
+  const _IconRow({required this.items, required this.onHold});
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(builder: (context, box) {
+      final w = (box.maxWidth / 4.5).clamp(64.0, 96.0);
+      return Container(
+        decoration: cardBox(r: 20),
+        padding: const EdgeInsets.fromLTRB(0, 14, 0, 12),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Padding(
+            padding: EdgeInsets.only(left: 16, bottom: 10),
+            child: MixTitle('생활', '바로가기', size: 15),
+          ),
+          SizedBox(
+            height: w * 0.62 + 34,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              children: [
+                for (final b in items)
+                  _IconTile(
+                    w: w,
+                    icon: b.icon,
+                    label: kHomeShort[b.fid] ?? featureById(b.fid)?.name ?? b.name,
+                    onTap: () {
+                      final f = featureById(b.fid);
+                      if (f != null) openFeature(context, f);
+                    },
+                    onHold: () => onHold(b),
+                  ),
+                _IconTile(w: w, icon: '', label: '전체 보기', onTap: () => homeToolsAsk.value++, onHold: null),
+              ],
+            ),
+          ),
+        ]),
+      );
+    });
+  }
+}
+
+class _IconTile extends StatelessWidget {
+  final double w;
+  final String icon, label;
+  final VoidCallback onTap;
+  final VoidCallback? onHold;
+  const _IconTile({required this.w, required this.icon, required this.label, required this.onTap, required this.onHold});
+  @override
+  Widget build(BuildContext context) => InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        onLongPress: onHold,
+        child: SizedBox(
+          width: w,
+          child: Column(children: [
+            SizedBox(
+              height: w * 0.62,
+              child: Center(
+                child: icon.isEmpty
+                    ? Container(
+                        width: w * 0.5,
+                        height: w * 0.5,
+                        decoration: BoxDecoration(color: const Color(0xFFF1F5FE), borderRadius: BorderRadius.circular(w * 0.25)),
+                        child: const Icon(Icons.grid_view_rounded, color: kBlue, size: 22),
+                      )
+                    : LineIcon(icon, size: w * 0.56),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, letterSpacing: -0.4, color: kInk)),
+          ]),
+        ),
+      );
 }
 
 // 편집 막대: ⊖/⊕ · 아이콘 · 이름 · (손잡이)
@@ -245,7 +432,9 @@ class _EditBar extends StatelessWidget {
   final bool on;
   final VoidCallback onToggle;
   final Widget? handle;
-  const _EditBar({required this.b, required this.on, required this.onToggle, this.handle});
+  final Widget? move; // ↑ 크게 보기로 / ↓ 아이콘으로
+  final String? label;
+  const _EditBar({required this.b, required this.on, required this.onToggle, this.handle, this.move, this.label});
   @override
   Widget build(BuildContext context) => Container(
         height: 56,
@@ -260,8 +449,9 @@ class _EditBar extends StatelessWidget {
           Opacity(opacity: on ? 1 : 0.55, child: LineIcon(b.icon, size: 28)),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(b.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700, letterSpacing: -0.3, color: on ? kInk : kSub)),
+            child: Text(label ?? b.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700, letterSpacing: -0.3, color: on ? kInk : kSub)),
           ),
+          if (move != null) move!,
           if (handle != null) handle! else const SizedBox(width: 12),
         ]),
       );

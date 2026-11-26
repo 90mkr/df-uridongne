@@ -34,6 +34,12 @@ class _ShellState extends State<Shell> {
     _boot();
     mapAsk.addListener(_toMap);
     homeEditAsk.addListener(_toHome);
+    homeToolsAsk.addListener(_toTools);
+  }
+
+  // 홈 아이콘 줄 끝 「전체 보기」 → 생활 도구 탭
+  void _toTools() {
+    if (mounted) setState(() => tab = 3);
   }
 
   // 내 정보의 「홈 편집」 → 홈 탭으로 (홈이 편집 모드로 바뀜)
