@@ -1,0 +1,11 @@
+{
+ "id": "subway",
+ "name": "지하철",
+ "folder": "lib/features/subway",
+ "room": "날씨·미세먼지 방 (대표님 11-26 「여기서 진행」: 지하철 노선도)",
+ "state": "작업 중",
+ "doing": "노선도 보기: 동네 노선을 지도 위 노선 색 선으로(collector/features/subway_lines.py 새로) + 지하철 화면 머리에 「노선도」 단추. 가까운 역·시간표 부분은 건드리지 않음",
+ "version": "0.2.0",
+ "updated": "2026-11-26 19:05",
+ "order": 20
+}
