@@ -315,7 +315,7 @@ class _GoPageState extends State<GoPage> {
       body: LayoutBuilder(builder: (context, box) {
         final w = box.maxWidth;
         final imgH = w * 388 / 1080;
-        final cardTop = math.max(top + 58, imgH * 0.47);
+        final cardTop = math.max(top + 66, imgH * 0.47);
         return Stack(children: [
           // 하늘 그림 머리 (아래쪽은 흰색으로 이어져 경계 없음)
           Positioned(top: 0, left: 0, right: 0, child: Image.asset('assets/art/go_head.jpg', width: w, fit: BoxFit.fitWidth)),
@@ -456,40 +456,45 @@ class _GoPageState extends State<GoPage> {
         Text(t, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: -0.6)),
       ]);
 
-  Widget _guide() => Container(
-        decoration: BoxDecoration(color: const Color(0xFFE7F2FD), borderRadius: BorderRadius.circular(18)),
-        clipBehavior: Clip.antiAlias,
-        child: Stack(children: [
-          Positioned(right: 0, bottom: 0, child: Image.asset('assets/art/go_city.png', height: 86, opacity: const AlwaysStoppedAnimation(0.9))),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(10, 16, 16, 16),
-            child: Row(children: [
-              Image.asset('assets/art/go_map.png', width: 96),
-              Container(width: 1, height: 64, color: const Color(0xFFC9D8EE), margin: const EdgeInsets.symmetric(horizontal: 12)),
-              const Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text.rich(
-                    TextSpan(children: [
-                      TextSpan(text: '가고 싶은 곳을 찾아 '),
-                      TextSpan(text: '‘길찾기’', style: TextStyle(color: kBlue, fontSize: 17, fontWeight: FontWeight.w900)),
-                      TextSpan(text: '를 누르면'),
+  Widget _guide() => LayoutBuilder(builder: (context, box) {
+        final narrow = box.maxWidth < 520;
+        const ink = Color(0xFF10213F);
+        final body = TextStyle(fontSize: narrow ? 12 : 12.5, color: kInk, height: 1.4);
+        return Container(
+          decoration: BoxDecoration(color: const Color(0xFFE7F2FD), borderRadius: BorderRadius.circular(18)),
+          clipBehavior: Clip.antiAlias,
+          child: Stack(children: [
+            Positioned(right: 0, bottom: 0, child: Image.asset('assets/art/go_city.png', height: narrow ? 62 : 86, opacity: const AlwaysStoppedAnimation(0.55))),
+            Padding(
+              padding: EdgeInsets.fromLTRB(narrow ? 6 : 10, 16, 14, 16),
+              child: Row(children: [
+                Image.asset('assets/art/go_map.png', width: narrow ? 76 : 100),
+                Container(width: 1, height: 64, color: const Color(0xFFC9D8EE), margin: EdgeInsets.symmetric(horizontal: narrow ? 10 : 14)),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text.rich(
+                      TextSpan(children: [
+                        TextSpan(text: narrow ? '가고 싶은 곳을 찾아\n' : '가고 싶은 곳을 찾아 '),
+                        TextSpan(text: '‘길찾기’', style: TextStyle(color: kBlue, fontSize: narrow ? 16 : 17.5, fontWeight: FontWeight.w900)),
+                        const TextSpan(text: '를 누르면'),
+                      ]),
+                      style: TextStyle(fontSize: narrow ? 14 : 15, fontWeight: FontWeight.w800, letterSpacing: -0.5, height: 1.3, color: ink),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(narrow ? '카카오맵·네이버 지도에서\n버스·지하철 길이 바로 열려요.' : '카카오맵·네이버 지도에서 버스·지하철 길이 바로 열려요.', style: body),
+                    const SizedBox(height: 3),
+                    Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      const Padding(padding: EdgeInsets.only(top: 1), child: Icon(Icons.star_outline_rounded, size: 15, color: kBlue)),
+                      const SizedBox(width: 3),
+                      Expanded(child: Text(narrow ? '자주 가는 곳을 저장해\n더 빠르게 이용할 수 있어요.' : '자주 가는 곳을 저장해 더 빠르게 이용할 수 있어요.', style: body)),
                     ]),
-                    style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, letterSpacing: -0.5, height: 1.3, color: Color(0xFF10213F)),
-                  ),
-                  SizedBox(height: 5),
-                  Text('카카오맵·네이버 지도에서 버스·지하철 길이 바로 열려요.', style: TextStyle(fontSize: 12, color: kInk, height: 1.4)),
-                  SizedBox(height: 3),
-                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Padding(padding: EdgeInsets.only(top: 1), child: Icon(Icons.star_outline_rounded, size: 15, color: kBlue)),
-                    SizedBox(width: 3),
-                    Expanded(child: Text('을 누르면 자주 가는 곳에 저장돼요.', style: TextStyle(fontSize: 12, color: kInk, height: 1.4))),
                   ]),
-                ]),
-              ),
-            ]),
-          ),
-        ]),
-      );
+                ),
+              ]),
+            ),
+          ]),
+        );
+      });
 
   // 찾은 곳
   Widget _results() {
