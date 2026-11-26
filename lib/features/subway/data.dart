@@ -1,7 +1,9 @@
 // 지하철 자료 (지하철 담당: 본부, 대표님 요청 11-24)
 // web/data/subway/st_<동네>.json — 동네 지하철역 위치 + 역별 시간표 (collector/features/subway.py 가 주 1회 모음)
 // 인천1·2호선은 실시간 도착이 공개되지 않아 「시간표 기준」으로 다음 열차를 계산한다.
+import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/data.dart';
 
@@ -116,4 +118,16 @@ Future<List<Station>> nearStations(Complex c, {double km = 2}) async {
   return l;
 }
 
-String naverStationUrl(Station s) => 'https://m.map.naver.com/search2/search.naver?query=${Uri.encodeComponent('${s.name}역 ${s.line}')}';
+// 네이버 지도에서 이 역 열기 (대표님 11-26: 예전 모바일 검색 주소는 휴대폰에서 지도가 안 나옴)
+// 휴대폰: 네이버 지도 앱으로 바로 (역을 누르면 실시간 도착까지 나옴) → 앱이 없으면 새 네이버 지도 웹 주소
+String naverStationUrl(Station s) => 'https://map.naver.com/p/search/${Uri.encodeComponent('${s.name}역 ${s.line}')}';
+
+Future<void> openNaverStation(Station s) async {
+  final q = Uri.encodeComponent('${s.name}역 ${s.line}');
+  if (!kIsWeb) {
+    try {
+      if (await launchUrl(Uri.parse('nmap://search?query=$q&appname=kr.designfeel.dongne'), mode: LaunchMode.externalApplication)) return;
+    } catch (_) {}
+  }
+  await launchUrl(Uri.parse(naverStationUrl(s)), mode: LaunchMode.externalApplication);
+}

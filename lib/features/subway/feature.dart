@@ -29,7 +29,7 @@ class SubwayFeature extends Feature {
   @override
   int get order => 20;
   @override
-  String get version => '0.3.1';
+  String get version => '0.3.2';
   @override
   bool get ready => true;
 
@@ -336,7 +336,7 @@ class _NaverLink extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           child: InkWell(
             borderRadius: BorderRadius.circular(12),
-            onTap: () => openUrl(naverStationUrl(s)),
+            onTap: () => openNaverStation(s),
             child: Container(
               height: 40,
               padding: const EdgeInsets.symmetric(horizontal: 12),
