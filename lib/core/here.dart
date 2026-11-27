@@ -137,22 +137,22 @@ class _BaseSwitchState extends State<BaseSwitch> {
                       border: on ? Border.all(color: const Color(0xFFC9D8FB)) : null,
                       boxShadow: on ? const [BoxShadow(color: Color(0x141C3A6E), blurRadius: 8)] : null,
                     ),
-                    padding: EdgeInsets.symmetric(horizontal: cp ? 10 : 12),
+                    padding: EdgeInsets.symmetric(horizontal: cp ? 6 : 12),
                     child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                      Icon(ic, size: 15, color: on ? kBlue : kMute),
-                      const SizedBox(width: 5),
+                      Icon(ic, size: cp ? 14 : 15, color: on ? kBlue : kMute),
+                      SizedBox(width: cp ? 3 : 5),
                       Flexible(
                         child: Text(t,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: 13, fontWeight: on ? FontWeight.w800 : FontWeight.w600, color: on ? kInk : kSub, letterSpacing: -0.3)),
+                            style: TextStyle(fontSize: cp ? 12.5 : 13, fontWeight: on ? FontWeight.w800 : FontWeight.w600, color: on ? kInk : kSub, letterSpacing: -0.3)),
                       ),
                     ]),
                   ),
                 ),
               );
           final row = Row(children: [
-              seg(!here, Icons.home_rounded, cp ? homeName : '$homeName 기준', () => setHereChoice(false)),
+              seg(!here, Icons.home_rounded, cp ? '집' : '$homeName 기준', () => setHereChoice(false)),
               seg(here, busy ? Icons.more_horiz_rounded : Icons.my_location_rounded, cp ? '현재 위치' : (here && town.isNotEmpty ? '지금 여기 · $town' : '지금 여기 기준'), () async {
                 setState(() => busy = true);
                 final ok = await switchToHere();
@@ -162,7 +162,7 @@ class _BaseSwitchState extends State<BaseSwitch> {
               }),
             ]);
           return Container(
-            width: cp ? 196 : null,
+            width: cp ? 158 : null,
             padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(color: const Color(0xFFE9EEF6), borderRadius: BorderRadius.circular(21)),
             child: row,
