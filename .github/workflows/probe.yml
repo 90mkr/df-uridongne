@@ -8,4 +8,5 @@ jobs:
       - run: python3 collector/probe.py
         env:
           DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
+          VWORLD_KEY: ${{ secrets.VWORLD_KEY }}
           SIDS: PW014293,CPCP0005,LU001801
