@@ -19,6 +19,8 @@ const _farM = 1500.0;
 
 // 이번에 앱을 켜 있는 동안 고른 기준 (null = 저절로: 멀면 내 위치)
 final hereChoice = ValueNotifier<bool?>(null);
+// 그 기준을 고른 곳 — 거기서 1.5km 넘게 움직이면 고른 것을 잊고 다시 저절로 (대표님 11-27: 송도에서 「우리 단지로」 눌러 둔 채 용인 가면 계속 송도)
+LatLng? _choiceAt;
 
 // 지금 위치에 세운 가상 단지 (id 'here_…' — 단지 게시판·단지별 저장과 섞이지 않게)
 Complex hereComplex(LatLng p, Complex home) {
@@ -48,9 +50,10 @@ class HereFrame extends StatefulWidget {
   State<HereFrame> createState() => _HereFrameState();
 }
 
-class _HereFrameState extends State<HereFrame> {
+class _HereFrameState extends State<HereFrame> with WidgetsBindingObserver {
   LatLng? pos;
   bool busy = false;
+  Timer? _tick;
 
   bool get _far => pos != null && meters(pos!, widget.home.pos) > _farM;
   bool get _useHere => pos != null && (hereChoice.value ?? _far);
@@ -59,18 +62,50 @@ class _HereFrameState extends State<HereFrame> {
   void initState() {
     super.initState();
     pos = myPos.value;
+    WidgetsBinding.instance.addObserver(this);
+    myPos.addListener(_onPos);
     _locate(ask: false);
+    // 앱을 켜 둔 채 이동해도 따라가게 (아래 탭 「전화번호부」처럼 계속 떠 있는 화면) — 3분마다 조용히 위치 다시 보기
+    _tick = Timer.periodic(const Duration(minutes: 3), (_) => _locate(ask: false));
+  }
+
+  @override
+  void dispose() {
+    _tick?.cancel();
+    myPos.removeListener(_onPos);
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  // 앱을 다시 열 때마다 지금 위치를 다시 본다 (어제 송도에서 열어 둔 앱을 오늘 용인에서 열어도 용인 기준)
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState s) {
+    if (s == AppLifecycleState.resumed) _locate(ask: false);
+  }
+
+  void _onPos() {
+    final p = myPos.value;
+    if (p != null && mounted && (pos == null || meters(p, pos!) > 50)) _setPos(p);
+  }
+
+  void _setPos(LatLng p) {
+    if (_choiceAt != null && meters(p, _choiceAt!) > _farM) {
+      hereChoice.value = null;
+      _choiceAt = null;
+    }
+    setState(() => pos = p);
   }
 
   Future<void> _locate({required bool ask}) async {
     final p = await myLocation(ask: ask).timeout(const Duration(seconds: 8), onTimeout: () => null);
     if (!mounted) return;
-    if (p != null) setState(() => pos = p);
+    if (p != null) _setPos(p);
   }
 
   Future<void> _toggle() async {
     if (_useHere) {
       hereChoice.value = false;
+      _choiceAt = pos;
       setState(() {});
       return;
     }
@@ -85,6 +120,7 @@ class _HereFrameState extends State<HereFrame> {
       }
     }
     hereChoice.value = true;
+    _choiceAt = pos;
     setState(() {});
   }
 
