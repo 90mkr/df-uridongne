@@ -58,7 +58,9 @@ class _ShellState extends State<Shell> {
     fbReady();
     await Future.wait([loadAreas(), loadSavedComplex(), Future.delayed(const Duration(milliseconds: 1400))]);
     myLocation(ask: false);
-    startSettingsSync(); // 로그인해 있으면 설정(우리 단지·홈 배치) 서버 백업·되살리기
+    startSettingsSync();
+    startHereWatch(); // 앱 전체 「우리 집 | 지금 여기」 기준 (11-28)
+    // 로그인해 있으면 설정(우리 단지·홈 배치) 서버 백업·되살리기
     if (!mounted) return;
     setState(() => booting = false);
     _shortcuts();

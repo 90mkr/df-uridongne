@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../features/registry.dart';
 import 'data.dart';
+import 'here.dart';
 import 'feature.dart';
 import 'theme.dart';
 import 'ui.dart';
@@ -126,7 +127,7 @@ const _rowTitles = {
 class _RowCard extends StatelessWidget {
   final Feature f;
   final Complex c;
-  const _RowCard({required this.f, required this.c});
+  const _RowCard({super.key, required this.f, required this.c});
   @override
   Widget build(BuildContext context) {
     final t = _rowTitles[f.id];
@@ -174,7 +175,7 @@ List<HomeBlock> defaultBlocks(BuildContext context, Complex c, {required Widget 
   if (at(Slot.hero).isEmpty) out.add(HomeBlock('today', '지금 우리 단지', 'weather', (_) => today()));
   // 켜면 첫 화면 맨 위 카드 바로 아래에 오는 배너형 큰 카드 (반려동물 「오늘의 반려 생활」, 대표님 11-26)
   for (final f in features.where((f) => _topMain.contains(f.id))) {
-    final w = f.mainCard(context, c);
+    final w = f.mainCard(context, baseFor(c, f.id));
     if (w != null) out.add(HomeBlock('m:${f.id}', _mainNames[f.id] ?? f.name, f.icon, (_) => w));
   }
   for (final f in at(Slot.half)) {
@@ -187,14 +188,14 @@ List<HomeBlock> defaultBlocks(BuildContext context, Complex c, {required Widget 
   }
   for (final f in [...features]..sort((a, b) => a.mainOrder.compareTo(b.mainOrder))) {
     if (_topMain.contains(f.id)) continue;
-    final w = f.mainCard(context, c);
+    final w = f.mainCard(context, baseFor(c, f.id));
     if (w != null) out.add(HomeBlock('m:${f.id}', _mainNames[f.id] ?? f.name, f.icon, (_) => w));
   }
   // 한 줄 카드가 따로 없는 기능도 같은 모양 한 줄 카드로 (처음엔 꺼 둠)
   for (final f in features) {
     if (!f.ready || !_rowTitles.containsKey(f.id) || f.mainCard(context, c) != null) continue;
     final t = _rowTitles[f.id]!;
-    out.add(HomeBlock('r:${f.id}', '${t.$1} ${t.$2}', f.icon, (_) => _RowCard(f: f, c: c)));
+    out.add(HomeBlock('r:${f.id}', '${t.$1} ${t.$2}', f.icon, (_) => _RowCard(key: ValueKey(baseFor(c, f.id).id), f: f, c: baseFor(c, f.id))));
   }
   for (final f in at(Slot.tail)) {
     out.add(HomeBlock('f:${f.id}', f.name, f.icon, (_) => card(f)));

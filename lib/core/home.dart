@@ -13,6 +13,7 @@ import 'feature.dart';
 import 'icons.dart';
 import 'banners.dart';
 import 'theme.dart';
+import 'here.dart';
 import 'ui.dart';
 import 'remote.dart';
 
@@ -87,13 +88,18 @@ class _HomeTabState extends State<HomeTab> {
 
   Widget _body(BuildContext context, Complex c) => ValueListenableBuilder<int>(
         valueListenable: homeLayoutTick,
-        builder: (context, _, __) => _bodyIn(context, c),
+        // 「우리 집 | 지금 여기」가 바뀌거나 많이 움직이면 카드들을 그 기준으로 다시 (대표님 11-28)
+        builder: (context, _, __) => ValueListenableBuilder<int>(valueListenable: baseTick, builder: (context, _, __) => _bodyIn(context, c)),
       );
 
   Widget _bodyIn(BuildContext context, Complex c) {
-    Widget card(Feature f) => KeyedSubtree(key: ValueKey('${f.id}$gen'), child: f.homeCard(context, c) ?? const SizedBox());
+    Widget card(Feature f) {
+      final fc = baseFor(c, f.id);
+      return KeyedSubtree(key: ValueKey('${f.id}${fc.id}$gen'), child: f.homeCard(context, fc) ?? const SizedBox());
+    }
+    final tc = baseFor(c, 'weather');
     // 홈 칸들: 기본 순서 → 사용자가 「홈 편집」에서 바꾼 순서·끈 칸 적용
-    final base = defaultBlocks(context, c, today: () => TodayHero(key: ValueKey('today${c.id}$gen'), c: c), card: card);
+    final base = defaultBlocks(context, c, today: () => TodayHero(key: ValueKey('today${tc.id}$gen'), c: tc), card: card);
     if (editing) return _editor(context, base);
     final all = arrange(base);
     // 11-26 홈 두 단계: 위 큰 카드(크게 보기) · 아래 아이콘 한 줄
@@ -466,12 +472,13 @@ class _Header extends StatelessWidget {
     return Container(
       color: kBg,
       padding: const EdgeInsets.fromLTRB(kPad, 12, 12, 4),
-      child: Row(children: [
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+      Row(children: [
         Expanded(
           child: InkWell(
             onTap: () => openComplexInfo(context),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-              const Text('우리 단지', style: T.tiny),
+              Text(c?.isHome == true ? '우리 집' : '우리 단지', style: T.tiny),
               const SizedBox(height: 1),
               Row(children: [
                 Flexible(
@@ -494,12 +501,21 @@ class _Header extends StatelessWidget {
         ),
         if (c != null)
           for (final f in head)
-            Padding(padding: const EdgeInsets.only(left: 8), child: f.homeCard(context, c!) ?? const SizedBox()),
+            ValueListenableBuilder<int>(
+              valueListenable: baseTick,
+              builder: (context, _, __) {
+                final fc = baseFor(c!, f.id);
+                return Padding(padding: const EdgeInsets.only(left: 8), child: KeyedSubtree(key: ValueKey(fc.id), child: f.homeCard(context, fc) ?? const SizedBox()));
+              },
+            ),
         IconButton(
           tooltip: '알림',
           onPressed: () => toast(context, '알림은 준비하고 있어요'),
           icon: const LineIcon('bell', size: 23, fill: Colors.transparent),
         ),
+      ]),
+      // 앱 전체 기준 하나 — 여기서 바꾸면 버스·주유·화장실·약국·주차·전화번호부가 모두 따라온다
+      if (c != null) Padding(padding: const EdgeInsets.fromLTRB(0, 8, 4, 2), child: BaseSwitch(home: c!)),
       ]),
     );
   }

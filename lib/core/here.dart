@@ -12,7 +12,7 @@ import 'theme.dart';
 import 'ui.dart';
 
 // 근처를 찾는 기능 (여기 든 기능만 알약 단추가 뜬다)
-const kNearbyFeatures = {'toilet', 'phonebook', 'pharmacy', 'charger', 'gas', 'parking', 'pet', 'events', 'lotto', 'postcode', 'subway', 'bus'};
+const kNearbyFeatures = {'weather', 'air', 'toilet', 'phonebook', 'pharmacy', 'charger', 'gas', 'parking', 'pet', 'events', 'lotto', 'postcode', 'subway', 'bus'};
 
 // 단지에서 이만큼 떨어져 있으면 저절로 「지금 내 위치」 기준
 const _farM = 1500.0;
@@ -39,6 +39,134 @@ extension ComplexHere on Complex {
   bool get isHere => id.startsWith('here_');
 }
 
+// ───────── 앱 전체 「기준 하나」 (대표님 11-28: 기능마다 따로 바꾸게 하지 말고 한 번에) ─────────
+// 홈 카드·기능 화면 모두 baseFor() 로 단지를 받는다. 홈 맨 위 「우리 집 | 지금 여기」 한 곳에서 바꾸면 전부 따라온다.
+final baseTick = ValueNotifier<int>(0);
+LatLng? _tickAt;
+
+bool useHereFor(Complex home) {
+  final p = myPos.value;
+  if (p == null) return false;
+  return hereChoice.value ?? (meters(p, home.pos) > _farM);
+}
+
+/// 이 기능이 지금 볼 단지 — 근처 기능이고 「지금 여기」 기준이면 지금 위치에 세운 가상 단지
+Complex baseFor(Complex home, String featureId) =>
+    kNearbyFeatures.contains(featureId) && useHereFor(home) ? hereComplex(myPos.value!, home) : home;
+
+void setHereChoice(bool? v) {
+  hereChoice.value = v;
+  _choiceAt = v == null ? null : myPos.value;
+  baseTick.value++;
+}
+
+void _onMyPos() {
+  final p = myPos.value;
+  if (p == null) return;
+  // 고른 곳에서 1.5km 넘게 움직이면 고른 것을 잊고 다시 저절로
+  if (_choiceAt != null && meters(p, _choiceAt!) > _farM) {
+    hereChoice.value = null;
+    _choiceAt = null;
+    _tickAt = p;
+    baseTick.value++;
+    return;
+  }
+  // 300m 넘게 움직였을 때만 다시 그림 (걸을 때마다 깜빡이지 않게)
+  if (_tickAt == null || meters(p, _tickAt!) > 300) {
+    _tickAt = p;
+    baseTick.value++;
+  }
+}
+
+class _HereWatch with WidgetsBindingObserver {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState s) {
+    if (s == AppLifecycleState.resumed) myLocation(ask: false);
+  }
+}
+
+bool _watching = false;
+
+/// 앱이 켜질 때 한 번 (shell): 위치를 지켜보다 바뀌면 baseTick 으로 알림 — 다시 열 때·3분마다 조용히 위치 확인
+void startHereWatch() {
+  if (_watching) return;
+  _watching = true;
+  myPos.addListener(_onMyPos);
+  WidgetsBinding.instance.addObserver(_HereWatch());
+  myLocation(ask: false);
+  Timer.periodic(const Duration(minutes: 3), (_) => myLocation(ask: false));
+}
+
+/// 「지금 여기」로 바꾸기 (위치 권한이 없으면 묻는다). 못 찾으면 false
+Future<bool> switchToHere() async {
+  final p = myPos.value ?? await myLocation(ask: true).timeout(const Duration(seconds: 12), onTimeout: () => null);
+  if (p == null) return false;
+  setHereChoice(true);
+  return true;
+}
+
+/// 홈 맨 위 「우리 집 | 지금 여기」
+class BaseSwitch extends StatefulWidget {
+  final Complex home;
+  const BaseSwitch({super.key, required this.home});
+  @override
+  State<BaseSwitch> createState() => _BaseSwitchState();
+}
+
+class _BaseSwitchState extends State<BaseSwitch> {
+  bool busy = false;
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<int>(
+        valueListenable: baseTick,
+        builder: (context, _, __) {
+          final here = useHereFor(widget.home);
+          final homeName = widget.home.isHome ? '우리 집' : '우리 단지';
+          final town = here ? (areaAt(myPos.value!)?.name ?? '') : '';
+          Widget seg(bool on, IconData ic, String t, VoidCallback tap) => Expanded(
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(18),
+                  onTap: on || busy ? null : tap,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: on ? Colors.white : Colors.transparent,
+                      borderRadius: BorderRadius.circular(18),
+                      border: on ? Border.all(color: const Color(0xFFC9D8FB)) : null,
+                      boxShadow: on ? const [BoxShadow(color: Color(0x141C3A6E), blurRadius: 8)] : null,
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      Icon(ic, size: 15, color: on ? kBlue : kMute),
+                      const SizedBox(width: 5),
+                      Flexible(
+                        child: Text(t,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 13, fontWeight: on ? FontWeight.w800 : FontWeight.w600, color: on ? kInk : kSub, letterSpacing: -0.3)),
+                      ),
+                    ]),
+                  ),
+                ),
+              );
+          return Container(
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(color: const Color(0xFFE9EEF6), borderRadius: BorderRadius.circular(21)),
+            child: Row(children: [
+              seg(!here, Icons.home_rounded, '$homeName 기준', () => setHereChoice(false)),
+              seg(here, busy ? Icons.more_horiz_rounded : Icons.my_location_rounded, here && town.isNotEmpty ? '지금 여기 · $town' : '지금 여기 기준', () async {
+                setState(() => busy = true);
+                final ok = await switchToHere();
+                if (!mounted) return;
+                setState(() => busy = false);
+                if (!ok) toast(context, '위치를 찾지 못했어요. 위치 권한을 켜 주세요');
+              }),
+            ]),
+          );
+        },
+      );
+}
+
 /// 기능 화면을 감싸 「우리 단지 / 지금 내 위치」 기준을 바꿔 준다
 class HereFrame extends StatefulWidget {
   final String featureId;
@@ -50,104 +178,48 @@ class HereFrame extends StatefulWidget {
   State<HereFrame> createState() => _HereFrameState();
 }
 
-class _HereFrameState extends State<HereFrame> with WidgetsBindingObserver {
-  LatLng? pos;
+class _HereFrameState extends State<HereFrame> {
   bool busy = false;
-  Timer? _tick;
-
-  bool get _far => pos != null && meters(pos!, widget.home.pos) > _farM;
-  bool get _useHere => pos != null && (hereChoice.value ?? _far);
-
-  @override
-  void initState() {
-    super.initState();
-    pos = myPos.value;
-    WidgetsBinding.instance.addObserver(this);
-    myPos.addListener(_onPos);
-    _locate(ask: false);
-    // 앱을 켜 둔 채 이동해도 따라가게 (아래 탭 「전화번호부」처럼 계속 떠 있는 화면) — 3분마다 조용히 위치 다시 보기
-    _tick = Timer.periodic(const Duration(minutes: 3), (_) => _locate(ask: false));
-  }
-
-  @override
-  void dispose() {
-    _tick?.cancel();
-    myPos.removeListener(_onPos);
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  // 앱을 다시 열 때마다 지금 위치를 다시 본다 (어제 송도에서 열어 둔 앱을 오늘 용인에서 열어도 용인 기준)
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState s) {
-    if (s == AppLifecycleState.resumed) _locate(ask: false);
-  }
-
-  void _onPos() {
-    final p = myPos.value;
-    if (p != null && mounted && (pos == null || meters(p, pos!) > 50)) _setPos(p);
-  }
-
-  void _setPos(LatLng p) {
-    if (_choiceAt != null && meters(p, _choiceAt!) > _farM) {
-      hereChoice.value = null;
-      _choiceAt = null;
-    }
-    setState(() => pos = p);
-  }
-
-  Future<void> _locate({required bool ask}) async {
-    final p = await myLocation(ask: ask).timeout(const Duration(seconds: 8), onTimeout: () => null);
-    if (!mounted) return;
-    if (p != null) _setPos(p);
-  }
 
   Future<void> _toggle() async {
-    if (_useHere) {
-      hereChoice.value = false;
-      _choiceAt = pos;
-      setState(() {});
+    if (useHereFor(widget.home)) {
+      setHereChoice(false);
       return;
     }
-    if (pos == null) {
-      setState(() => busy = true);
-      await _locate(ask: true);
-      if (!mounted) return;
-      setState(() => busy = false);
-      if (pos == null) {
-        toast(context, '위치를 알 수 없어요. 휴대폰 위치(GPS)를 켜 주세요');
-        return;
-      }
-    }
-    hereChoice.value = true;
-    _choiceAt = pos;
-    setState(() {});
+    setState(() => busy = true);
+    final ok = await switchToHere();
+    if (!mounted) return;
+    setState(() => busy = false);
+    if (!ok) toast(context, '위치를 찾지 못했어요. 위치 권한을 켜 주세요');
   }
 
   @override
-  Widget build(BuildContext context) {
-    final here = _useHere;
-    final c = here ? hereComplex(pos!, widget.home) : widget.home;
-    return Stack(children: [
-      // 알약이 목록 맨 아래를 가리지 않게 아래 여백을 더 준다
-      MediaQuery(
-        data: MediaQuery.of(context).copyWith(padding: MediaQuery.of(context).padding.copyWith(bottom: MediaQuery.of(context).padding.bottom + 64)),
-        child: KeyedSubtree(key: ValueKey(c.id), child: widget.builder(context, c)),
-      ),
-      Positioned(
-        left: 0,
-        right: 0,
-        bottom: 0,
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 14),
-            child: Center(child: _Pill(here: here, busy: busy, homeName: widget.home.isHome ? '우리 집' : '우리 단지', onTap: _toggle)),
-          ),
-        ),
-      ),
-    ]);
-  }
+  Widget build(BuildContext context) => ValueListenableBuilder<int>(
+        valueListenable: baseTick,
+        builder: (context, _, __) {
+          final here = useHereFor(widget.home);
+          final c = baseFor(widget.home, widget.featureId);
+          return Stack(children: [
+            // 알약이 목록 맨 아래를 가리지 않게 아래 여백을 더 준다
+            MediaQuery(
+              data: MediaQuery.of(context).copyWith(padding: MediaQuery.of(context).padding.copyWith(bottom: MediaQuery.of(context).padding.bottom + 64)),
+              child: KeyedSubtree(key: ValueKey(c.id), child: widget.builder(context, c)),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: Center(child: _Pill(here: here, busy: busy, homeName: widget.home.isHome ? '우리 집' : '우리 단지', onTap: _toggle)),
+                ),
+              ),
+            ),
+          ]);
+        },
+      );
 }
 
 class _Pill extends StatelessWidget {
