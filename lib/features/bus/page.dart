@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/data.dart';
 import '../../core/feature.dart' show MapPoint;
+import '../../core/here.dart' show ComplexHere;
 import '../../core/map.dart';
 import '../../core/theme.dart';
 import '../../core/ui.dart';
@@ -46,6 +47,9 @@ class _BusPageState extends State<BusPage> {
   Timer? _tick;
 
   Complex get c => widget.complex;
+  // 기준 이름 (대표님 11-27: 내 위치 기준인데 「단지에서」로 나옴)
+  String get _from => c.isHere ? '여기서' : (c.isHome ? '집에서' : '단지에서');
+  String get _round => c.isHere ? '지금 있는 곳' : (c.isHome ? '우리 집' : '단지');
   Stop? get stop => stops.isEmpty ? null : stops[sel.clamp(0, stops.length - 1)];
   int get _ago => at == null ? 0 : DateTime.now().difference(at!).inSeconds;
 
@@ -225,9 +229,12 @@ class _BusPageState extends State<BusPage> {
         child: Padding(
           padding: const EdgeInsets.all(30),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Text(lastErr == BusErr.none ? '단지 둘레 800m 안에 정류장이 없어요' : '정류장 자료를 모으고 있어요', style: T.h2),
-            const SizedBox(height: 6),
-            const Text('서울은 서울시 버스 자료로 따로 준비하고 있어요.', textAlign: TextAlign.center, style: T.small),
+            Text(lastErr == BusErr.none ? '$_round 둘레 800m 안에 정류장이 없어요' : '정류장 자료를 모으고 있어요', textAlign: TextAlign.center, style: T.h2),
+            // 서울 안내는 서울에 있을 때만
+            if ((c.area?.sido ?? '').contains('서울')) ...[
+              const SizedBox(height: 6),
+              const Text('서울은 서울시 버스 자료로 따로 준비하고 있어요.', textAlign: TextAlign.center, style: T.small),
+            ],
           ]),
         ),
       );
@@ -316,7 +323,7 @@ class _BusPageState extends State<BusPage> {
               if (toward.isNotEmpty) TextSpan(text: '$toward 방면'),
               TextSpan(text: '정류장 번호 ${s.no.isEmpty ? '-' : s.no}'),
               TextSpan(children: [
-                const TextSpan(text: '단지에서 '),
+                TextSpan(text: '$_from '),
                 TextSpan(text: distText(meters(c.pos, s.pos)), style: const TextStyle(color: kBlue, fontWeight: FontWeight.w800)),
               ]),
             ], size: 12.5),
@@ -567,9 +574,10 @@ class _BusPageState extends State<BusPage> {
               ),
             )
           else
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 6),
-              child: Text('단지 앞 가까운 정류장', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: kInk, letterSpacing: -0.3)),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Text(c.isHere ? '지금 있는 곳 가까운 정류장' : (c.isHome ? '집 앞 가까운 정류장' : '단지 앞 가까운 정류장'),
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: kInk, letterSpacing: -0.3)),
             ),
           const Spacer(),
           if (anyBusy)
@@ -637,7 +645,7 @@ class _BusPageState extends State<BusPage> {
                 TextSpan(children: [
                   if (tw.isNotEmpty) TextSpan(text: '$tw 방면', style: const TextStyle(color: kInk, fontWeight: FontWeight.w700)),
                   if (tw.isNotEmpty) const TextSpan(text: '  ·  '),
-                  TextSpan(text: '단지에서 ${distText(meters(c.pos, s.pos))}'),
+                  TextSpan(text: '$_from ${distText(meters(c.pos, s.pos))}'),
                   if (s.no.isNotEmpty) TextSpan(text: '  ·  ${s.no}'),
                 ]),
                 maxLines: 1,

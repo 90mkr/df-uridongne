@@ -219,7 +219,7 @@ class _HomeCardState extends State<_HomeCard> {
                                 favRows.isNotEmpty
                                     ? '즐겨찾기 버스 ${favRows.length}개'
                                     : s == null
-                                        ? '정류장을 찾고 있어요'
+                                        ? (loading ? '정류장을 찾고 있어요' : '800m 안에 정류장 없음')
                                         : '${s.name} · ${distText(meters(c.pos, s.pos))}',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
