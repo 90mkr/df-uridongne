@@ -468,7 +468,6 @@ class _Header extends StatelessWidget {
   const _Header({required this.c});
   @override
   Widget build(BuildContext context) {
-    final head = features.where((f) => f.slot == Slot.header).toList();
     return Container(
       color: kBg,
       padding: const EdgeInsets.fromLTRB(kPad, 12, 12, 4),
@@ -478,7 +477,15 @@ class _Header extends StatelessWidget {
           child: InkWell(
             onTap: () => openComplexInfo(context),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-              Text(c?.isHome == true ? '우리 집' : '우리 단지', style: T.tiny),
+              ValueListenableBuilder<int>(
+                valueListenable: baseTick,
+                builder: (context, _, __) {
+                  final here = c != null && useHereFor(c!);
+                  final town = here ? (areaAt(myPos.value!)?.name ?? '') : '';
+                  return Text(here ? '지금 ${town.isEmpty ? '현재 위치' : town} 기준으로 보는 중' : (c?.isHome == true ? '우리 집' : '우리 단지'),
+                      style: here ? T.tiny.copyWith(color: kBlue, fontWeight: FontWeight.w700) : T.tiny);
+                },
+              ),
               const SizedBox(height: 1),
               Row(children: [
                 Flexible(
@@ -499,23 +506,14 @@ class _Header extends StatelessWidget {
             ]),
           ),
         ),
-        if (c != null)
-          for (final f in head)
-            ValueListenableBuilder<int>(
-              valueListenable: baseTick,
-              builder: (context, _, __) {
-                final fc = baseFor(c!, f.id);
-                return Padding(padding: const EdgeInsets.only(left: 8), child: KeyedSubtree(key: ValueKey(fc.id), child: f.homeCard(context, fc) ?? const SizedBox()));
-              },
-            ),
+        // 날씨 자리에 「우리 집 | 현재 위치」 (대표님 11-28: 날씨는 덜 중요 — 생활 도구·지금 우리 단지 카드에서 봄)
+        if (c != null) Padding(padding: const EdgeInsets.only(left: 8), child: BaseSwitch(home: c!, compact: true)),
         IconButton(
           tooltip: '알림',
           onPressed: () => toast(context, '알림은 준비하고 있어요'),
           icon: const LineIcon('bell', size: 23, fill: Colors.transparent),
         ),
       ]),
-      // 앱 전체 기준 하나 — 여기서 바꾸면 버스·주유·화장실·약국·주차·전화번호부가 모두 따라온다
-      if (c != null) Padding(padding: const EdgeInsets.fromLTRB(0, 8, 4, 2), child: BaseSwitch(home: c!)),
       ]),
     );
   }

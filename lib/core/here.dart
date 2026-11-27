@@ -108,7 +108,8 @@ Future<bool> switchToHere() async {
 /// 홈 맨 위 「우리 집 | 지금 여기」
 class BaseSwitch extends StatefulWidget {
   final Complex home;
-  const BaseSwitch({super.key, required this.home});
+  final bool compact; // 홈 머리 단지 이름 옆 (날씨 자리, 대표님 11-28)
+  const BaseSwitch({super.key, required this.home, this.compact = false});
   @override
   State<BaseSwitch> createState() => _BaseSwitchState();
 }
@@ -122,20 +123,21 @@ class _BaseSwitchState extends State<BaseSwitch> {
           final here = useHereFor(widget.home);
           final homeName = widget.home.isHome ? '우리 집' : '우리 단지';
           final town = here ? (areaAt(myPos.value!)?.name ?? '') : '';
+          final cp = widget.compact;
           Widget seg(bool on, IconData ic, String t, VoidCallback tap) => Expanded(
                 child: InkWell(
                   borderRadius: BorderRadius.circular(18),
                   onTap: on || busy ? null : tap,
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 180),
-                    height: 34,
+                    height: cp ? 32 : 34,
                     decoration: BoxDecoration(
                       color: on ? Colors.white : Colors.transparent,
                       borderRadius: BorderRadius.circular(18),
                       border: on ? Border.all(color: const Color(0xFFC9D8FB)) : null,
                       boxShadow: on ? const [BoxShadow(color: Color(0x141C3A6E), blurRadius: 8)] : null,
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    padding: EdgeInsets.symmetric(horizontal: cp ? 10 : 12),
                     child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                       Icon(ic, size: 15, color: on ? kBlue : kMute),
                       const SizedBox(width: 5),
@@ -149,19 +151,21 @@ class _BaseSwitchState extends State<BaseSwitch> {
                   ),
                 ),
               );
-          return Container(
-            padding: const EdgeInsets.all(3),
-            decoration: BoxDecoration(color: const Color(0xFFE9EEF6), borderRadius: BorderRadius.circular(21)),
-            child: Row(children: [
-              seg(!here, Icons.home_rounded, '$homeName 기준', () => setHereChoice(false)),
-              seg(here, busy ? Icons.more_horiz_rounded : Icons.my_location_rounded, here && town.isNotEmpty ? '지금 여기 · $town' : '지금 여기 기준', () async {
+          final row = Row(children: [
+              seg(!here, Icons.home_rounded, cp ? homeName : '$homeName 기준', () => setHereChoice(false)),
+              seg(here, busy ? Icons.more_horiz_rounded : Icons.my_location_rounded, cp ? '현재 위치' : (here && town.isNotEmpty ? '지금 여기 · $town' : '지금 여기 기준'), () async {
                 setState(() => busy = true);
                 final ok = await switchToHere();
                 if (!mounted) return;
                 setState(() => busy = false);
                 if (!ok) toast(context, '위치를 찾지 못했어요. 위치 권한을 켜 주세요');
               }),
-            ]),
+            ]);
+          return Container(
+            width: cp ? 196 : null,
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(color: const Color(0xFFE9EEF6), borderRadius: BorderRadius.circular(21)),
+            child: row,
           );
         },
       );
