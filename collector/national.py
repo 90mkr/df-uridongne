@@ -338,7 +338,12 @@ def build_apts(regions, bld):
         apts[rid].append({"id": code, "n": (it.get("kaptName") or b.get("kaptName") or "").strip(), "k": "" if kind in ("", "아파트") else kind,
                           "a": road or (b.get("kaptAddr") or "").strip(), "t": (b.get("kaptTel") or "").strip(),
                           "h": int(b.get("kaptdaCnt") or 0), "y": round(yx[0], 6), "x": round(yx[1], 6)})
-    print(f"  아파트 {sum(len(v) for v in apts.values()):,}단지 (좌표 못 찾음 {miss})")
+    got = sum(len(v) for v in apts.values())
+    print(f"  아파트 {got:,}단지 (좌표 못 찾음 {miss})")
+    # 좌표를 거의 못 찾았으면 (11-26: 브이월드 0건 → 229개 동네가 빈 목록으로 덮임) 이번엔 아무것도 쓰지 않는다
+    if got < len(lst) * 0.3:
+        print(f"  !! 좌표 찾은 단지가 너무 적음 ({got:,}/{len(lst):,}) — 기존 아파트 파일 그대로 둠")
+        return None
     return apts
 
 
@@ -497,8 +502,20 @@ def load_caches():
 
 
 def save_caches():
-    dump("_kapt.json", {k: v for k, v in KAPT_CACHE.items() if v})
-    dump("_geo.json", {k: v for k, v in GEO.items() if v})
+    # 비어 있으면 쓰지 않는다 (예전 좌표·기본정보를 빈 파일로 덮지 않게, 11-28)
+    k = {a: v for a, v in KAPT_CACHE.items() if v}
+    g = {a: v for a, v in GEO.items() if v}
+    if k:
+        dump("_kapt.json", k)
+    if g:
+        dump("_geo.json", g)
+
+
+def _has_list(name, key):
+    try:
+        return bool(json.load(open(os.path.join(OUT, name), encoding="utf-8")).get(key))
+    except Exception:
+        return False
 
 
 def dump(name, obj):
@@ -568,6 +585,8 @@ def main():
         if apts is not None:
             for r in all_regions:
                 al = sorted(apts.get(r["id"], []), key=lambda z: z["n"])
+                if not al and _has_list(f"apt_{r['id']}.json", "apts"):
+                    continue  # 이번에 0곳인데 예전 자료가 있으면 덮지 않음
                 dump(f"apt_{r['id']}.json", {"area_id": r["id"], "updated": NOW, "src": "공동주택관리정보시스템(K-apt)", "apts": al})
     if all_regions and os.environ.get("TOILETS", "1") == "1":
         tl = build_toilets(all_regions, bld)

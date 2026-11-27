@@ -130,21 +130,23 @@ class Complex {
 
 final Map<String, List<Complex>> _apts = {};
 
-// 동네의 아파트 단지 목록 (자동 제작이 web/data/apt_<동네>.json 으로 모아 둠)
+// 동네의 아파트 단지 목록 (자동 제작이 store 의 apt_<동네>.json 으로 모아 둠)
+// 비어 있으면 (11-26 전국 자료처럼 좌표를 못 찾아 빈 목록이 올라온 경우) → main 의 예전 자료 → 그것도 없으면 카카오로 바로 찾기 (저장 안 함)
+List<Complex> _aptList(dynamic j, Area a) => <Complex>[
+      for (final x in (j is Map ? (j['apts'] as List? ?? const []) : const []))
+        if (x is Map && x['y'] != null && x['x'] != null)
+          Complex(id: '${x['id']}', name: '${x['n']}', addr: '${x['a'] ?? ''}', areaId: a.id, lat: (x['y'] as num).toDouble(), lng: (x['x'] as num).toDouble())
+    ];
+
 Future<List<Complex>> complexesOf(Area a) async {
   final have = _apts[a.id];
   if (have != null) return have;
-  final j = await getJson('${storeBase}apt_${a.id}.json');
-  if (j == null) {
-    // 아직 아파트 자료가 없는 동네: 그 자리에서 카카오로 찾아 보여 주기만 (저장 안 함)
+  var list = _aptList(await getJson('${storeBase}apt_${a.id}.json'), a);
+  if (list.isEmpty) list = _aptList(await getJson('${dataBase}apt_${a.id}.json'), a);
+  if (list.isEmpty) {
     final live = await kkComplexes(near: a.center);
     return [for (final c in live) Complex(id: c.id, name: c.name, addr: c.addr, areaId: a.id, lat: c.lat, lng: c.lng)];
   }
-  final list = <Complex>[
-    for (final x in (j is Map ? (j['apts'] as List? ?? const []) : const []))
-      if (x is Map && x['y'] != null)
-        Complex(id: '${x['id']}', name: '${x['n']}', addr: '${x['a'] ?? ''}', areaId: a.id, lat: (x['y'] as num).toDouble(), lng: (x['x'] as num).toDouble())
-  ];
   _apts[a.id] = list;
   return list;
 }
