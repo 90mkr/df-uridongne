@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/data.dart';
 import '../../core/feature.dart';
+import '../../core/here.dart';
 import '../../core/icons.dart';
 import '../../core/theme.dart';
 import 'data.dart';
@@ -91,11 +92,31 @@ class _HomeCardState extends State<_HomeCard> {
   // 즐겨찾기 버스 (대표님 11-25): 고정한 버스가 있으면 홈 카드엔 그 버스만 — (노선, 타는 정류장, 지금 도착)
   List<(Map, Stop, Arrival?)> favRows = [];
   Timer? _t;
+  // 홈 카드도 집·단지에서 1.5km 넘게 나와 있으면 지금 있는 곳 기준 (대표님 11-27: 버스 화면엔 정류장이 뜨는데 홈 카드는 「없어요」)
+  late Complex _c = widget.complex;
+
+  Complex _base() {
+    final p = myPos.value, h = widget.complex;
+    if (p != null && hereChoice.value != false && meters(p, h.pos) > 1500) return hereComplex(p, h);
+    return h;
+  }
+
+  void _onPos() {
+    if (_base().id != _c.id) {
+      stop = null;
+      arr = null;
+      setState(() => loading = true);
+      _load();
+    }
+  }
 
   @override
   void initState() {
     super.initState();
+    myPos.addListener(_onPos);
+    hereChoice.addListener(_onPos);
     _load();
+    myLocation(ask: false);
     _t = Timer.periodic(const Duration(seconds: 30), (_) => _refresh());
   }
 
@@ -113,11 +134,14 @@ class _HomeCardState extends State<_HomeCard> {
   @override
   void dispose() {
     _t?.cancel();
+    myPos.removeListener(_onPos);
+    hereChoice.removeListener(_onPos);
     super.dispose();
   }
 
   Future<void> _load() async {
-    final list = await stopsFor(widget.complex);
+    _c = _base();
+    final list = await stopsFor(_c);
     if (!mounted) return;
     stop = list.isEmpty ? null : list.first;
     await _refresh();
@@ -125,7 +149,7 @@ class _HomeCardState extends State<_HomeCard> {
 
   Future<void> _refresh() async {
     final s = stop;
-    final c = widget.complex;
+    final c = _c;
     final favs = <(Map, Stop)>[];
     for (final m in await favRoutes()) {
       final fs = Stop.fromJson(m['s']) ?? s;
@@ -151,7 +175,7 @@ class _HomeCardState extends State<_HomeCard> {
 
   @override
   Widget build(BuildContext context) {
-    final f = widget.feature, c = widget.complex, s = stop;
+    final f = widget.feature, c = _c, s = stop;
     // 가로 한 줄 큰 카드: 파란 머리띠(정류장) + 노선별 줄 (최대 4개). 불러오는 동안도 높이를 잡아 둬 화면이 안 튐
     Widget body;
     if (loading) {
@@ -220,7 +244,7 @@ class _HomeCardState extends State<_HomeCard> {
                                     ? '즐겨찾기 버스 ${favRows.length}개'
                                     : s == null
                                         ? (loading ? '정류장을 찾고 있어요' : '800m 안에 정류장 없음')
-                                        : '${s.name} · ${distText(meters(c.pos, s.pos))}',
+                                        : '${c.isHere ? '지금 위치 · ' : ''}${s.name} · ${distText(meters(c.pos, s.pos))}',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(fontSize: 12, color: Color(0xF2FFFFFF), height: 1.3),
