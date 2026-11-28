@@ -122,7 +122,6 @@ class _BaseSwitchState extends State<BaseSwitch> {
         builder: (context, _, __) {
           final here = useHereFor(widget.home);
           final homeName = widget.home.isHome ? '우리 집' : '우리 단지';
-          final town = here ? (areaAt(myPos.value!)?.name ?? '') : '';
           final cp = widget.compact;
           Widget seg(bool on, IconData ic, String t, VoidCallback tap) => Expanded(
                 child: InkWell(
@@ -137,7 +136,7 @@ class _BaseSwitchState extends State<BaseSwitch> {
                       border: on && !cp ? Border.all(color: const Color(0xFFC9D8FB)) : null,
                       boxShadow: on && !cp ? const [BoxShadow(color: Color(0x141C3A6E), blurRadius: 8)] : null,
                     ),
-                    padding: EdgeInsets.symmetric(horizontal: cp ? 3 : 12),
+                    padding: EdgeInsets.symmetric(horizontal: cp ? 3 : 8),
                     child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                       Icon(ic, size: cp ? 10 : 15, color: on ? kBlue : Colors.white),
                       SizedBox(width: cp ? 2 : 5),
@@ -146,7 +145,7 @@ class _BaseSwitchState extends State<BaseSwitch> {
                             maxLines: 1,
                             softWrap: false,
                             overflow: cp ? TextOverflow.visible : TextOverflow.ellipsis, // 머리 단추는 「…」 없이 고정 (대표님 11-28)
-                            style: TextStyle(fontSize: cp ? 10 : 13, fontWeight: on ? FontWeight.w800 : FontWeight.w600, color: on ? (cp ? kBlue : kInk) : Colors.white, letterSpacing: -0.3)),
+                            style: TextStyle(fontSize: cp ? 10 : 12.5, fontWeight: on ? FontWeight.w800 : FontWeight.w600, color: on ? (cp ? kBlue : kInk) : Colors.white, letterSpacing: -0.3)),
                       ),
                     ]),
                   ),
@@ -154,7 +153,7 @@ class _BaseSwitchState extends State<BaseSwitch> {
               );
           final row = Row(children: [
               seg(!here, Icons.home_rounded, cp ? '집' : '$homeName 기준', () => setHereChoice(false)),
-              seg(here, busy ? Icons.more_horiz_rounded : Icons.my_location_rounded, cp ? '현위치' : (here && town.isNotEmpty ? '지금 여기 · $town' : '지금 여기 기준'), () async {
+              seg(here, busy ? Icons.more_horiz_rounded : Icons.my_location_rounded, cp ? '현위치' : '현위치 기준', () async {
                 setState(() => busy = true);
                 final ok = await switchToHere();
                 if (!mounted) return;
@@ -163,9 +162,9 @@ class _BaseSwitchState extends State<BaseSwitch> {
               }),
             ]);
           return Container(
-            width: cp ? 112 : null,
+            width: cp ? 112 : 260,
             padding: EdgeInsets.all(cp ? 2 : 3),
-            decoration: BoxDecoration(color: kBlue, borderRadius: BorderRadius.circular(21)), // 파란 바탕 + 흰 글씨, 머리 단추는 3분의 2 크기 (대표님 11-28)
+            decoration: BoxDecoration(color: kBlue, borderRadius: BorderRadius.circular(21), boxShadow: cp ? null : const [BoxShadow(color: Color(0x332563EB), blurRadius: 14)]), // 파란 바탕 + 흰 글씨, 머리 단추는 3분의 2 크기 (대표님 11-28)
             child: row,
           );
         },
@@ -184,25 +183,10 @@ class HereFrame extends StatefulWidget {
 }
 
 class _HereFrameState extends State<HereFrame> {
-  bool busy = false;
-
-  Future<void> _toggle() async {
-    if (useHereFor(widget.home)) {
-      setHereChoice(false);
-      return;
-    }
-    setState(() => busy = true);
-    final ok = await switchToHere();
-    if (!mounted) return;
-    setState(() => busy = false);
-    if (!ok) toast(context, '위치를 찾지 못했어요. 위치 권한을 켜 주세요');
-  }
-
   @override
   Widget build(BuildContext context) => ValueListenableBuilder<int>(
         valueListenable: baseTick,
         builder: (context, _, __) {
-          final here = useHereFor(widget.home);
           final c = baseFor(widget.home, widget.featureId);
           return Stack(children: [
             // 알약이 목록 맨 아래를 가리지 않게 아래 여백을 더 준다
@@ -218,52 +202,13 @@ class _HereFrameState extends State<HereFrame> {
                 top: false,
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: 14),
-                  child: Center(child: _Pill(here: here, busy: busy, homeName: widget.home.isHome ? '우리 집' : '우리 단지', onTap: _toggle)),
+                  child: Center(child: BaseSwitch(home: widget.home)), // 머리 단추와 같은 모양, 글자는 풀어서 (대표님 11-28)
                 ),
               ),
             ),
           ]);
         },
       );
-}
-
-class _Pill extends StatelessWidget {
-  final bool here, busy;
-  final String homeName;
-  final VoidCallback onTap;
-  const _Pill({required this.here, required this.busy, required this.homeName, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(22),
-      elevation: 0,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(22),
-        onTap: busy ? null : onTap,
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(14, 9, 16, 9),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: kLine),
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.10), blurRadius: 16)],
-          ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            busy
-                ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 1.6))
-                : Icon(here ? Icons.my_location_rounded : Icons.home_outlined, size: 16, color: kBlue),
-            const SizedBox(width: 7),
-            Text(here ? '지금 내 위치 기준' : '$homeName 기준',
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: kInk, letterSpacing: -0.3)),
-            Container(width: 1, height: 12, margin: const EdgeInsets.symmetric(horizontal: 10), color: kLine),
-            Text(here ? '$homeName으로' : '내 위치로',
-                style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: kBlue, letterSpacing: -0.3)),
-          ]),
-        ),
-      ),
-    );
-  }
 }
 
 /// 기능 화면 만들기 — 근처 기능이면 「어디 기준」 틀로 감싼다
