@@ -292,3 +292,12 @@ for perm in ("android.permission.ACCESS_WIFI_STATE", "com.google.android.provide
         s = s.replace("<application", f'<uses-permission android:name="{perm}" tools:node="remove"/>\n    <application', 1)
 open(path, "w", encoding="utf-8").write(s)
 print("쓰지 않는 권한 뺌")
+
+
+# QR 읽기 부품(ML Kit)을 앱에 넣지 않고 구글 플레이 서비스 것을 씀 — 앱 크기 약 5MB(휴대폰 종류마다) 줄임 (대표님 11-28)
+gp = "android/gradle.properties"
+if os.path.exists(gp):
+    t = open(gp, encoding="utf-8").read()
+    if "mobile_scanner.useUnbundled" not in t:
+        open(gp, "a", encoding="utf-8").write("\ndev.steenbakker.mobile_scanner.useUnbundled=true\n")
+print("QR 부품 가볍게")

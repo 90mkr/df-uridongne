@@ -252,13 +252,38 @@ class _ComplexPickPageState extends State<ComplexPickPage> {
   }
 
   // 주택·빌라·상가 주택 등: 지금 위치를 「우리 집」으로 — 동네 게시판·생활 도구는 그대로 쓰고 단지 게시판만 없음
+  // 주택·빌라: 지금 위치를 우리 집으로 (대표님 11-28: 누르면 하얗게 아무것도 안 나옴 → 위치 찾는 동안 안내 창, 오래 걸리면 마지막 위치로)
   Future<void> _house() async {
-    final p = await myLocation();
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: Material(
+          color: Colors.white,
+          borderRadius: BorderRadius.all(Radius.circular(16)),
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 26, vertical: 22),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              SizedBox(width: 26, height: 26, child: CircularProgressIndicator(strokeWidth: 2.4, color: kBlue)),
+              SizedBox(height: 14),
+              Text('지금 위치를 우리 집으로 찾는 중이에요', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              SizedBox(height: 4),
+              Text('집 안에 계시면 몇 초 걸릴 수 있어요', style: TextStyle(fontSize: 12, color: kSub)),
+            ]),
+          ),
+        ),
+      ),
+    );
+    LatLng? p;
+    try {
+      p = await myLocation().timeout(const Duration(seconds: 15), onTimeout: () => myPos.value);
+    } catch (_) {
+      p = myPos.value;
+    }
     if (!mounted) return;
-    if (p == null) return toast(context, '위치를 알 수 없어요. 휴대폰 위치 사용을 켜 주세요');
-    final a = areaAt(p);
-    final town = a == null ? '' : a.name.split('/').first;
-    _done(Complex(id: 'home_${DateTime.now().millisecondsSinceEpoch}', name: town.isEmpty ? '우리 집' : '우리 집 ($town)', addr: '', areaId: areaIdAt(p), lat: p.latitude, lng: p.longitude));
+    Navigator.of(context, rootNavigator: true).pop(); // 안내 창 닫기
+    if (p == null) return toast(context, '위치를 알 수 없어요. 휴대폰 위치 사용을 켜고 다시 눌러 주세요');
+    _done(Complex(id: 'home_${DateTime.now().millisecondsSinceEpoch}', name: '우리 집', addr: '', areaId: areaIdAt(p), lat: p.latitude, lng: p.longitude));
   }
 
   void _done(Complex c) {

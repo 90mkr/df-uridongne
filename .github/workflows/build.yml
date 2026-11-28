@@ -236,7 +236,8 @@ jobs:
           EV_KEY: ${{ secrets.EV_KEY }}
         run: |
           flutter pub get
-          flutter build apk --release \
+          # 직접 받는 설치 파일은 요즘 휴대폰용(arm64) 하나만 — 170MB → 약 70MB (대표님 11-28). 플레이 스토어는 AAB 라 휴대폰마다 맞는 것만 받음
+          flutter build apk --release --target-platform android-arm64 \
             --dart-define=DATA_GO_KR_KEY="$DATA_GO_KR_KEY" --dart-define=OPINET_KEY="$OPINET_KEY" \
             --dart-define=AIRKOREA_KEY="$AIRKOREA_KEY" --dart-define=EV_KEY="$EV_KEY"
           cp build/app/outputs/flutter-apk/app-release.apk dongne.apk
