@@ -281,3 +281,14 @@ for g in glob.glob("android/app/build.gradle*"):
     if t2 != t:
         open(g, "w", encoding="utf-8").write(t2)
 print("대상 API 36 이상으로 맞춤")
+
+
+# 쓰지 않는 권한 빼기 (부품이 저절로 넣는 것 중 필요 없는 것, 대표님 11-28 출시 점검)
+s = open(path, encoding="utf-8").read()
+if 'xmlns:tools=' not in s:
+    s = s.replace('<manifest xmlns:android="http://schemas.android.com/apk/res/android"', '<manifest xmlns:android="http://schemas.android.com/apk/res/android"\n    xmlns:tools="http://schemas.android.com/tools"', 1)
+for perm in ("android.permission.ACCESS_WIFI_STATE", "com.google.android.providers.gsf.permission.READ_GSERVICES"):
+    if f'{perm}" tools:node="remove"' not in s:
+        s = s.replace("<application", f'<uses-permission android:name="{perm}" tools:node="remove"/>\n    <application', 1)
+open(path, "w", encoding="utf-8").write(s)
+print("쓰지 않는 권한 뺌")
