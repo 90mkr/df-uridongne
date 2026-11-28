@@ -264,6 +264,9 @@ class _LinesPageState extends State<LinesPage> {
   // 권역 바꾸기: 우리 권역이면 우리 역 둘레, 다른 권역이면 그 권역 전체가 한 화면에
   String region = 'capital';
   String? homeRegion; // 우리 단지(또는 지금 위치)가 든 권역
+  // 가까운 역 (이름, 거리 m) — 출발역 기본값·역 검색 맨 위 (대표님 11-28: 송도인데 가락부터 나오면 안 됨)
+  List<(String, double)> nearSt = const [];
+  String? get _defFrom => _away || nearSt.isEmpty ? null : nearSt.first.$1;
   bool get _away => region != homeRegion;
 
   void _loadRegion(String r, {bool first = false}) {
@@ -292,11 +295,23 @@ class _LinesPageState extends State<LinesPage> {
           if (!v.contains(x)) v.add(x);
         }
       }
+      final nd = <String, double>{};
+      if (r == homeRegion) {
+        for (final x in l) {
+          for (final s in x.stations) {
+            final d = meters(widget.c.pos, s.$2);
+            if (d < (nd[s.$1] ?? double.infinity)) nd[s.$1] = d;
+          }
+        }
+      }
+      final ns = [for (final e in nd.entries) (e.key, e.value)]..sort((x, y) => x.$2.compareTo(y.$2));
       setState(() {
         all = l;
         near = n;
         byName = bn;
         world = _World(_regions[r]!);
+        nearSt = ns.take(6).toList();
+        rFrom = _defFrom; // 출발역은 가장 가까운 역부터
         if (n.isEmpty) showAll = true;
         if (onMap) {
           // 지도는 새로 켜지므로 처음 자리를 미리 정해 둠
@@ -670,6 +685,8 @@ class _LinesPageState extends State<LinesPage> {
           to: rTo,
           route: routeMode ? route : null,
           names: {for (final l in a) for (final st in l.stations) st.$1}.toList()..sort(),
+          nearby: _away ? const [] : nearSt,
+          showClear: routeMode || rTo != null || rFrom != _defFrom,
           onPick: (isFrom, n) {
             setState(() {
               routeMode = true;
@@ -679,7 +696,7 @@ class _LinesPageState extends State<LinesPage> {
           },
           onSwap: () => _setRoute(from: rTo, to: rFrom),
           onClear: () {
-            _setRoute();
+            _setRoute(from: _defFrom);
             setState(() => routeMode = false);
           },
         ),
@@ -1268,7 +1285,9 @@ class _RoutePanel extends StatelessWidget {
   final List<String> names;
   final void Function(bool isFrom, String name) onPick;
   final VoidCallback onSwap, onClear;
-  const _RoutePanel({required this.from, required this.to, required this.route, required this.names, required this.onPick, required this.onSwap, required this.onClear});
+  final List<(String, double)> nearby; // 가까운 역 (검색 맨 위)
+  final bool showClear;
+  const _RoutePanel({required this.from, required this.to, required this.route, required this.names, required this.onPick, required this.onSwap, required this.onClear, this.nearby = const [], this.showClear = false});
 
   Future<void> _search(BuildContext context, bool isFrom) async {
     final n = await showModalBottomSheet<String>(
@@ -1276,7 +1295,7 @@ class _RoutePanel extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => _StationSearch(title: isFrom ? '출발역' : '도착역', names: names),
+      builder: (_) => _StationSearch(title: isFrom ? '출발역' : '도착역', names: names, nearby: nearby),
     );
     if (n != null) onPick(isFrom, n);
   }
@@ -1286,12 +1305,18 @@ class _RoutePanel extends StatelessWidget {
     final r = route;
     Widget field(String label, String? v, bool isFrom) => Expanded(
           child: InkWell(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(15),
             onTap: () => _search(context, isFrom),
             child: Container(
-              height: 46,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: v == null ? kLine : kBlue.withValues(alpha: 0.5))),
+              height: 48,
+              padding: const EdgeInsets.symmetric(horizontal: 13),
+              // 대표님 11-28: 바깥 구분선보다 약해 보였음 → 테두리·둥글기를 살림 (중요한 기능)
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(15),
+                border: Border.all(color: v == null ? const Color(0xFFAEB9C8) : kBlue),
+                boxShadow: const [BoxShadow(color: Color(0x12000000), blurRadius: 8)],
+              ),
               child: Row(children: [
                 Icon(isFrom ? Icons.trip_origin_rounded : Icons.place_outlined, size: 15, color: v == null ? kMute : kBlue),
                 const SizedBox(width: 6),
@@ -1309,44 +1334,58 @@ class _RoutePanel extends StatelessWidget {
           field('출발', from, true),
           IconButton(tooltip: '출발·도착 바꾸기', onPressed: from == null && to == null ? null : onSwap, icon: const Icon(Icons.swap_horiz_rounded, color: kBlue)),
           field('도착', to, false),
-          if (from != null || to != null)
+          if (showClear)
             IconButton(tooltip: '경로 지우기', visualDensity: VisualDensity.compact, onPressed: onClear, icon: const Icon(Icons.close_rounded, size: 20, color: kSub)),
         ]),
         if (from != null && to != null && r == null)
           const Padding(padding: EdgeInsets.only(top: 10), child: Text('두 역을 잇는 길을 찾지 못했어요 (다른 권역이거나 자료가 없어요)', style: T.small)),
         if (r != null) ...[
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
+          // 어디서 갈아타는지가 먼저 (대표님 11-28: 처음 가는 사람은 몇 번, 어디서 갈아타는지가 제일 궁금함)
           Text.rich(
             TextSpan(children: [
-              TextSpan(text: '약 ${r.minutes}분', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: kBlue, letterSpacing: -0.5)),
-              TextSpan(text: '   ${r.transfers == 0 ? '갈아타지 않음' : '환승 ${r.transfers}번'} · ${r.stops}정거장', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: kSub)),
+              TextSpan(text: r.transfers == 0 ? '갈아타지 않고 한 번에' : '${r.transfers}번 갈아타요', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: kBlue, letterSpacing: -0.5)),
+              TextSpan(text: '   약 ${r.minutes}분 · ${r.stops}정거장', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: kSub)),
             ]),
           ),
-          const SizedBox(height: 4),
-          Text(r.summary, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: kInk, letterSpacing: -0.3, height: 1.35)),
-          const SizedBox(height: 6),
-          for (final leg in r.legs)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 3),
-              child: Row(children: [
-                Container(width: 10, height: 10, decoration: BoxDecoration(color: leg.line.color, shape: BoxShape.circle)),
-                const SizedBox(width: 7),
-                Expanded(child: Text('${leg.line.name}  ${leg.from} → ${leg.to}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, color: kInk))),
-                Text('${leg.count}정거장', style: const TextStyle(fontSize: 12, color: kSub, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 168),
+            child: SingleChildScrollView(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+                for (var i = 0; i < r.legs.length; i++) ...[
+                  if (i > 0)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(4, 5, 0, 5),
+                      child: Row(children: [
+                        const Icon(Icons.sync_alt_rounded, size: 15, color: kBlue),
+                        const SizedBox(width: 6),
+                        Text('${r.legs[i].from}역에서 갈아타기', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: kBlue, letterSpacing: -0.3)),
+                      ]),
+                    ),
+                  Row(children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                      decoration: BoxDecoration(color: r.legs[i].line.color, borderRadius: BorderRadius.circular(20)),
+                      child: Text(r.legs[i].line.name, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.2)),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text('${r.legs[i].from} → ${r.legs[i].to}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: kInk, letterSpacing: -0.3))),
+                    Text('${r.legs[i].count}정거장', style: const TextStyle(fontSize: 12, color: kSub, fontWeight: FontWeight.w600)),
+                  ]),
+                ],
               ]),
             ),
-          const SizedBox(height: 10),
+          ),
+          const SizedBox(height: 12),
           Row(children: [
             Expanded(child: _Btn(label: '네이버 지도', onTap: () => _openRouteApp('naver', r))),
             const SizedBox(width: 10),
             Expanded(flex: 2, child: _Btn(label: '실시간·자세히 (카카오맵)', strong: true, onTap: () => _openRouteApp('kakao', r))),
           ]),
-        ] else if (from == null)
-          const Padding(padding: EdgeInsets.only(top: 10), child: Text('노선도에서 출발역을 누르고, 이어서 도착역을 누르세요.', style: T.small)),
-        if (from != null && to == null)
-          const Padding(padding: EdgeInsets.only(top: 10), child: Text('이제 도착역을 누르세요.', style: T.small)),
-        const SizedBox(height: 6),
-        const Text('시간은 거리로 어림한 값이에요. 실시간 도착·정확한 시간은 지도 앱에서 확인하세요.', style: T.tiny),
+          const SizedBox(height: 6),
+          const Text('시간은 거리로 어림한 값이에요. 실시간 도착·정확한 시간은 지도 앱에서 확인하세요.', style: T.tiny),
+        ],
       ]),
     );
   }
@@ -1356,7 +1395,8 @@ class _RoutePanel extends StatelessWidget {
 class _StationSearch extends StatefulWidget {
   final String title;
   final List<String> names;
-  const _StationSearch({required this.title, required this.names});
+  final List<(String, double)> nearby;
+  const _StationSearch({required this.title, required this.names, this.nearby = const []});
   @override
   State<_StationSearch> createState() => _StationSearchState();
 }
@@ -1366,6 +1406,9 @@ class _StationSearchState extends State<_StationSearch> {
   @override
   Widget build(BuildContext context) {
     final l = q.isEmpty ? widget.names : widget.names.where((n) => n.contains(q)).toList();
+    // 아무것도 안 적었을 땐 가까운 역부터 (그 아래 가나다순 전체)
+    final nb = q.isEmpty ? widget.nearby : const <(String, double)>[];
+    String far(double m) => m < 1000 ? '${m.round()}m' : '${(m / 1000).toStringAsFixed(1)}km';
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
@@ -1380,15 +1423,34 @@ class _StationSearchState extends State<_StationSearch> {
                 decoration: InputDecoration(
                   hintText: '${widget.title} 이름',
                   prefixIcon: const Icon(Icons.search_rounded, color: kBlue),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: kLine)),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: kLine)),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: Color(0xFFAEB9C8))),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: Color(0xFFAEB9C8))),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: kBlue)),
                 ),
               ),
             ),
             Expanded(
               child: ListView.builder(
-                itemCount: l.length,
-                itemBuilder: (_, i) => ListTile(dense: true, title: Text('${l[i]}역', style: const TextStyle(fontSize: 15)), onTap: () => Navigator.pop(context, l[i])),
+                itemCount: l.length + (nb.isEmpty ? 0 : nb.length + 2),
+                itemBuilder: (_, i) {
+                  if (nb.isNotEmpty) {
+                    if (i == 0) return const Padding(padding: EdgeInsets.fromLTRB(kPad, 8, kPad, 2), child: Text('가까운 역', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: kBlue)));
+                    if (i <= nb.length) {
+                      final e = nb[i - 1];
+                      return ListTile(
+                        dense: true,
+                        leading: const Icon(Icons.near_me_outlined, size: 18, color: kBlue),
+                        minLeadingWidth: 20,
+                        title: Text('${e.$1}역', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                        trailing: Text(far(e.$2), style: T.tiny),
+                        onTap: () => Navigator.pop(context, e.$1),
+                      );
+                    }
+                    if (i == nb.length + 1) return const Padding(padding: EdgeInsets.fromLTRB(kPad, 12, kPad, 2), child: Text('모든 역', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: kSub)));
+                    i -= nb.length + 2;
+                  }
+                  return ListTile(dense: true, title: Text('${l[i]}역', style: const TextStyle(fontSize: 15)), onTap: () => Navigator.pop(context, l[i]));
+                },
               ),
             ),
           ]),
