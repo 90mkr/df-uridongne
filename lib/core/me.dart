@@ -1,6 +1,7 @@
 // 내 정보 탭 (본부 방만 고침): 로그인 · 우리 단지 · 정책 · 관리자
 import 'package:flutter/material.dart';
 
+import 'account.dart';
 import 'complex_pick.dart';
 import 'data.dart';
 import 'fb.dart';
@@ -71,7 +72,7 @@ class MeTab extends StatelessWidget {
                       _row('사용 방법', '처음 안내 · 기능 설명', () => openGuide(context)),
                       _row('개인정보처리방침', '', () => openUrl('${kSiteUrl}policy/privacy.html', inApp: true)),
                       _row('이용약관', '', () => openUrl('${kSiteUrl}policy/terms.html', inApp: true)),
-                      if (u != null) _row('회원 탈퇴', '', () => openUrl('${kSiteUrl}policy/delete.html', inApp: true)),
+                      if (u != null) _row('회원 탈퇴', '', () => _leave(context)), // 앱 안에서 바로 (대표님 11-28 플레이 출시)
                     ]),
                     const SizedBox(height: 20),
                     const Text('우동콕 · 디자인필', style: T.tiny),
@@ -104,6 +105,48 @@ class MeTab extends StatelessWidget {
           ]),
         ),
       );
+}
+
+// 회원 탈퇴: 무엇이 지워지는지 보여 주고 → 최근 로그인 확인 → 지우기 → 끝 안내
+Future<void> _leave(BuildContext context) async {
+  const red = Color(0xFFE5484D);
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      title: const Text('회원 탈퇴', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+      content: const Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('탈퇴하면 아래 정보가 바로 지워지고 되살릴 수 없어요.', style: TextStyle(fontSize: 13.5, height: 1.45)),
+        SizedBox(height: 10),
+        Text('· 계정(이메일·닉네임)\n· 동네 이야기에 쓴 글·댓글·사진\n· 이웃 추천, 행사 알리기\n· 반려동물 수첩, 설정 백업', style: TextStyle(fontSize: 13, height: 1.55, color: kSub)),
+      ]),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('닫기', style: TextStyle(color: kSub))),
+        TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('탈퇴하기', style: TextStyle(color: red, fontWeight: FontWeight.w800))),
+      ],
+    ),
+  );
+  if (ok != true || !context.mounted) return;
+  if (needFreshLogin) {
+    toast(context, '안전을 위해 한 번 더 로그인해 주세요. 로그인 뒤 탈퇴가 이어져요');
+    await openLogin(context);
+    if (!context.mounted || me == null || needFreshLogin) return;
+  }
+  final err = await deleteAccount();
+  if (!context.mounted) return;
+  if (err == 'relogin') return toast(context, '로그인 시간이 지나 탈퇴하지 못했어요. 다시 로그인한 뒤 눌러 주세요');
+  if (err != null) return toast(context, err);
+  await showDialog(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      title: const Text('탈퇴되었습니다', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+      content: const Text('그동안 우동콕을 써 주셔서 고맙습니다.\n고른 단지와 홈 설정은 이 휴대폰에만 남아 있어요.', style: TextStyle(fontSize: 13.5, height: 1.5)),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('확인', style: TextStyle(color: kBlue, fontWeight: FontWeight.w800)))],
+    ),
+  );
 }
 
 // 닉네임 바꾸기 창

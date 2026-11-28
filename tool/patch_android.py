@@ -266,3 +266,18 @@ for kt in glob.glob("android/app/src/main/kotlin/**/MainActivity.kt", recursive=
     pkg = re.search(r"^package\s+([\w.]+)", old, re.M).group(1)
     open(kt, "w", encoding="utf-8").write(MAIN_KT.format(pkg=pkg))
     print("MainActivity: 사진 준비 채널 넣음")
+
+
+# 구글 플레이 대상 API 수준: 2026-08-31부터 새 앱·업데이트는 Android 16(API 36) 이상 (대표님 11-28 출시)
+for g in glob.glob("android/app/build.gradle*"):
+    t = open(g, encoding="utf-8").read()
+    if g.endswith(".kts"):
+        t2 = t.replace("targetSdk = flutter.targetSdkVersion", "targetSdk = maxOf(36, flutter.targetSdkVersion)")
+        t2 = t2.replace("compileSdk = flutter.compileSdkVersion", "compileSdk = maxOf(36, flutter.compileSdkVersion)")
+    else:
+        t2 = t.replace("targetSdkVersion flutter.targetSdkVersion", "targetSdkVersion Math.max(36, flutter.targetSdkVersion)")
+        t2 = t2.replace("compileSdkVersion flutter.compileSdkVersion", "compileSdkVersion Math.max(36, flutter.compileSdkVersion)")
+        t2 = t2.replace("compileSdk = flutter.compileSdkVersion", "compileSdk = Math.max(36, flutter.compileSdkVersion)")
+    if t2 != t:
+        open(g, "w", encoding="utf-8").write(t2)
+print("대상 API 36 이상으로 맞춤")

@@ -108,6 +108,11 @@
         allow delete: if (request.auth != null && resource.data.uid == request.auth.uid) || isAdmin();
       }
     }
+    // 회원 탈퇴 (11-28): 내가 쓴 댓글을 한꺼번에 찾아 지우기 — 본인 댓글만 보이고 지워짐
+    match /{path=**}/cm/{c} {
+      allow read, delete: if request.auth != null && resource.data.uid == request.auth.uid
+        && resource.data.keys().hasOnly(['b', 'uid', 'name', 'at']);
+    }
     // 내 정보·기록 (반려동물 아이·몸무게 등): 로그인한 본인만 읽고 씀 · 한 칸 400KB 까지 (11-26)
     match /dn_my/{uid}/d/{key} {
       allow read, delete: if request.auth != null && request.auth.uid == uid;

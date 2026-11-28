@@ -242,6 +242,40 @@ jobs:
           cp build/app/outputs/flutter-apk/app-release.apk dongne.apk
           if [ -f android/app/upload.jks ]; then keytool -list -v -keystore android/app/upload.jks -storepass "$KEY_PASS" -alias dongne | grep -E "SHA1|SHA256" || true; fi
 
+      # 플레이 출시용 앱 묶음(AAB): 올리는 글 제목에 [출시]가 있을 때만 (대표님 11-28)
+      - name: 출시용 앱 묶음 만들기
+        if: contains(github.event.head_commit.message, '[출시]')
+        env:
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASS }}
+          DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
+          OPINET_KEY: ${{ secrets.OPINET_KEY }}
+          AIRKOREA_KEY: ${{ secrets.AIRKOREA_KEY }}
+          EV_KEY: ${{ secrets.EV_KEY }}
+        run: |
+          if [ ! -f android/app/upload.jks ]; then echo "::error::서명 키가 없어 출시용 묶음을 만들 수 없습니다"; exit 1; fi
+          flutter build appbundle --release \
+            --dart-define=DATA_GO_KR_KEY="$DATA_GO_KR_KEY" --dart-define=OPINET_KEY="$OPINET_KEY" \
+            --dart-define=AIRKOREA_KEY="$AIRKOREA_KEY" --dart-define=EV_KEY="$EV_KEY"
+          cp build/app/outputs/bundle/release/app-release.aab udongkok.aab
+          echo "== 서명 확인 =="; jarsigner -verify udongkok.aab | tail -1 || true
+          echo "== 대상·최소 API =="; grep -rhoE "(targetSdk|minSdk|compileSdk)[^\n]*" android/app/build.gradle* | head -5
+          echo "== 실제 들어간 권한 =="; M=$(find build/app/intermediates -path "*release*" -name AndroidManifest.xml | grep -i merged | head -1); echo "$M"; grep -o 'uses-permission[^>]*' "$M" | sort -u
+          grep -o 'android:targetSdkVersion="[0-9]*"' "$M" | head -1 || true
+
+      - name: 출시용 묶음 올리기
+        if: contains(github.event.head_commit.message, '[출시]')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V=$(grep -m1 '^version:' pubspec.yaml | awk '{print $2}')
+          NOTE="플레이 콘솔에 올리는 출시용 파일 · 버전 $V · 만든 시각 $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M')"
+          if gh release view store >/dev/null 2>&1; then
+            gh release upload store udongkok.aab --clobber
+            gh release edit store --notes "$NOTE" --title "우동콕 출시용 (AAB)" || true
+          else
+            gh release create store udongkok.aab --title "우동콕 출시용 (AAB)" --notes "$NOTE" --target main --prerelease
+          fi
+
       - name: 설치 파일 고정 링크로 게시
         env:
           GH_TOKEN: ${{ github.token }}
