@@ -9,7 +9,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_map/flutter_map.dart';
+import '../../core/dnmap.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../core/theme.dart';
@@ -28,7 +28,9 @@ class BusRoutePage extends StatefulWidget {
 }
 
 class _BusRoutePageState extends State<BusRoutePage> with SingleTickerProviderStateMixin {
-  final _map = MapController();
+  final _map = DnMapCtl();
+  LatLng? _cam;
+  double _z = 15;
   late final AnimationController _move = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400))..addListener(() => setState(() {}));
 
   RouteInfo? info;
@@ -174,15 +176,15 @@ class _BusRoutePageState extends State<BusRoutePage> with SingleTickerProviderSt
       if (pts.length == 1) {
         _map.move(pts.first, 16);
       } else {
-        _map.fitCamera(CameraFit.coordinates(coordinates: pts, padding: const EdgeInsets.fromLTRB(40, 64, 60, 40), maxZoom: max));
+        _map.fit(pts, const EdgeInsets.fromLTRB(40, 64, 60, 40), maxZoom: max);
       }
     } catch (_) {}
   }
 
   void _zoom(double d) {
     if (!ready) return;
-    final cam = _map.camera;
-    _map.move(cam.center, (cam.zoom + d).clamp(6, 18).toDouble());
+    _z = (_z + d).clamp(6, 18).toDouble();
+    _map.move(_cam ?? s.pos, _z);
   }
 
   void _goto(LatLng? p, {String? bus}) {
@@ -272,91 +274,91 @@ class _BusRoutePageState extends State<BusRoutePage> with SingleTickerProviderSt
       decoration: cardBox(r: 16),
       clipBehavior: Clip.antiAlias,
       child: Stack(children: [
-        FlutterMap(
-          mapController: _map,
-          options: MapOptions(
-            initialCenter: s.pos,
-            initialZoom: 15,
-            interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
-            onMapReady: () {
-              ready = true;
-              if (!loading) _fitMine();
-            },
-            onTap: (_, __) => setState(() => sel = null),
-          ),
-          children: [
-            TileLayer(urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', userAgentPackageName: 'kr.designfeel.dongne'),
-            if (line.length > 1) PolylineLayer(polylines: [Polyline(points: line, strokeWidth: 3.5, color: kBlue.withValues(alpha: 0.75))]),
-            CircleLayer(circles: [
-              for (final r in list)
-                if (r.pos != null && r.id != s.id) CircleMarker(point: r.pos!, radius: 3.4, color: Colors.white, borderColor: kBlue.withValues(alpha: 0.8), borderStrokeWidth: 1),
-            ]),
-            MarkerLayer(markers: [
-              // 내 정류장
-              Marker(
-                point: s.pos,
-                width: 150,
-                height: 50,
-                alignment: Alignment.topCenter,
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 4),
-                    decoration: BoxDecoration(gradient: kBusGrad, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.white), boxShadow: kShadow),
-                    child: Text(s.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
-                  ),
-                  const SizedBox(height: 3),
-                  Container(
-                    width: 16,
-                    height: 16,
-                    decoration: BoxDecoration(color: kBlue, shape: BoxShape.circle, border: Border.all(color: Colors.white), boxShadow: kShadow),
-                  ),
-                ]),
-              ),
-              // 달리는 버스
-              for (final b in buses)
-                if (_shown(b) case final p?)
-                  Marker(
-                    point: p,
-                    width: 64,
-                    height: 64,
-                    child: GestureDetector(
-                      onTap: () => setState(() => sel = sel == b.vehicleNo ? null : b.vehicleNo),
-                      child: BusPulse(
-                        size: 32,
-                        child: Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            gradient: kBusGrad,
-                            borderRadius: BorderRadius.circular(9),
-                            border: Border.all(color: sel == b.vehicleNo ? kInk : Colors.white),
-                            boxShadow: kShadow,
-                          ),
-                          child: const Icon(Icons.directions_bus_rounded, size: 20, color: Colors.white),
-                        ),
-                      ),
-                    ),
-                  ),
-              // 고른 버스 안내
-              if (selBus != null && _shown(selBus) != null)
-                Marker(
-                  point: _shown(selBus)!,
-                  width: 200,
-                  height: 62,
-                  alignment: const Alignment(0, -1.7),
+        // 네이버 지도 (대표님 11-28: 노선 상세만 옛날 지도로 나옴 → 버스 화면과 같은 네이버 지도)
+        DnMap(
+          center: s.pos,
+          zoom: 15,
+          ctl: _map,
+          showComplex: false,
+          onReady: () {
+            ready = true;
+            if (!loading) _fitMine();
+          },
+          onIdle: (c, z, _, __) {
+            _cam = c;
+            _z = z;
+          },
+          onMapTap: () => setState(() => sel = null),
+          lines: [if (line.length > 1) DnLine(line, color: kBlue.withValues(alpha: 0.75), width: 4)],
+          marks: [
+            for (final r in list)
+              if (r.pos != null && r.id != s.id)
+                DnMark(
+                  id: 'st_${r.id}',
+                  pos: r.pos!,
+                  key: 'rdot',
+                  size: const Size(9, 9),
+                  child: Container(width: 9, height: 9, decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, border: Border.all(color: kBlue.withValues(alpha: 0.8), width: 1.5))),
+                ),
+            // 내 정류장
+            DnMark(
+              id: 'mine',
+              pos: s.pos,
+              key: 'mine|${s.name}',
+              size: const Size(150, 50),
+              z: 20,
+              child: Column(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.end, children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 4),
+                  decoration: BoxDecoration(gradient: kBusGrad, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.white)),
+                  child: Text(s.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
+                ),
+                const SizedBox(height: 3),
+                Container(width: 16, height: 16, decoration: BoxDecoration(color: kBlue, shape: BoxShape.circle, border: Border.all(color: Colors.white))),
+              ]),
+            ),
+            // 달리는 버스
+            for (final b in buses)
+              if (_shown(b) case final p?)
+                DnMark(
+                  id: 'bus_${b.vehicleNo}',
+                  pos: p,
+                  key: 'bus|${sel == b.vehicleNo}',
+                  size: const Size(34, 34),
+                  z: 30,
+                  onTap: () => setState(() => sel = sel == b.vehicleNo ? null : b.vehicleNo),
                   child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      gradient: kBusGrad,
+                      borderRadius: BorderRadius.circular(9),
+                      border: Border.all(color: sel == b.vehicleNo ? kInk : Colors.white, width: 1.5),
+                    ),
+                    child: const Icon(Icons.directions_bus_rounded, size: 20, color: Colors.white),
+                  ),
+                ),
+            // 고른 버스 안내
+            if (selBus != null && _shown(selBus) != null)
+              DnMark(
+                id: 'selinfo',
+                pos: _shown(selBus)!,
+                key: 'sel|${_busText(selBus)}|${selBus.vehicleNo}|${selBus.nodeName}',
+                size: const Size(200, 96),
+                z: 40,
+                child: Column(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.start, children: [
+                  Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                    decoration: cardBox(r: 10),
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: kLine)),
                     child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(_busText(selBus), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, letterSpacing: -0.3)),
+                      Text(_busText(selBus), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, letterSpacing: -0.3, color: kInk)),
                       const SizedBox(height: 1),
                       Text([if (selBus.vehicleNo.isNotEmpty) selBus.vehicleNo, if (selBus.nodeName.isNotEmpty) selBus.nodeName].join(' · '),
                           maxLines: 1, overflow: TextOverflow.ellipsis, style: T.tiny),
                     ]),
                   ),
-                ),
-            ]),
-            const RichAttributionWidget(attributions: [TextSourceAttribution('OpenStreetMap')]),
+                ]),
+              ),
           ],
         ),
         // 왼쪽 위: 운행 대수

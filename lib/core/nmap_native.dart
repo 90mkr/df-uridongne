@@ -147,12 +147,15 @@ class _NMapState extends State<_NMap> {
     final have = _img[k];
     if (have != null) return have;
     if (apt) await precacheImage(const AssetImage('assets/icons/apt.png'), context); // 그림으로 찍기 전에 미리 읽어 둠
+    // 버스 정류장('bus')·그림 핀(pin_)은 웹 미리보기와 같은 정류장 쉼터 그림 (대표님 11-28: 설치 파일만 버스 그림으로 나옴)
+    final pinFile = icon == 'bus' ? 'pin_busstop' : (icon.startsWith('pin_') ? icon : '');
+    if (pinFile.isNotEmpty && mounted) await precacheImage(AssetImage('assets/icons/$pinFile.png'), context);
     if (!apt && kColorPng.contains(icon) && mounted) await precacheImage(AssetImage('assets/icons/$icon.png'), context);
     if (!mounted) return NOverlayImage.fromAssetImage('assets/icons/apt.png');
     final w = apt
         ? Image.asset('assets/icons/apt.png', width: 46, height: 46) // 우리 단지: 웃는 집 (대표님 11-24)
-        : icon == 'bus'
-            ? SizedBox(width: sel ? 40 : 32, height: sel ? 40 : 32, child: const LineIcon('bus', size: 32))
+        : pinFile.isNotEmpty
+            ? Image.asset('assets/icons/$pinFile.png', width: sel ? 52 : 44, height: sel ? 52 : 44, filterQuality: FilterQuality.medium)
             : Container(
                 width: sel ? 40 : 32,
                 height: sel ? 40 : 32,
@@ -164,7 +167,7 @@ class _NMapState extends State<_NMap> {
                 ),
                 child: LineIcon(icon, size: sel ? 28 : 23),
               );
-    final img = await NOverlayImage.fromWidget(widget: w, size: apt ? const Size(46, 46) : Size(sel ? 40 : 32, sel ? 40 : 32), context: context);
+    final img = await NOverlayImage.fromWidget(widget: w, size: apt ? const Size(46, 46) : (pinFile.isNotEmpty ? Size(sel ? 52 : 44, sel ? 52 : 44) : Size(sel ? 40 : 32, sel ? 40 : 32)), context: context);
     _img[k] = img;
     return img;
   }
