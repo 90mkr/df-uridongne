@@ -165,6 +165,63 @@ class _LinesPageState extends State<LinesPage> {
   final tc = TransformationController();
   Size? box;
   _World? world;
+  // 「지도 위에 보기」: 노선만 ↔ 지도를 오갈 때 보던 자리를 그대로 (대표님 11-28: 호선을 고른 채 다시 지도를 보면 우리 단지로 가 버려 지도만 나옴)
+  LatLng? camC; // 지금 보는 가운데
+  double? camZ; // 지금 지도 배율
+  LatLng? startC; // 지도를 켤 때 자리 (켠 뒤에는 안 바꿈)
+  double startZ = 13;
+  Size mapBox = const Size(400, 600);
+
+  // 노선도 1km 가 몇 점인지 ↔ 지도 배율
+  static double _zoomOf(double pxKm, double lat) => math.log(pxKm * 40075 * math.cos(lat * math.pi / 180) / 256) / math.ln2;
+  static double _pxKmOf(double z, double lat) => 256 * math.pow(2, z) / (40075 * math.cos(lat * math.pi / 180));
+
+  void _toggleMap() {
+    final w = world, b = box;
+    setState(() {
+      if (!onMap) {
+        // 노선도에서 보던 자리 → 지도
+        if (w != null && b != null) {
+          final s = tc.value.getMaxScaleOnAxis();
+          final c = w.ll(MatrixUtils.transformPoint(Matrix4.inverted(tc.value), Offset(b.width / 2, b.height / 2)));
+          startC = c;
+          startZ = _zoomOf(s * _World.perKm, c.latitude).clamp(8.0, 16.0);
+        } else {
+          startC = widget.c.pos;
+          startZ = 13;
+        }
+        camC = startC;
+        camZ = startZ;
+        onMap = true;
+      } else {
+        onMap = false;
+        box = null; // 돌아오면 지도에서 보던 자리로 (_plainView 가 맞춤)
+      }
+    });
+  }
+
+  // 지도: 이 점들이 다 보이는 자리·배율로 (배율을 우리가 알아야 역 이름을 겹치지 않게 고를 수 있음)
+  void _mapGo(LatLng c, double z) {
+    ctl.move(c, z);
+    setState(() {
+      camC = c;
+      camZ = z;
+    });
+  }
+
+  void _mapFit(List<LatLng> pts) {
+    if (pts.isEmpty) return;
+    var s = 90.0, n = -90.0, w = 180.0, e = -180.0;
+    for (final p in pts) {
+      s = math.min(s, p.latitude);
+      n = math.max(n, p.latitude);
+      w = math.min(w, p.longitude);
+      e = math.max(e, p.longitude);
+    }
+    final zx = math.log((mapBox.width - 80) * 360 / (256 * math.max(e - w, 0.002))) / math.ln2;
+    final zy = math.log((mapBox.height - 120) / math.max(_my(s, 0) - _my(n, 0), 0.00001)) / math.ln2;
+    _mapGo(LatLng((s + n) / 2, (w + e) / 2), math.min(zx, zy).clamp(7.0, 15.0));
+  }
 
   @override
   void initState() {
@@ -233,9 +290,9 @@ class _LinesPageState extends State<LinesPage> {
     final l = name == null ? null : (this.all ?? const <SubLine>[]).where((x) => x.name == name).firstOrNull;
     if (onMap) {
       if (l != null) {
-        ctl.fit([for (final s in l.stations) s.$2], const EdgeInsets.fromLTRB(40, 60, 40, 60));
+        _mapFit([for (final s in l.stations) s.$2]);
       } else {
-        ctl.move(widget.c.pos, all ? 11 : 13);
+        _mapGo(widget.c.pos, all ? 11 : 13);
       }
     } else {
       // 노선 전체를 한 화면에 넣으면 깨알처럼 작아짐 → 우리 역 둘레를 읽을 만한 크기로, 나머지는 손가락으로 (대표님 11-28)
@@ -260,7 +317,7 @@ class _LinesPageState extends State<LinesPage> {
     if (!move) return;
     final p = l.stations.firstWhere((s) => s.$1 == name).$2;
     if (onMap) {
-      ctl.move(p, 15);
+      _mapGo(p, 15);
     } else {
       final w = world;
       if (w != null) _setView(w.px(p), math.max(tc.value.getMaxScaleOnAxis(), 0.9), fy: 0.5);
@@ -283,12 +340,7 @@ class _LinesPageState extends State<LinesPage> {
             child: Center(
               child: _Pill(
                 label: onMap ? '노선만 보기' : '지도 위에 보기',
-                onTap: () {
-                  setState(() {
-                    onMap = !onMap;
-                    if (!onMap) box = null; // 돌아오면 우리 단지로
-                  });
-                },
+                onTap: _toggleMap,
               ),
             ),
           ),
@@ -310,7 +362,19 @@ class _LinesPageState extends State<LinesPage> {
     return LayoutBuilder(builder: (context, c) {
       final first = box == null;
       box = c.biggest;
-      if (first) WidgetsBinding.instance.addPostFrameCallback((_) => _resetView());
+      if (first) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final cc = camC, cz = camZ;
+          if (cc != null && cz != null) {
+            // 지도에서 보던 자리 그대로
+            _setView(w.px(cc), (_pxKmOf(cz, cc.latitude) / _World.perKm).clamp(0.04, _maxS), fy: 0.5);
+            camC = null;
+            camZ = null;
+          } else {
+            _resetView();
+          }
+        });
+      }
       return ClipRect(
         child: Stack(children: [
           // 손가락 움직임만 받는 판 — 그림은 그 위에 화면 기준으로 따로 그림
@@ -406,46 +470,81 @@ class _LinesPageState extends State<LinesPage> {
   }
 
   // ---- 지도 위에 보기 ----
-  Widget _mapView(List<SubLine> a) {
-    final w = pick != null ? 7.0 : (showAll ? 4.0 : 6.0);
-    final base = [for (final l in a) if (_strong(l)) l];
-    final lines = <DnLine>[
-      for (final l in base.reversed)
-        for (final p in l.paths)
-          if (p.length >= 2) ...[
-            DnLine(p, color: Colors.white, width: w + 4),
-            DnLine(p, color: l.color, width: w),
-          ],
-    ];
-    // 「간단 경로」: 지나는 구간을 굵게 위에 덧그림
-    final rr = routeMode ? route : null;
-    if (rr != null) {
-      for (final leg in rr.legs) {
-        final pts = [for (final st in leg.stops) st.$2];
-        lines.add(DnLine(pts, color: Colors.white, width: 13));
-        lines.add(DnLine(pts, color: leg.line.color, width: 9));
-      }
-    }
-    final marks = <DnMark>[];
-    final seen = <String>{};
-    for (final l in base) {
-      for (final s in l.stations) {
-        if (pick == null && meters(widget.c.pos, s.$2) > 8000) continue;
-        if (!seen.add(s.$1)) continue;
-        final sel = tapped?.$1 == s.$1;
-        marks.add(DnMark(
-          id: 'st|${s.$1}',
-          pos: s.$2,
-          key: '${s.$1}|${l.name}|$sel',
-          size: sel ? const Size(190, 58) : const Size(10, 10),
-          z: sel ? 9 : 1,
-          onTap: () => _tapStation(s.$1, l),
-          child: sel ? _StationTag(name: s.$1, color: l.color) : _Dot(color: l.color),
-        ));
-      }
-    }
-    return DnMap(center: widget.c.pos, zoom: 13, lines: lines, marks: marks, ctl: ctl, onMapTap: () => setState(() => tapped = null));
-  }
+  Widget _mapView(List<SubLine> a) => LayoutBuilder(builder: (context, cons) {
+        mapBox = cons.biggest;
+        final z = camZ ?? startZ;
+        final w = pick != null ? 7.0 : (showAll ? 4.0 : 6.0);
+        final base = [for (final l in a) if (_strong(l)) l];
+        final lines = <DnLine>[
+          for (final l in base.reversed)
+            for (final p in l.paths)
+              if (p.length >= 2) ...[
+                DnLine(p, color: Colors.white, width: w + 4),
+                DnLine(p, color: l.color, width: w),
+              ],
+        ];
+        // 「간단 경로」: 지나는 구간을 굵게 위에 덧그림
+        final rr = routeMode ? route : null;
+        if (rr != null) {
+          for (final leg in rr.legs) {
+            final pts = [for (final st in leg.stops) st.$2];
+            lines.add(DnLine(pts, color: Colors.white, width: 13));
+            lines.add(DnLine(pts, color: leg.line.color, width: 9));
+          }
+        }
+        // 역: 점 + 이름 (대표님 11-28: 지도 위에도 역 이름) — 환승역부터, 겹치는 이름은 숨기고 키우면 더 나옴
+        final sts = <(String, SubLine, LatLng, bool)>[];
+        final seen = <String>{};
+        for (final l in base) {
+          for (final s in l.stations) {
+            if (pick == null && meters(widget.c.pos, s.$2) > 8000) continue;
+            if (!seen.add(s.$1)) continue;
+            sts.add((s.$1, l, s.$2, (byName[s.$1]?.length ?? 0) > 1));
+          }
+        }
+        sts.sort((x, y) => (x.$4 ? 0 : 1).compareTo(y.$4 ? 0 : 1));
+        final placed = <Rect>[];
+        final marks = <DnMark>[];
+        for (final (name, l, pos, multi) in sts) {
+          final sel = tapped?.$1 == name;
+          var lab = false;
+          var tw = 10.0;
+          if (!sel && (multi || z >= 10.5)) {
+            tw = _nameW(name);
+            final r = Rect.fromLTWH(_mx(pos.longitude, z) - tw / 2, _my(pos.latitude, z) - 30, tw, 30);
+            if (!placed.any((p) => p.overlaps(r))) {
+              placed.add(r.inflate(3));
+              lab = true;
+            }
+          }
+          marks.add(DnMark(
+            id: 'st|$name',
+            pos: pos,
+            key: '$name|${l.name}|$sel|$lab',
+            size: sel ? const Size(190, 58) : (lab ? Size(tw, 30) : const Size(10, 10)),
+            z: sel ? 9 : (lab ? 2 : 1),
+            onTap: () => _tapStation(name, l),
+            child: sel ? _StationTag(name: name, color: l.color) : (lab ? _NamedDot(name: name, color: l.color, strong: multi) : _Dot(color: l.color)),
+          ));
+        }
+        return DnMap(
+          center: startC ?? widget.c.pos,
+          zoom: startZ,
+          lines: lines,
+          marks: marks,
+          ctl: ctl,
+          onMapTap: () => setState(() => tapped = null),
+          onIdle: (c, zoom, b, g) {
+            camC = c;
+            // 배율이 눈에 띄게 바뀌면 보일 이름을 다시 고름
+            if ((zoom - (camZ ?? startZ)).abs() > 0.2) {
+              setState(() => camZ = zoom);
+            } else {
+              camZ ??= zoom;
+            }
+          },
+        );
+      });
 
   // ---- 아래: 호선 고르기 · 역 정보 (노선 띠는 뺌, 대표님 11-27·28) ----
   Widget _bottom(List<SubLine> a) {
@@ -509,6 +608,23 @@ class _World {
   double get _cos => math.cos((bbox[1] + bbox[3]) / 2 * math.pi / 180);
   Size get size => Size((bbox[2] - bbox[0]) * 111 * _cos * perKm, (bbox[3] - bbox[1]) * 111 * perKm);
   Offset px(LatLng p) => Offset((p.longitude - bbox[0]) * 111 * _cos * perKm, (bbox[3] - p.latitude) * 111 * perKm);
+  LatLng ll(Offset o) => LatLng(bbox[3] - o.dy / (111 * perKm), bbox[0] + o.dx / (111 * _cos * perKm));
+}
+
+// 지도(웹 메르카토르) 화면 자리 — 지도 위 역 이름이 겹치는지 볼 때
+double _mx(double lng, double z) => (lng + 180) / 360 * 256 * math.pow(2, z);
+double _my(double lat, double z) {
+  final sn = math.sin(lat * math.pi / 180);
+  return (0.5 - math.log((1 + sn) / (1 - sn)) / (4 * math.pi)) * 256 * math.pow(2, z);
+}
+
+// 역 이름표 너비 어림 (한글 11.5, 그 밖 7)
+double _nameW(String n) {
+  var w = 12.0;
+  for (final r in n.runes) {
+    w += r > 0x2E80 ? 11.5 : 7;
+  }
+  return w;
 }
 
 class _Painter extends CustomPainter {
@@ -1194,6 +1310,27 @@ class _Dot extends StatelessWidget {
   Widget build(BuildContext context) => Align(
         alignment: Alignment.bottomCenter,
         child: Container(width: 10, height: 10, decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, border: Border.all(color: color, width: 1))),
+      );
+}
+
+// 지도 위 역: 이름표 + 점 (아래 가운데가 역 자리)
+class _NamedDot extends StatelessWidget {
+  final String name;
+  final Color color;
+  final bool strong;
+  const _NamedDot({required this.name, required this.color, this.strong = false});
+  @override
+  Widget build(BuildContext context) => Align(
+        alignment: Alignment.bottomCenter,
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+            decoration: BoxDecoration(color: const Color(0xE6FFFFFF), borderRadius: BorderRadius.circular(4)),
+            child: Text(name, maxLines: 1, softWrap: false, overflow: TextOverflow.visible, style: TextStyle(fontFamily: 'Pretendard', fontSize: 11.5, fontWeight: strong ? FontWeight.w800 : FontWeight.w700, color: kInk, height: 1.2, letterSpacing: -0.3)),
+          ),
+          const SizedBox(height: 2),
+          Container(width: 10, height: 10, decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, border: Border.all(color: color, width: 1))),
+        ]),
       );
 }
 
