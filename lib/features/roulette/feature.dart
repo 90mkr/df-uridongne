@@ -158,10 +158,11 @@ class _HomeCardState extends State<_HomeCard> with SingleTickerProviderStateMixi
           right: -ws * 0.06,
           top: -lift,
           child: IgnorePointer(
-            child: AnimatedBuilder(
+            // 늘 도는 원판이 홈 전체를 매 순간 다시 그리지 않게 따로 떼어 그림 (대표님 11-28 스크롤 걸림)
+            child: RepaintBoundary(child: AnimatedBuilder(
               animation: spin,
               builder: (_, __) => Wheel(foods: foods, size: ws, angle: spin.value * 2 * math.pi, labels: ws >= 130),
-            ),
+            )),
           ),
         ),
       ]),

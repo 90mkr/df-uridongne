@@ -142,6 +142,8 @@ class _HomeTabState extends State<HomeTab> {
             constraints: const BoxConstraints(maxWidth: 720),
             child: ListView(
               key: ValueKey('home$gen'),
+              // 카드를 화면 밖으로 나가도 버리지 않음 — 위로 올릴 때 다시 만들며 높이가 0→커져 제자리처럼 걸리던 것 (대표님 11-28)
+              cacheExtent: 100000,
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(kPad, 14, kPad, 28),
               children: [
