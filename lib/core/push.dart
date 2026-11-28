@@ -5,9 +5,11 @@
 // 보내는 쪽은 서버(깃허브 「알림 보내기」)가 새 글을 보고 그 주제로 보낸다.
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 
 import 'data.dart';
 import 'fb.dart';
+import 'keys.dart';
 
 // 게시판 분류 (board/data.dart 의 kBoards 와 같게)
 const kPushCats = ['news', 'share', 'free', 'rec', 'lost'];
@@ -74,6 +76,14 @@ Future<void> syncPush(Complex c, [List<String> cats = kPushCats]) async {
       final t = userTopic(u.uid);
       await pushOn('mycomment') ? await FirebaseMessaging.instance.subscribeToTopic(t) : await FirebaseMessaging.instance.unsubscribeFromTopic(t);
     }
+    // 관리자: 오류·개선 의견이 들어오면 바로 알림 (대표님 11-28)
+    isAdmin ? await FirebaseMessaging.instance.subscribeToTopic('dn_admin') : await FirebaseMessaging.instance.unsubscribeFromTopic('dn_admin');
     await prefSet('push.complex', keys.join('|'));
   } catch (_) {}
+}
+
+/// 글·댓글·의견을 올린 직후 「중간 다리」에 알림을 부탁 (다리가 문서를 직접 확인하고 보냄). 실패해도 그냥 넘어감
+void pingNotify(String docPath) {
+  if (kDataProxy.isEmpty) return;
+  http.post(Uri.parse('$kDataProxy/notify?doc=${Uri.encodeQueryComponent(docPath)}'), headers: const {'X-App': 'dongne'}).timeout(const Duration(seconds: 15)).then((_) {}, onError: (_) {});
 }

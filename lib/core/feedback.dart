@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'data.dart';
 import 'fb.dart';
 import 'me.dart' show openLogin;
+import 'push.dart' show pingNotify;
 import 'theme.dart';
 import 'ui.dart';
 
@@ -123,7 +124,7 @@ class _FeedbackSheetState extends State<_FeedbackSheet> {
     var ok = false;
     if (await fbReady()) {
       try {
-        await db.collection('dn_feedback').add({
+        final ref = await db.collection('dn_feedback').add({
           'kind': kind,
           'text': t,
           'contact': contact.text.trim(),
@@ -135,6 +136,7 @@ class _FeedbackSheetState extends State<_FeedbackSheet> {
           'st': 'new',
           'at': fs.FieldValue.serverTimestamp(),
         });
+        pingNotify(ref.path); // 대표님 휴대폰으로 바로 알림
         ok = true;
       } catch (e) {
         debugPrint('의견 보내기: $e');

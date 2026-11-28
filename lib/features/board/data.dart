@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../core/data.dart';
 import '../../core/fb.dart';
+import '../../core/push.dart' show pingNotify;
 
 // 게시판들 (대표님 11-25: 단체 홈페이지처럼 게시판 여러 개) — (id, 짧은 이름, 게시판 이름)
 const kBoards = [('news', '소식', '공지·소식'), ('share', '나눔', '나눔터'), ('free', '자유', '자유게시판'), ('rec', '추천', '업체 추천'), ('lost', '분실', '분실물')];
@@ -97,7 +98,7 @@ Future<String?> writePost({required Complex c, bool town = false, required Strin
   if (u == null) return '로그인이 필요해요';
   if (!await fbReady()) return '서버에 연결하지 못했어요';
   try {
-    await db.collection('dn_posts').add({
+    final ref = await db.collection('dn_posts').add({
       'cid': boardKey(c, town),
       'area': c.areaId,
       'cat': cat,
@@ -111,6 +112,7 @@ Future<String?> writePost({required Complex c, bool town = false, required Strin
       'ph': [for (final p in photos) base64Encode(p)],
       'th': [for (final p in thumbs) base64Encode(p)],
     });
+    pingNotify(ref.path); // 바로 알림 (11-28)
     boardTick.value++;
     return null;
   } catch (e) {
@@ -157,7 +159,8 @@ Future<String?> addComment(Post p, String body) async {
   if (u == null) return '로그인이 필요해요';
   try {
     final ref = db.collection('dn_posts').doc(p.id);
-    await ref.collection('cm').add({'b': body, 'uid': u.uid, 'name': myName, 'at': fs.FieldValue.serverTimestamp()});
+    final cref = await ref.collection('cm').add({'b': body, 'uid': u.uid, 'name': myName, 'at': fs.FieldValue.serverTimestamp()});
+    pingNotify(cref.path); // 바로 알림 (11-28)
     try {
       // ca: 마지막 댓글 시각 — 서버가 「내 글 댓글」 알림을 찾을 때 씀
       await ref.update({'n': fs.FieldValue.increment(1), 'ca': fs.FieldValue.serverTimestamp()});

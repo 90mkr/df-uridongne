@@ -73,6 +73,8 @@ def main():
         since = (now - timedelta(minutes=20)).strftime("%Y-%m-%dT%H:%M:%SZ")
     n = 0
     for d in query(project, tok, "dn_posts", since):
+        if ((d.get("fields") or {}).get("nt") or {}).get("booleanValue"):
+            continue  # 중간 다리가 이미 바로 보냄 (11-28)
         cid, cat, t = sv(d, "cid"), sv(d, "cat"), sv(d, "t")
         where = "우리 동네" if cid.startswith("a_") else "우리 단지"
         n += send(project, tok, safe(f"dn_b_{cid}_{cat}"), f"[{where} {NAMES.get(cat, '게시판')}] 새 글", t[:60], {"open": "board", "cid": cid, "cat": cat})
@@ -90,7 +92,18 @@ def main():
         for d in cms:
             if sv(d, "at") <= since or not uid or uid == sv(d, "uid"):
                 continue
+            if ((d.get("fields") or {}).get("nt") or {}).get("booleanValue"):
+                continue
             n += send(project, tok, safe(f"dn_u_{uid}"), "내 글에 댓글이 달렸어요", f"「{sv(p, 't')[:30]}」 {sv(d, 'b')[:40]}", {"open": "board", "cid": sv(p, "cid")})
+    # 오류·개선 의견 → 관리자 (다리가 못 보낸 것만)
+    try:
+        for d in query(project, tok, "dn_feedback", since):
+            if ((d.get("fields") or {}).get("nt") or {}).get("booleanValue"):
+                continue
+            kind = "오류 신고" if sv(d, "kind") == "bug" else "개선 제안"
+            n += send(project, tok, "dn_admin", f"[우동콕 의견] {kind}", f"{sv(d, 'name') or '이용자'} · {sv(d, 'text')[:80]}", {"open": "feedback"})
+    except Exception as e:
+        print("의견 찾기 실패", repr(e)[:120])
     os.makedirs(os.path.dirname(STATE), exist_ok=True)
     open(STATE, "w").write(now.strftime("%Y-%m-%dT%H:%M:%SZ"))
     print(f"보낸 알림 {n}건 (기준 {since})")

@@ -75,6 +75,11 @@ class _ShellState extends State<Shell> {
       final c = complex.value;
       if (c != null) syncPush(c);
     });
+    // 로그인·로그아웃하면 다시 맞추기 (관리자 의견 알림 포함, 11-28)
+    authTick.addListener(() {
+      final c = complex.value;
+      if (c != null) syncPush(c);
+    });
     // 처음 설치하고 켜면 1·2·3단계 안내 → 그다음 우리 단지 고르기 (대표님 11-27)
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await showIntroIfNew(context);
