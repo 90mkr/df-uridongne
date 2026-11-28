@@ -274,6 +274,7 @@ class _LinesPageState extends State<LinesPage> {
       pick = null;
       showAll = r != homeRegion;
       tapped = null;
+      routeMode = false;
       rFrom = null;
       rTo = null;
       route = null;
@@ -663,37 +664,36 @@ class _LinesPageState extends State<LinesPage> {
       padding: EdgeInsets.fromLTRB(0, 10, 0, 10 + MediaQuery.paddingOf(context).bottom),
       decoration: const BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: Color(0xFFE6EAF0)))),
       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        // 경로 찾기: 출발·도착 칸을 늘 보이는 한 줄로 (대표님 11-28: 단추 사이에 섞여 있어 잘 안 보였음)
+        _RoutePanel(
+          from: rFrom,
+          to: rTo,
+          route: routeMode ? route : null,
+          names: {for (final l in a) for (final st in l.stations) st.$1}.toList()..sort(),
+          onPick: (isFrom, n) {
+            setState(() {
+              routeMode = true;
+              tapped = null;
+            });
+            isFrom ? _setRoute(from: n, to: rTo == n ? null : rTo) : _setRoute(from: rFrom == n ? null : rFrom, to: n);
+          },
+          onSwap: () => _setRoute(from: rTo, to: rFrom),
+          onClear: () {
+            _setRoute();
+            setState(() => routeMode = false);
+          },
+        ),
+        const SizedBox(height: 10),
         SizedBox(
           height: 32,
           child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: kPad), children: [
             _RegionChip(label: kRegionNames[region] ?? region, onTap: _pickRegion),
-            _Chip(label: '경로 찾기', color: kBlue, on: routeMode, onTap: () => setState(() {
-                  routeMode = !routeMode;
-                  tapped = null;
-                  if (!routeMode) {
-                    rFrom = null;
-                    rTo = null;
-                    route = null;
-                  }
-                })),
             if (near.isNotEmpty) _Chip(label: '우리 동네', color: kInk, on: !routeMode && pick == null && !showAll, onTap: () => _choose(null)),
             _Chip(label: '전체', color: kInk, on: pick == null && showAll, onTap: () => _choose(null, all: true)),
             for (final l in [...near, ...a.where((x) => !near.contains(x))])
               _Chip(label: l.name, color: l.color, on: pick == l.name, onTap: () => _choose(pick == l.name ? null : l.name)),
           ]),
         ),
-        if (routeMode) ...[
-          const SizedBox(height: 10),
-          _RoutePanel(
-            from: rFrom,
-            to: rTo,
-            route: route,
-            names: {for (final l in a) for (final st in l.stations) st.$1}.toList()..sort(),
-            onPick: (isFrom, n) => isFrom ? _setRoute(from: n, to: rTo == n ? null : rTo) : _setRoute(from: rFrom, to: n),
-            onSwap: () => _setRoute(from: rTo, to: rFrom),
-            onClear: () => _setRoute(),
-          ),
-        ],
         if (!routeMode && t != null) ...[
           const SizedBox(height: 8),
           _StationCard(
@@ -1293,9 +1293,11 @@ class _RoutePanel extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: v == null ? kLine : kBlue.withValues(alpha: 0.5))),
               child: Row(children: [
+                Icon(isFrom ? Icons.trip_origin_rounded : Icons.place_outlined, size: 15, color: v == null ? kMute : kBlue),
+                const SizedBox(width: 6),
                 Text(label, style: const TextStyle(fontSize: 11.5, color: kSub, fontWeight: FontWeight.w600)),
-                const SizedBox(width: 8),
-                Expanded(child: Text(v ?? '역 검색·노선도에서 누르기', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: v == null ? 12.5 : 15, fontWeight: v == null ? FontWeight.w500 : FontWeight.w800, color: v == null ? kMute : kInk, letterSpacing: -0.4))),
+                const SizedBox(width: 6),
+                Expanded(child: Text(v ?? (isFrom ? '출발역 찾기' : '도착역 찾기'), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: v == null ? 12.5 : 15, fontWeight: v == null ? FontWeight.w500 : FontWeight.w800, color: v == null ? kMute : kInk, letterSpacing: -0.4))),
               ]),
             ),
           ),
@@ -1307,6 +1309,8 @@ class _RoutePanel extends StatelessWidget {
           field('출발', from, true),
           IconButton(tooltip: '출발·도착 바꾸기', onPressed: from == null && to == null ? null : onSwap, icon: const Icon(Icons.swap_horiz_rounded, color: kBlue)),
           field('도착', to, false),
+          if (from != null || to != null)
+            IconButton(tooltip: '경로 지우기', visualDensity: VisualDensity.compact, onPressed: onClear, icon: const Icon(Icons.close_rounded, size: 20, color: kSub)),
         ]),
         if (from != null && to != null && r == null)
           const Padding(padding: EdgeInsets.only(top: 10), child: Text('두 역을 잇는 길을 찾지 못했어요 (다른 권역이거나 자료가 없어요)', style: T.small)),
