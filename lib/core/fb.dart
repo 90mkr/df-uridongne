@@ -80,17 +80,36 @@ Future<String?> signInKakao() => _run(() async {
       }
     }, '카카오 로그인을 마치지 못했어요');
 
-Future<String?> signInEmail(String email, String pass, {bool join = false}) => _run(() async {
+Future<String?> signInEmail(String email, String pass, {bool join = false, String nick = ''}) => _run(() async {
       final a = fa.FirebaseAuth.instance;
       if (join) {
         final c = await a.createUserWithEmailAndPassword(email: email, password: pass);
         lastLoginNew = true;
+        // 가입할 때 받은 닉네임 (대표님 11-28)
+        if (nick.trim().isNotEmpty) {
+          await c.user?.updateDisplayName(nick.trim());
+          await c.user?.reload();
+        }
         await c.user?.sendEmailVerification();
       } else {
         lastLoginNew = false;
         await a.signInWithEmailAndPassword(email: email, password: pass);
       }
     }, '로그인을 마치지 못했어요');
+
+// 닉네임 바꾸기 (내 정보)
+Future<String?> setNick(String n) async {
+  final u = me;
+  if (u == null) return '로그인해 주세요';
+  try {
+    await u.updateDisplayName(n.trim());
+    await u.reload();
+    authTick.value++;
+    return null;
+  } catch (e) {
+    return '닉네임을 바꾸지 못했어요';
+  }
+}
 
 Future<void> signOut() async {
   if (!fbOn) return;

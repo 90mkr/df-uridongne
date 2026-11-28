@@ -45,7 +45,15 @@ class MeTab extends StatelessWidget {
                                   Text('콕플과 같은 계정으로 쓸 수 있어요', style: T.small),
                                 ])
                               : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                  Text(myName, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                                  // 닉네임 누르면 바꾸기 (대표님 11-28)
+                                  InkWell(
+                                    onTap: () => _editNick(context),
+                                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                      Flexible(child: Text(myName, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700))),
+                                      const SizedBox(width: 4),
+                                      const Icon(Icons.edit_outlined, size: 15, color: kSub),
+                                    ]),
+                                  ),
                                   Text(u.email ?? '', style: T.small),
                                 ]),
                         ),
@@ -98,6 +106,32 @@ class MeTab extends StatelessWidget {
       );
 }
 
+// 닉네임 바꾸기 창
+Future<void> _editNick(BuildContext context) async {
+  final ctl = TextEditingController(text: myName);
+  final r = await showDialog<String>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      title: const Text('닉네임 바꾸기', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+      content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('동네 이야기 글·댓글에 보이는 이름이에요', style: T.small),
+        const SizedBox(height: 10),
+        TextField(controller: ctl, autofocus: true, maxLength: 12, decoration: inputDeco('2~12자')),
+      ]),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('닫기', style: TextStyle(color: kSub))),
+        TextButton(onPressed: () => Navigator.pop(ctx, ctl.text.trim()), child: const Text('바꾸기', style: TextStyle(color: kBlue, fontWeight: FontWeight.w800))),
+      ],
+    ),
+  );
+  if (r == null || !context.mounted) return;
+  if (r.length < 2) return toast(context, '닉네임을 2자 넘게 넣어 주세요');
+  final err = await setNick(r);
+  if (context.mounted) toast(context, err ?? '닉네임을 바꿨어요');
+}
+
 // 가입 축하 창
 Future<void> showWelcome(BuildContext context, {bool mail = false}) => showDialog(
       context: context,
@@ -147,6 +181,7 @@ class _Login extends StatefulWidget {
 class _LoginState extends State<_Login> {
   final email = TextEditingController();
   final pass = TextEditingController();
+  final nick = TextEditingController();
   bool busy = false;
   bool join = false;
   String? error;
@@ -195,6 +230,7 @@ class _LoginState extends State<_Login> {
           const SizedBox(height: 8),
           Btn('구글로 계속하기', onTap: busy ? null : () => run(signInGoogle)),
           const Padding(padding: EdgeInsets.symmetric(vertical: 14), child: Row(children: [Expanded(child: Divider(color: kLine)), Padding(padding: EdgeInsets.symmetric(horizontal: 10), child: Text('또는 이메일', style: T.tiny)), Expanded(child: Divider(color: kLine))])),
+          if (join) Field('', nick, hint: '닉네임 (동네 이야기에 보이는 이름, 2~12자)', max: 12),
           Field('', email, hint: '이메일', type: TextInputType.emailAddress, max: 80),
           Field('', pass, hint: '비밀번호 (6자 넘게)', secret: true, max: 40),
           if (error != null)
@@ -213,8 +249,10 @@ class _LoginState extends State<_Login> {
               : () {
                   final e = email.text.trim(), p = pass.text;
                   if (e.isEmpty || p.isEmpty) return setState(() => error = '이메일과 비밀번호를 넣어 주세요');
+                  final n = nick.text.trim();
+                  if (join && n.length < 2) return setState(() => error = '닉네임을 2자 넘게 넣어 주세요');
                   if (join && p.length < 6) return setState(() => error = '비밀번호는 6자 넘게 넣어 주세요');
-                  run(() => signInEmail(e, p, join: join));
+                  run(() => signInEmail(e, p, join: join, nick: n));
                 }),
           TextButton(
             onPressed: () => setState(() {
