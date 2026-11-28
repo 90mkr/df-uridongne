@@ -176,7 +176,7 @@ class GuidePage extends StatelessWidget {
         '카카오·구글·이메일 중 편한 것으로',
         '콕플 계정이 있으면 그대로 쓸 수 있어요',
       ], '로그인하기', () => openLogin(context)),
-      _Step('알림 받기', '단지 게시판 새 글, 내 글에 달린 댓글, 일자리 소식을 알림으로 받아요.', const _NotiMock(), [
+      _Step('알림 받기', '게시판 새 글, 내 글에 달린 댓글을 알림으로 받아요.', const _NotiMock(), [
         '「내 정보」 → 「알림 설정」에서 받을 것만 고르세요',
       ], '알림 설정', c == null ? null : () => Navigator.push(context, MaterialPageRoute(builder: (_) => BoardNotiPage(c: c)))),
       _Step('급할 때 바로가기', '휴대폰 바탕화면의 니즈콕 아이콘을 꾹 누르면 「가까운 화장실」이 바로 떠요.', const _ShortcutMock(), [
@@ -538,7 +538,7 @@ class _NotiMock extends StatelessWidget {
           child: Container(
             decoration: _box(),
             child: Column(children: [
-              for (final (t, on) in [('게시판 새 글', true), ('내 글 댓글', true), ('일자리 소식', false), ('나눔·장터', true)])
+              for (final (t, on) in [('게시판 새 글', true), ('내 글 댓글', true), ('분실물', false), ('나눔·장터', true)])
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
                   child: Row(children: [

@@ -241,7 +241,6 @@ extension on _BoardPageState {
           // 우리 동네 지원금·혜택 (지원금 방이 만든 기능이 있으면 카드로 연결)
           if (benefits != null) _BenefitCard(f: benefits, c: widget.c),
           for (final b in kBoards) section(b.$1),
-          _JobSection(c: widget.c),
           const Padding(padding: EdgeInsets.only(top: 4), child: Text('광고·비방 글은 신고해 주세요. 여러 번 신고된 글은 가려져요.', style: T.tiny, textAlign: TextAlign.center)),
         ],
       ),
@@ -280,79 +279,6 @@ class _BenefitCard extends StatelessWidget {
           ),
         ),
       );
-}
-
-// 일자리 마당 — 우리 구 채용 공고 제목만 쭉 (고용24)
-class _JobSection extends StatefulWidget {
-  final Complex c;
-  const _JobSection({required this.c});
-  @override
-  State<_JobSection> createState() => _JobSectionState();
-}
-
-class _JobSectionState extends State<_JobSection> {
-  List<Job>? jobs;
-  bool loaded = false;
-  bool more = false;
-  @override
-  void initState() {
-    super.initState();
-    jobsOf(widget.c).then((v) {
-      if (mounted) setState(() {
-        jobs = v;
-        loaded = true;
-      });
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final v = jobs ?? const <Job>[];
-    final show = more ? v.take(30).toList() : v.take(5).toList();
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: cardBox(),
-      clipBehavior: Clip.antiAlias,
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(14, 12, 12, 8),
-          child: Row(children: [
-            const Text('일자리 마당', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: -0.4)),
-            const SizedBox(width: 6),
-            Text(widget.c.area?.gu ?? '', style: const TextStyle(fontSize: 12, color: kSub)),
-            const Spacer(),
-            if (v.length > 5) GestureDetector(onTap: () => setState(() => more = !more), child: Text(more ? '접기' : '더보기', style: const TextStyle(fontSize: 12, color: kSub))),
-          ]),
-        ),
-        const Divider(height: 1, color: Color(0xFFF0F2F5)),
-        if (!loaded)
-          const Padding(padding: EdgeInsets.all(14), child: Text('불러오는 중…', style: T.small))
-        else if (jobs == null)
-          const Padding(padding: EdgeInsets.fromLTRB(14, 12, 14, 13), child: Text('우리 구 채용 공고가 곧 매일 올라와요 (고용24 연결 준비 중)', style: TextStyle(fontSize: 13, color: kMute)))
-        else if (v.isEmpty)
-          const Padding(padding: EdgeInsets.fromLTRB(14, 12, 14, 13), child: Text('지금 올라온 공고가 없어요', style: TextStyle(fontSize: 13, color: kMute)))
-        else
-          for (final (i, j) in show.indexed) ...[
-            if (i > 0) const Divider(height: 1, color: Color(0xFFF5F6F8)),
-            InkWell(
-              onTap: j.url.isEmpty ? null : () => openUrl(j.url),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(14, 11, 12, 11),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(j.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: -0.3)),
-                  const SizedBox(height: 4),
-                  Row(children: [
-                    Expanded(child: Text([j.company, j.place].where((s) => s.isNotEmpty).join(' · '), maxLines: 1, overflow: TextOverflow.ellipsis, style: T.small)),
-                    if (j.pay.isNotEmpty) ...[const SizedBox(width: 6), Pill(j.pay)],
-                    if (j.until.isNotEmpty) ...[const SizedBox(width: 6), Pill(j.until, color: kBlue, bg: const Color(0xFFEEF3FF))],
-                  ]),
-                ]),
-              ),
-            ),
-          ],
-      ]),
-    );
-  }
 }
 
 // 한 줄 글 (사진 없이, 공지사항처럼)

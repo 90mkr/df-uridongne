@@ -16,22 +16,6 @@ final kBoardCats = [for (final b in kBoards) (b.$1, b.$2)];
 String catName(String id) => kBoards.firstWhere((c) => c.$1 == id, orElse: () => ('', '자유', '자유게시판')).$2;
 String boardName(String id) => kBoards.firstWhere((c) => c.$1 == id, orElse: () => ('', '자유', '자유게시판')).$3;
 
-// 일자리 마당 — 고용24(옛 워크넷) 채용 공고, 구(시군구) 단위 · 본부 「전국 자료」가 job_<동네>.json 으로 매일 (키 들어오면)
-class Job {
-  final String title, company, pay, until, place, url;
-  const Job(this.title, this.company, this.pay, this.until, this.place, this.url);
-}
-
-Future<List<Job>?> jobsOf(Complex c) async {
-  if (c.areaId.isEmpty) return null;
-  final j = await getJson('${storeBase}job_${c.areaId}.json');
-  if (j is! Map) return null;
-  return [
-    for (final x in (j['jobs'] as List? ?? const []))
-      if (x is Map) Job('${x['t'] ?? ''}', '${x['c'] ?? ''}', '${x['p'] ?? ''}', '${x['u'] ?? ''}', '${x['a'] ?? ''}', '${x['l'] ?? ''}')
-  ];
-}
-
 class Post {
   final String id, cid, cat, title, body, uid, name;
   final DateTime at;

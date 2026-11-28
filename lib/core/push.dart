@@ -1,7 +1,6 @@
 // 휴대폰 알림 받기 (본부 방만 고침) — 파이어베이스 메시징 「주제」 구독
 // 게시판 알림 고르기 (대표님 11-25): 게시판·범위마다 켜고 끄기. 처음엔 공지·소식만 켜짐.
 //   주제 이름: dn_b_<게시판키>_<분류>  (게시판키 = 단지 id 또는 a_<동네id>)
-//             dn_job_<동네id>          (일자리 마당 — 하루 한 번 모아서)
 //             dn_u_<회원id>            (내 글에 댓글)
 // 보내는 쪽은 서버(깃허브 「알림 보내기」)가 새 글을 보고 그 주제로 보낸다.
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -16,7 +15,6 @@ const kPushCats = ['news', 'share', 'free', 'rec', 'lost'];
 String _safe(String s) => s.replaceAll(RegExp(r'[^a-zA-Z0-9\-_.~%]'), '_');
 
 String boardTopic(String boardKey, String cat) => _safe('dn_b_${boardKey}_$cat');
-String jobTopic(String areaId) => _safe('dn_job_$areaId');
 String userTopic(String uid) => _safe('dn_u_$uid');
 
 // 기본값: 공지·소식만 켜짐, 내 글 댓글 켜짐
@@ -70,10 +68,6 @@ Future<void> syncPush(Complex c, [List<String> cats = kPushCats]) async {
         final t = boardTopic(k, cat);
         on ? await FirebaseMessaging.instance.subscribeToTopic(t) : await FirebaseMessaging.instance.unsubscribeFromTopic(t);
       }
-    }
-    if (c.areaId.isNotEmpty) {
-      final t = jobTopic(c.areaId);
-      await pushOn('job') ? await FirebaseMessaging.instance.subscribeToTopic(t) : await FirebaseMessaging.instance.unsubscribeFromTopic(t);
     }
     final u = me;
     if (u != null) {

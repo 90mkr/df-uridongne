@@ -27,7 +27,6 @@ class _BoardNotiPageState extends State<BoardNotiPage> {
   List<String> get _keys => [
         for (final s in ['complex', 'town'])
           for (final b in kBoards) '$s.${b.$1}',
-        'job',
         'mycomment',
       ];
 
@@ -40,7 +39,6 @@ class _BoardNotiPageState extends State<BoardNotiPage> {
 
   String _topic(String key) {
     final c = widget.c;
-    if (key == 'job') return jobTopic(c.areaId);
     if (key == 'mycomment') return userTopic(me?.uid ?? '');
     final p = key.split('.');
     return boardTopic(p[0] == 'town' ? 'a_${c.areaId}' : c.id, p[1]);
@@ -85,7 +83,6 @@ class _BoardNotiPageState extends State<BoardNotiPage> {
         if (!c.isHome) _group('우리 단지 · ${c.name}', [for (final b in kBoards) _sw('complex.${b.$1}', b.$3)]),
         if (c.areaId.isNotEmpty) _group('우리 동네 · $town', [for (final b in kBoards) _sw('town.${b.$1}', b.$3)]),
         _group('그 밖에', [
-          _sw('job', '일자리 마당 새 공고', '하루 한 번 모아서 「새 공고 ○건」'),
           _sw('mycomment', '내 글에 댓글이 달리면', me == null ? '로그인하면 받을 수 있어요' : ''),
         ]),
         const Text('휴대폰 설정에서 니즈콕 알림을 꺼 두면 여기서 켜도 오지 않아요.', style: T.tiny),

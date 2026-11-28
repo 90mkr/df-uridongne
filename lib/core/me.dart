@@ -59,7 +59,7 @@ class MeTab extends StatelessWidget {
                     _group([
                       _row('우리 단지', c?.name ?? '고르기', () => pickComplex(context)),
                       if (c != null) _row('홈 편집', '순서 · 보일 카드', () => openHomeEditFor(context, c)),
-                      if (c != null) _row('알림 설정', '게시판 · 일자리 · 댓글', () => Navigator.push(context, MaterialPageRoute(builder: (_) => BoardNotiPage(c: c)))),
+                      if (c != null) _row('알림 설정', '게시판 · 댓글', () => Navigator.push(context, MaterialPageRoute(builder: (_) => BoardNotiPage(c: c)))),
                       _row('사용 방법', '처음 안내 · 기능 설명', () => openGuide(context)),
                       _row('개인정보처리방침', '', () => openUrl('${kSiteUrl}policy/privacy.html', inApp: true)),
                       _row('이용약관', '', () => openUrl('${kSiteUrl}policy/terms.html', inApp: true)),
