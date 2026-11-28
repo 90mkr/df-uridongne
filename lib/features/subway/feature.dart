@@ -384,29 +384,37 @@ class _Page extends StatelessWidget {
                 const LineIcon('subway', size: 30),
                 const SizedBox(width: 8),
                 const Text('가까운 역 지하철', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: -0.6, color: Colors.white)),
-                const Spacer(),
-                // 노선도 (대표님 11-26)
-                Padding(
-                  padding: const EdgeInsets.only(right: kPad),
-                  child: Material(
-                    color: const Color(0x26FFFFFF),
-                    shape: const StadiumBorder(side: BorderSide(color: Color(0x99FFFFFF))),
-                    child: InkWell(
-                      customBorder: const StadiumBorder(),
-                      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => LinesPage(c: c))),
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                        child: Text('노선도', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Colors.white)),
-                      ),
+              ]),
+            ),
+            // 아래 줄: 안내 글 + 「노선도」 단추 (대표님 11-28: 위 오른쪽은 그림과 겹쳐 안 보임 → 그림 아래쪽, 살짝 색 넣어 또렷하게)
+            Positioned(
+              left: kPad,
+              right: kPad,
+              bottom: 12,
+              child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+                const Expanded(
+                  child: Text('시간표 기준이에요.\n실제 열차는 몇 분 늦어질 수 있어요.', maxLines: 2, style: TextStyle(fontSize: 12, height: 1.35, color: Color(0xF2FFFFFF))),
+                ),
+                const SizedBox(width: 10),
+                Material(
+                  color: const Color(0xF5FFFFFF),
+                  shape: const StadiumBorder(),
+                  elevation: 3,
+                  shadowColor: const Color(0x662A1C7A),
+                  child: InkWell(
+                    customBorder: const StadiumBorder(),
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => LinesPage(c: c))),
+                    child: const Padding(
+                      padding: EdgeInsets.fromLTRB(12, 8, 16, 8),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(Icons.route_rounded, size: 17, color: Color(0xFF5B45D0)),
+                        SizedBox(width: 5),
+                        Text('노선도 보기', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: -0.3, color: Color(0xFF4A35C2))),
+                      ]),
                     ),
                   ),
                 ),
               ]),
-            ),
-            Positioned(
-              left: kPad,
-              bottom: 14,
-              child: const Text('시간표 기준이에요. 실제 열차는 몇 분 늦어질 수 있어요.', style: TextStyle(fontSize: 12, color: Color(0xE6FFFFFF))),
             ),
           ]),
         ),
