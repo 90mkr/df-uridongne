@@ -94,7 +94,7 @@ class _ShopListPageState extends State<ShopListPage> {
       if (s.sub.isNotEmpty) m[s.sub] = (m[s.sub] ?? 0) + 1;
     }
     final e = m.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
-    return e.length < 2 ? const [] : e.take(8).toList();
+    return e.length < 2 ? const [] : e.take(20).toList(); // 아랫줄 한 줄을 다 쓰니 20개까지
   }
 
   // 언제나 지도로 먼저 열고, 목록은 원할 때만 (대표님 11-23)
@@ -185,11 +185,12 @@ class _ShopListPageState extends State<ShopListPage> {
         ),
       );
 
+  // 두 줄 (대표님 11-28): 윗줄 정렬·영업 중, 아랫줄 과·종류 고르기 (옆으로 밀어서)
   Widget _bar(int n, bool wide) {
     final ss = subs;
-    return SizedBox(
-      height: 46,
-      child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.fromLTRB(16, 4, 16, 8), children: [
+    final top = SizedBox(
+      height: 42,
+      child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.fromLTRB(16, 4, 16, 4), children: [
         _chip('이웃 추천 순', sort == Sort.rec, () => setState(() {
               sort = Sort.rec;
               _changed();
@@ -202,8 +203,14 @@ class _ShopListPageState extends State<ShopListPage> {
               openOnly = !openOnly;
               _changed();
             }), dot: true),
-        if (ss.isNotEmpty) ...[
-          Container(width: 1, margin: const EdgeInsets.fromLTRB(4, 8, 10, 8), color: kLine),
+      ]),
+    );
+    if (ss.isEmpty) return Padding(padding: const EdgeInsets.only(bottom: 4), child: top);
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      top,
+      SizedBox(
+        height: 42,
+        child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.fromLTRB(16, 2, 16, 8), children: [
           _chip('전체', sub.isEmpty, () => setState(() {
                 sub = '';
                 _changed();
@@ -213,9 +220,9 @@ class _ShopListPageState extends State<ShopListPage> {
                   sub = sub == e.key ? '' : e.key;
                   _changed();
                 }), light: true),
-        ],
-      ]),
-    );
+        ]),
+      ),
+    ]);
   }
 
   Widget _chip(String t, bool on, VoidCallback f, {bool dot = false, bool light = false}) {
