@@ -200,32 +200,43 @@ class _ShellState extends State<Shell> {
 // 첫 화면 (대표님 11-24 우동콕): 아이콘과 같은 파랑 바탕 + 웃는 집 그림, 위에 앱 이름
 class _Splash extends StatelessWidget {
   const _Splash();
+  // 첫 화면 (대표님 11-28 새 배경): 「콕」 로고 + 생활 기능 고리 그림을 아래에, 위 빈 파랑에 앱 이름
+  static const bg = Color(0xFF0123BA);
   @override
   Widget build(BuildContext context) => Scaffold(
-        backgroundColor: const Color(0xFF015DFD),
-        body: SafeArea(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.center, children: [
-            const Spacer(flex: 3),
-            const Text('우리 동네, 필요한 것만 콕', style: TextStyle(fontSize: 15, color: Color(0xD9FFFFFF), fontWeight: FontWeight.w500, letterSpacing: -0.3)),
-            const SizedBox(height: 8),
-            Text.rich(
-              const TextSpan(children: [
-                TextSpan(text: '우동', style: TextStyle(fontWeight: FontWeight.w300)),
-                TextSpan(text: '콕', style: TextStyle(fontWeight: FontWeight.w800)),
-              ]),
-              style: const TextStyle(fontSize: 46, color: Colors.white, letterSpacing: -1.5, height: 1.1),
+        backgroundColor: bg,
+        body: LayoutBuilder(builder: (ctx, box) {
+          // 그림은 잘리지 않게: 가로를 꽉 채우되 화면 높이를 넘으면 높이에 맞춤, 아래쪽에 붙임
+          const ratio = 1672 / 941;
+          final w = box.maxWidth * ratio <= box.maxHeight ? box.maxWidth : box.maxHeight / ratio;
+          return Stack(children: [
+            Positioned(
+              left: (box.maxWidth - w) / 2,
+              bottom: 0,
+              width: w,
+              height: w * ratio,
+              child: artImage('assets/art/splash_bg.png', width: w, height: w * ratio, fit: BoxFit.fill),
             ),
-            const SizedBox(height: 24),
-            const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xB3FFFFFF))),
-            const Spacer(flex: 2),
-            // 넓은 화면(폴드)에서도 한가운데 · 높이에 맞춰 크기 제한 (대표님 11-24: 폴드7에서 왼쪽으로 쏠림)
-            LayoutBuilder(builder: (ctx, box) {
-              final w = [box.maxWidth * 0.78, MediaQuery.of(ctx).size.height * 0.42, 420.0].reduce((a, b) => a < b ? a : b);
-              return SizedBox(width: box.maxWidth, child: Center(child: artImage('assets/art/splash_home.png', width: w, height: w, fit: BoxFit.contain)));
-            }),
-            const Spacer(flex: 2),
-          ]),
-        ),
+            Positioned(
+              left: 0,
+              right: 0,
+              top: box.maxHeight * 0.17,
+              child: const Column(children: [
+                Text('우리 동네, 필요한 것만 콕', style: TextStyle(fontSize: 15, color: Color(0xD9FFFFFF), fontWeight: FontWeight.w500, letterSpacing: -0.3)),
+                SizedBox(height: 8),
+                Text.rich(
+                  TextSpan(children: [
+                    TextSpan(text: '우동', style: TextStyle(fontWeight: FontWeight.w300)),
+                    TextSpan(text: '콕', style: TextStyle(fontWeight: FontWeight.w800)),
+                  ]),
+                  style: TextStyle(fontSize: 46, color: Colors.white, letterSpacing: -1.5, height: 1.1),
+                ),
+                SizedBox(height: 24),
+                SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xB3FFFFFF))),
+              ]),
+            ),
+          ]);
+        }),
       );
 }
 
