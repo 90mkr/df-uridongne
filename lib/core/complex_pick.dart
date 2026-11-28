@@ -26,6 +26,10 @@ class _ComplexPickPageState extends State<ComplexPickPage> {
   LatLng? from;
   LatLng? liveAt; // 준비된 동네가 아닌 곳: 이 자리 둘레를 카카오에서 바로 찾음
   bool liveSearch = false; // 전국 이름 찾기 결과를 보여 주는 중
+  bool house = false; // 「주택·빌라」 칸 (대표님 11-28: 단지가 아닌 분은 처음부터 고르게)
+  final hq = TextEditingController();
+  List<Map> hres = [];
+  bool hbusy = false;
 
   @override
   void initState() {
@@ -116,17 +120,40 @@ class _ComplexPickPageState extends State<ComplexPickPage> {
   Widget build(BuildContext context) {
     final list = shown;
     return DetailPage(
-      title: '우리 단지 고르기',
+      title: '사는 곳 고르기',
       body: Column(children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(kPad, 14, kPad, 6),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             if (widget.first) ...[
-              const MixTitle('사는 단지를', '골라 주세요', size: 19),
+              const MixTitle('사는 곳을', '골라 주세요', size: 19),
               const SizedBox(height: 4),
-              const Text('단지 기준으로 쓰레기 배출일·버스·약국·동네 가게를 모아 보여 드려요', style: T.small),
+              const Text('사는 곳 기준으로 쓰레기 배출일·버스·약국·동네 가게를 모아 보여 드려요', style: T.small),
               const SizedBox(height: 14),
             ],
+            // 아파트 / 주택 고르기 (그누보드식 붙은 칸)
+            Container(
+              height: 42,
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: kLine)),
+              clipBehavior: Clip.antiAlias,
+              child: Row(children: [
+                for (final (i, t) in [(false, '아파트·오피스텔'), (true, '주택·빌라 (단지 아님)')].indexed) ...[
+                  if (i > 0) const VerticalDivider(width: 1, color: kLine),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => setState(() => house = t.$1),
+                      child: Container(
+                        color: house == t.$1 ? kBlue : Colors.transparent,
+                        alignment: Alignment.center,
+                        child: Text(t.$2, style: TextStyle(fontSize: 13.5, fontWeight: house == t.$1 ? FontWeight.w800 : FontWeight.w500, color: house == t.$1 ? Colors.white : kInk)),
+                      ),
+                    ),
+                  ),
+                ],
+              ]),
+            ),
+            if (house) _housePanel() else ...[
             TextField(controller: q, onChanged: (_) => setState(() => liveSearch = false), onSubmitted: (_) => _searchAll(), textInputAction: TextInputAction.search, style: const TextStyle(fontSize: 14.5), decoration: inputDeco('단지 이름으로 찾기 (전국)')),
             const SizedBox(height: 10),
             Row(children: [
@@ -155,10 +182,13 @@ class _ComplexPickPageState extends State<ComplexPickPage> {
                 ),
               ),
             ]),
+            ],
           ]),
         ),
         Expanded(
-          child: loading
+          child: house
+              ? _houseList()
+              : loading
               ? const Center(child: CircularProgressIndicator(strokeWidth: 1.6, color: kBlue))
               : ListView.separated(
                   padding: const EdgeInsets.fromLTRB(kPad, 4, kPad, 30),
@@ -205,6 +235,78 @@ class _ComplexPickPageState extends State<ComplexPickPage> {
         ),
       ]),
     );
+  }
+
+  // ---- 주택·빌라 ----
+  Widget _housePanel() => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Btn('지금 있는 곳을 우리 집으로', icon: 'loc', primary: true, onTap: _house),
+        const SizedBox(height: 10),
+        TextField(
+          controller: hq,
+          onSubmitted: (_) => _houseSearch(),
+          textInputAction: TextInputAction.search,
+          style: const TextStyle(fontSize: 14.5),
+          decoration: inputDeco('또는 주소로 찾기 (예: 송도동 12-3, ○○빌라)').copyWith(
+            suffixIcon: IconButton(onPressed: _houseSearch, icon: const Icon(Icons.search_rounded, color: kBlue)),
+          ),
+        ),
+      ]);
+
+  Widget _houseList() {
+    if (hbusy) return const Center(child: CircularProgressIndicator(strokeWidth: 1.6, color: kBlue));
+    if (hres.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.fromLTRB(kPad, 24, kPad, 0),
+        child: Text('집에 있으면 「지금 있는 곳을 우리 집으로」를 누르시면 돼요.\n밖에 있으면 주소(동·번지)나 건물 이름으로 찾아 주세요.\n\n주택으로 정하면 단지 게시판 대신 동네 게시판이 보이고, 나머지 생활 정보는 똑같이 쓸 수 있어요.', style: TextStyle(fontSize: 13, color: kSub, height: 1.55)),
+      );
+    }
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(kPad, 4, kPad, 30),
+      itemCount: hres.length,
+      separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFEFF1F4)),
+      itemBuilder: (_, i) {
+        final d = hres[i];
+        final name = '${d['place_name'] ?? ''}'.trim();
+        final road = d['road_address'] is Map ? '${(d['road_address'] as Map)['address_name'] ?? ''}' : '${d['road_address_name'] ?? ''}';
+        final addr = '${d['address_name'] ?? ''}';
+        return InkWell(
+          onTap: () {
+            final y = double.tryParse('${d['y']}'), x = double.tryParse('${d['x']}');
+            if (y == null || x == null) return;
+            final p = LatLng(y, x);
+            _done(Complex(id: 'home_${DateTime.now().millisecondsSinceEpoch}', name: '우리 집', addr: road.isNotEmpty ? road : addr, areaId: areaIdAt(p), lat: y, lng: x));
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Row(children: [
+              const LineIcon('home', size: 24),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(name.isNotEmpty ? name : (road.isNotEmpty ? road : addr), style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600, height: 1.3)),
+                  if (name.isNotEmpty || road.isNotEmpty) Text(name.isNotEmpty ? (road.isNotEmpty ? road : addr) : addr, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.small),
+                ]),
+              ),
+            ]),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _houseSearch() async {
+    final t = hq.text.trim();
+    if (t.isEmpty) return;
+    FocusScope.of(context).unfocus();
+    setState(() => hbusy = true);
+    final r = <Map>[...await kkAll('address', {'query': t}, pages: 1)];
+    if (r.length < 5) r.addAll(await kkAll('keyword', {'query': t, if (from != null) 'x': '${from!.longitude}', if (from != null) 'y': '${from!.latitude}'}, pages: 1));
+    if (!mounted) return;
+    setState(() {
+      hres = r;
+      hbusy = false;
+    });
+    if (r.isEmpty) toast(context, '「$t」 주소를 찾지 못했어요. 동 이름과 번지로 찾아 보세요');
   }
 
   Future<void> _pickArea() async {

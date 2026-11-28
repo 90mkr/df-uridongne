@@ -52,7 +52,7 @@ class ToolsTab extends StatelessWidget {
         ),
         ListView(padding: EdgeInsets.zero, children: [
         SizedBox(
-          height: 120 + top,
+          height: 94 + top, // 제목과 칸 사이 반으로 (대표님 11-28)
           child: Padding(
             padding: EdgeInsets.only(top: top),
             child: Stack(children: [
