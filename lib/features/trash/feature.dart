@@ -22,7 +22,7 @@ class TrashFeature extends Feature {
   @override
   int get order => 10;
   @override
-  String get version => '0.2.0';
+  String get version => '0.2.1';
   @override
   bool get ready => true;
   @override

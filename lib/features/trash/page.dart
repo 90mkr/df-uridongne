@@ -1,4 +1,6 @@
 // 쓰레기·분리수거 상세 화면
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../core/data.dart';
@@ -174,12 +176,16 @@ class _TrashPageState extends State<TrashPage> {
       child: Row(children: [
         const TrashIcon('pin', size: 16, line: kBlue, fill: Color(0xFFD6E4FF)),
         const SizedBox(width: 4),
+        // 구역 이름이 길면 「…」 대신 옆으로 밀어 끝까지 (대표님 11-28)
         Expanded(
-          child: Text(
-            [g == null ? c.name : '${g.sido} ${g.gu}${i.dong.isNotEmpty ? ' · ${i.dong}' : ''}', if (z != null) z.label].join('  ·  '),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 12, color: kSub),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Text(
+              [g == null ? c.name : '${g.sido} ${g.gu}${i.dong.isNotEmpty ? ' · ${i.dong}' : ''}', if (z != null) z.label].join('  ·  '),
+              maxLines: 1,
+              softWrap: false,
+              style: const TextStyle(fontSize: 12, color: kSub),
+            ),
           ),
         ),
         if ((g?.zones.length ?? 0) > 1)
@@ -225,7 +231,25 @@ class _TrashPageState extends State<TrashPage> {
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: kLine), boxShadow: kShadow),
       clipBehavior: Clip.antiAlias,
       child: LayoutBuilder(builder: (ctx, box) {
-        final labelW = (box.maxWidth * 0.31).clamp(104.0, 170.0);
+        // 이름 밑 시간 글(「저녁 6시 ~ 새벽 0시」)이 「…」로 잘리지 않게 왼쪽 칸을 글 길이만큼 넓힘 (대표님 11-28)
+        // 요일 칸은 30 아래로 줄이지 않고, 그래도 모자라면 시간 글만 옆으로 밀어 봄
+        var timeW = 0.0;
+        for (final k in kKinds) {
+          final t = rangeText(i.hoursOf(k));
+          if (t.isEmpty) continue;
+          final tp = TextPainter(
+            text: TextSpan(text: t, style: const TextStyle(fontFamily: 'Pretendard', fontSize: 10.5)),
+            textDirection: TextDirection.ltr,
+            textScaler: MediaQuery.textScalerOf(ctx),
+            maxLines: 1,
+          )..layout();
+          if (tp.width > timeW) timeW = tp.width;
+          tp.dispose();
+        }
+        final wantW = timeW == 0 ? 0.0 : 12 + 26 + 7 + timeW + 8;
+        final baseW = (box.maxWidth * 0.31).clamp(104.0, 170.0);
+        final maxW = math.max(baseW, box.maxWidth - 8 - 30 * 7);
+        final labelW = math.max(baseW, wantW).clamp(baseW, maxW);
         final colW = (box.maxWidth - labelW - 8) / 7;
         return SizedBox(
           height: headH + rowH * 3 + 8,
@@ -287,7 +311,10 @@ class _TrashPageState extends State<TrashPage> {
                           child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
                             Text(kKindName[kKinds[n]]!, maxLines: 1, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, letterSpacing: -0.3)),
                             if (rangeText(i.hoursOf(kKinds[n])).isNotEmpty)
-                              Text(rangeText(i.hoursOf(kKinds[n])), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10.5, color: kSub)),
+                              SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: Text(rangeText(i.hoursOf(kKinds[n])), maxLines: 1, softWrap: false, style: const TextStyle(fontSize: 10.5, color: kSub)),
+                              ),
                           ]),
                         ),
                       ]),
