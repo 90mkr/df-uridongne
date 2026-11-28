@@ -32,8 +32,13 @@ class SubLine {
 
 // 확대 단계: 1km 가 화면 몇 점인가 (보통 12km 보기는 약 34)
 const _midPx = 52.0; // 여기부터 환승 색 점 · 흐린 노선의 역
-const _farPx = 80.0; // 여기부터 이름 아래 작은 정보 줄
-const _maxPx = 330.0; // 대표님 11-28: 3배 더 키울 수 있게 — 대신 키울수록 이름·역 동그라미도 크게 (눈 안 좋은 분)
+const _farPx = 75.0; // 여기부터 이름 아래 작은 정보 줄
+const _maxPx = 220.0; // 끝까지 키우면 한 화면에 역 서너 개 · 이름 2.3배 (눈 안 좋은 분도 보이게, 대표님 11-28)
+
+// 지금 배율 — 가로 배율만 읽는다.
+// (예전엔 getMaxScaleOnAxis 를 썼는데 깊이 축까지 봐서, 손으로 키울 때와 자리를 맞춰 줄 때 값이 달랐음
+//  → 같은 크기로 봐도 글자·동그라미 크기가 두 가지로 나옴. 대표님 11-28 「2개가 따로 돌아가는 듯」)
+double _sx(Matrix4 m) => m.storage[0].abs();
 const _maxS = _maxPx / _World.perKm;
 const _fitS = 110.0 / _World.perKm; // 저절로 맞출 때(경로 보기)는 여기까지만
 
@@ -182,7 +187,7 @@ class _LinesPageState extends State<LinesPage> {
       if (!onMap) {
         // 노선도에서 보던 자리 → 지도
         if (w != null && b != null) {
-          final s = tc.value.getMaxScaleOnAxis();
+          final s = _sx(tc.value);
           final c = w.ll(MatrixUtils.transformPoint(Matrix4.inverted(tc.value), Offset(b.width / 2, b.height / 2)));
           startC = c;
           startZ = _zoomOf(s * _World.perKm, c.latitude).clamp(8.0, 16.0);
@@ -271,7 +276,7 @@ class _LinesPageState extends State<LinesPage> {
   void _setView(Offset center, double s, {double fy = 0.42}) {
     final b = box;
     if (b == null) return;
-    tc.value = Matrix4.translationValues(b.width / 2 - center.dx * s, b.height * fy - center.dy * s, 0)..multiply(Matrix4.diagonal3Values(s, s, 1));
+    tc.value = Matrix4.translationValues(b.width / 2 - center.dx * s, b.height * fy - center.dy * s, 0)..multiply(Matrix4.diagonal3Values(s, s, s));
   }
 
   // 흰 바탕 노선도: 처음 보는 자리·크기 (km = 화면 가로에 들어올 거리)
@@ -320,7 +325,7 @@ class _LinesPageState extends State<LinesPage> {
       _mapGo(p, 15);
     } else {
       final w = world;
-      if (w != null) _setView(w.px(p), math.max(tc.value.getMaxScaleOnAxis(), 0.9), fy: 0.5);
+      if (w != null) _setView(w.px(p), math.max(_sx(tc.value), 0.9), fy: 0.5);
     }
   }
 
@@ -444,7 +449,7 @@ class _LinesPageState extends State<LinesPage> {
       final l = (byName[n] ?? const <SubLine>[]).where(_strong).firstOrNull ?? (byName[n] ?? const <SubLine>[]).firstOrNull;
       if (l != null) return _tapStation(n, l);
     }
-    final r = 28 / tc.value.getMaxScaleOnAxis();
+    final r = 28 / _sx(tc.value);
     (String, SubLine)? best;
     var bd = r;
     var bestStrong = false;
@@ -673,20 +678,24 @@ class _Painter extends CustomPainter {
   bool _strong(SubLine l) => strongSet.contains(l.name);
 
   // 많이 키웠을 때 이름 아래 작은 줄: 「○○선 환승 · 단지에서 1.2km」 + (시간표가 있는 동네 역) 「○○행 3분 · ○○행 5분」
-  String _subText(String n, SubLine l, LatLng ll, List<SubLine> others) {
-    final km = meters(homeLL, ll) / 1000;
-    final a = [
-      if (others.isNotEmpty) '${others.map((x) => x.name).join('·')} 환승',
-      km < 1 ? '$homeWord ${(km * 1000).round()}m' : '$homeWord ${km.toStringAsFixed(1)}km',
-    ].join(' · ');
+  // 많이 키웠을 때 이름 아래 작은 줄 — 방면마다 한 줄씩 (대표님 11-28: 길면 줄을 바꿔 이름까지 3줄)
+  //   「검단호수공원행 8분」 / 「송도달빛축제공원행 7분」 · 시간표가 없는 역은 「○○선 환승」 한 줄
+  String _subText(String n, SubLine l, List<SubLine> others) {
     final st = local.where((x) => x.name == n && x.hasTable && (x.line == l.name || x.line.contains(l.name) || l.name.contains(x.line))).firstOrNull;
-    if (st == null) return a;
     final now = DateTime.now();
-    final b = [
-      for (final ud in st.dirs)
-        for (final d in st.next(ud, now, n: 1)) '${st.dest(ud, now)} ${d.minsText}',
-    ].join(' · ');
-    return b.isEmpty ? a : '$a\n$b';
+    final rows = [
+      if (st != null)
+        for (final ud in st.dirs)
+          for (final d in st.next(ud, now, n: 1)) '${st.dest(ud, now)} ${d.minsText}',
+    ];
+    if (rows.length < 2 && others.isNotEmpty) rows.insert(0, '${others.map((x) => x.name).join('·')} 환승');
+    return rows.join('\n');
+  }
+
+  // 이름 옆 거리 「여기서 2.2km」 — 파랑으로 구분
+  String _distText(LatLng ll) {
+    final km = meters(homeLL, ll) / 1000;
+    return km < 1 ? '$homeWord ${(km * 1000).round()}m' : '$homeWord ${km.toStringAsFixed(1)}km';
   }
 
   @override
@@ -698,7 +707,7 @@ class _Painter extends CustomPainter {
   }
 
   void _paint(Canvas canvas) {
-    final s = tc.value.getMaxScaleOnAxis();
+    final s = _sx(tc.value);
     // 지금 보이는 곳 (가장자리 여유)
     final inv = Matrix4.inverted(tc.value);
     final v = view();
@@ -709,7 +718,7 @@ class _Painter extends CustomPainter {
     final bold = [for (final l in lines) if (_strong(l)) l];
     // 키울수록 글자·점·선도 같이 커짐 (지도 카드처럼) — 1km 가 30점일 때 기준, 최대 2.2배
     final px = s * _World.perKm; // 1km 가 화면 몇 점
-    final g = math.pow(px / 30, 0.42).clamp(1.0, 2.7).toDouble(); // 대표님 11-26: 너무 크지도 작지도 않게 → 11-28: 키우면 이름도 눈에 띄게 커지게 (끝까지 키우면 글자 2.7배)
+    final g = math.pow(px / 34, 0.45).clamp(0.85, 2.3).toDouble(); // 대표님 11-26: 너무 크지도 작지도 않게 → 11-28: 키우면 이름도 눈에 띄게 커지게 (보통 보기 1배 · 끝까지 키우면 2.3배)
     final d = math.pow(g, 1.25).toDouble(); // 역 동그라미는 글자보다 조금 더 빨리 커짐 (끝까지 키우면 약 3.5배)
     final lw = (pick != null ? 5.0 : 4.0) * math.min(g, 2.0) / s;
 
@@ -905,8 +914,8 @@ class _Painter extends CustomPainter {
     }
     labels.sort((a, b) => a.$3.compareTo(b.$3));
     for (final (n, o, pri) in labels) {
-      if (pri == 2 && px < 22) continue;
-      if (pri == 1 && px < 9) continue;
+      if (pri == 2 && px < 14) continue;
+      if (pri == 1 && px < 6) continue;
       final sel = pri == 0;
       double fs(double b) => ((b * g) * 2).round() / 2; // 0.5 단위 (글자 그림 다시 쓰기)
       final tp = _text(n,
@@ -916,10 +925,14 @@ class _Painter extends CustomPainter {
       // 키우면 더 보이는 것: 갈아타는 노선 색 점(이름 옆) · 작은 정보 줄(이름 아래)
       final inf = info[n];
       final others = (inf == null || px < _midPx) ? const <SubLine>[] : [for (final x in byName[n] ?? const <SubLine>[]) if (x != inf.$1) x];
-      final sub = (inf == null || px < _farPx) ? null : _text(_subText(n, inf.$1, inf.$2, others), size: fs(9.5), w: FontWeight.w500, color: sel ? Colors.white : kSub);
-      final dotR = 3.0 * g, dotGap = 2.5 * g, dotLead = 4.0 * g;
+      final far = inf != null && px >= _farPx;
+      final subT = far ? _subText(n, inf!.$1, others) : '';
+      final sub = subT.isEmpty ? null : _text(subT, size: fs(9.5), w: FontWeight.w500, color: sel ? Colors.white : kSub);
+      final dist = far ? _text(_distText(inf!.$2), size: fs(9.5), w: FontWeight.w700, color: sel ? Colors.white : kBlue) : null;
+      final dotR = 3.0 * g, dotGap = 2.5 * g, dotLead = 4.0 * g, distLead = 6.0 * g;
       final dotsW = others.isEmpty ? 0.0 : dotLead + others.length * (dotR * 2 + dotGap) - dotGap;
-      final w = math.max(tp.width + dotsW, sub?.width ?? 0.0) / s, h = (tp.height + (sub == null ? 0 : sub.height + 2)) / s;
+      final line1 = tp.width + dotsW + (dist == null ? 0.0 : distLead + dist.width);
+      final w = math.max(line1, sub?.width ?? 0.0) / s, h = (tp.height + (sub == null ? 0 : sub.height + 2)) / s;
       // 오른쪽 → 왼쪽 → 위 → 아래 중 빈 곳
       final gap = (sel ? 8 * d + 5 : (pri == 1 ? 7.5 * d + 4 : (pri == 3 ? 3.2 * d + 4 : 4.2 * d + 5))) / s; // 동그라미가 커진 만큼 이름도 떨어뜨림
       final cands = [
@@ -954,6 +967,7 @@ class _Painter extends CustomPainter {
       canvas.scale(1 / s);
       tp.paint(canvas, Offset.zero);
       if (sub != null) sub.paint(canvas, Offset(0, tp.height + 2));
+      if (dist != null) dist.paint(canvas, Offset(tp.width + dotsW + distLead, tp.height - dist.height - 1.2 * g));
       for (var i = 0; i < others.length; i++) {
         final c = Offset(tp.width + dotLead + dotR + i * (dotR * 2 + dotGap), tp.height / 2);
         canvas.drawCircle(c, dotR, Paint()..color = others[i].color);
