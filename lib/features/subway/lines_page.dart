@@ -704,6 +704,23 @@ class _LinesPageState extends State<LinesPage> {
             c: widget.c,
             away: _away,
             onClose: () => setState(() => tapped = null),
+            // 역을 누른 자리에서 바로 출발·도착으로 (대표님 11-28: 노선도에서 출발지·도착지를 고르면 경로)
+            onFrom: () {
+              final n = t.$1;
+              setState(() {
+                routeMode = true;
+                tapped = null;
+              });
+              _setRoute(from: n, to: rTo == n ? null : rTo);
+            },
+            onTo: () {
+              final n = t.$1;
+              setState(() {
+                routeMode = true;
+                tapped = null;
+              });
+              _setRoute(from: rFrom == n ? null : rFrom, to: n);
+            },
           ),
         ],
       ]),
@@ -1106,7 +1123,8 @@ class _StationCard extends StatelessWidget {
   final Complex c;
   final VoidCallback onClose;
   final bool away; // 다른 권역을 보는 중 (거리 숨김)
-  const _StationCard({required this.name, required this.line, required this.transfer, required this.local, required this.c, required this.onClose, this.away = false});
+  final VoidCallback? onFrom, onTo;
+  const _StationCard({required this.name, required this.line, required this.transfer, required this.local, required this.c, required this.onClose, this.away = false, this.onFrom, this.onTo});
 
   @override
   Widget build(BuildContext context) {
@@ -1170,10 +1188,22 @@ class _StationCard extends StatelessWidget {
         const SizedBox(height: 9),
         Padding(
           padding: const EdgeInsets.only(right: 10),
-          child: Row(children: [
-            Expanded(child: _Btn(label: '지도 앱에서 실시간', onTap: () => _openStation(name, line.name, pos))),
-            const SizedBox(width: 8),
-            Expanded(child: _Btn(label: '여기까지 길찾기', strong: true, onTap: () => _route(c, '$name역', pos))),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            if (onFrom != null && onTo != null) ...[
+              Row(children: [
+                Expanded(child: _Btn(label: '여기서 출발', onTap: onFrom!)),
+                const SizedBox(width: 10),
+                Expanded(child: _Btn(label: '여기로 도착', strong: true, onTap: onTo!)),
+              ]),
+              const SizedBox(height: 8),
+            ],
+            Row(children: [
+              Expanded(child: _Btn(label: '실시간 도착 (지도 앱)', onTap: () => _openStation(name, line.name, pos))),
+              if (!away) ...[
+                const SizedBox(width: 10),
+                Expanded(child: _Btn(label: c.isHere ? '여기서 이 역까지' : '단지에서 이 역까지', onTap: () => _route(c, '$name역', pos))),
+              ],
+            ]),
           ]),
         ),
       ]),
@@ -1282,7 +1312,14 @@ class _RoutePanel extends StatelessWidget {
           const Padding(padding: EdgeInsets.only(top: 10), child: Text('두 역을 잇는 길을 찾지 못했어요 (다른 권역이거나 자료가 없어요)', style: T.small)),
         if (r != null) ...[
           const SizedBox(height: 10),
-          Text(r.summary, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: kInk, letterSpacing: -0.3, height: 1.35)),
+          Text.rich(
+            TextSpan(children: [
+              TextSpan(text: '약 ${r.minutes}분', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: kBlue, letterSpacing: -0.5)),
+              TextSpan(text: '   ${r.transfers == 0 ? '갈아타지 않음' : '환승 ${r.transfers}번'} · ${r.stops}정거장', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: kSub)),
+            ]),
+          ),
+          const SizedBox(height: 4),
+          Text(r.summary, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: kInk, letterSpacing: -0.3, height: 1.35)),
           const SizedBox(height: 6),
           for (final leg in r.legs)
             Padding(
@@ -1298,14 +1335,14 @@ class _RoutePanel extends StatelessWidget {
           Row(children: [
             Expanded(child: _Btn(label: '네이버 지도', onTap: () => _openRouteApp('naver', r))),
             const SizedBox(width: 10),
-            Expanded(flex: 2, child: _Btn(label: '자세히 보기 (카카오맵)', strong: true, onTap: () => _openRouteApp('kakao', r))),
+            Expanded(flex: 2, child: _Btn(label: '실시간·자세히 (카카오맵)', strong: true, onTap: () => _openRouteApp('kakao', r))),
           ]),
         ] else if (from == null)
           const Padding(padding: EdgeInsets.only(top: 10), child: Text('노선도에서 출발역을 누르고, 이어서 도착역을 누르세요.', style: T.small)),
         if (from != null && to == null)
           const Padding(padding: EdgeInsets.only(top: 10), child: Text('이제 도착역을 누르세요.', style: T.small)),
         const SizedBox(height: 6),
-        const Text('대략적인 경로입니다. 실제 소요 시간은 지도 앱에서 확인하세요.', style: T.tiny),
+        const Text('시간은 거리로 어림한 값이에요. 실시간 도착·정확한 시간은 지도 앱에서 확인하세요.', style: T.tiny),
       ]),
     );
   }

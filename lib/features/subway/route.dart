@@ -3,6 +3,7 @@
 // 자료: 노선마다 역 위치(좌표)·선 모양(paths) — 선 위 꼭짓점 중 역 자리끼리 이어 역 사이 연결을 만든다
 import 'package:latlong2/latlong.dart';
 
+import '../../core/data.dart' show meters;
 import 'lines_page.dart' show SubLine;
 
 class RouteLeg {
@@ -12,6 +13,17 @@ class RouteLeg {
   int get count => stops.length - 1; // 정거장 수
   String get from => stops.first.$1;
   String get to => stops.last.$1;
+
+  /// 이 구간 어림 시간(분): 역마다 서고 떠나는 데 0.9분 + 1km 에 0.95분 (인천1호선·서울 2호선 실제 시간과 맞춰 봄)
+  /// 급행 성격 노선(GTX·공항철도·신분당선)은 더 빠르게
+  double get minutes {
+    final fast = line.name.contains('GTX') ? 0.5 : (line.name.contains('공항철도') || line.name.contains('신분당') ? 0.75 : 0.95);
+    var m = 0.0;
+    for (var i = 0; i + 1 < stops.length; i++) {
+      m += 0.9 + meters(stops[i].$2, stops[i + 1].$2) / 1000 * fast;
+    }
+    return m;
+  }
 }
 
 class SubRoute {
@@ -23,6 +35,9 @@ class SubRoute {
   String get to => legs.last.to;
   LatLng get fromPos => legs.first.stops.first.$2;
   LatLng get toPos => legs.last.stops.last.$2;
+
+  /// 어림 소요 시간(분) — 갈아탈 때마다 5분(걷기+기다리기). 시간표가 아니라 거리로 어림한 값
+  int get minutes => (legs.fold(0.0, (a, l) => a + l.minutes) + transfers * 5).round();
 
   /// 「인천1호선 → 부평 환승 1호선 → 신도림 환승 2호선 → 강남, 모두 n정거장」
   String get summary {
