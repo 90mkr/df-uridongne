@@ -254,7 +254,8 @@ jobs:
           EV_KEY: ${{ secrets.EV_KEY }}
         run: |
           if [ ! -f android/app/upload.jks ]; then echo "::error::서명 키가 없어 출시용 묶음을 만들 수 없습니다"; exit 1; fi
-          flutter build appbundle --release \
+          # 버전 코드는 제작 번호로 — 올릴 때마다 저절로 커져서 플레이가 늘 받아 줌 (대표님 11-28)
+          flutter build appbundle --release --build-number=${{ github.run_number }} \
             --dart-define=DATA_GO_KR_KEY="$DATA_GO_KR_KEY" --dart-define=OPINET_KEY="$OPINET_KEY" \
             --dart-define=AIRKOREA_KEY="$AIRKOREA_KEY" --dart-define=EV_KEY="$EV_KEY"
           cp build/app/outputs/bundle/release/app-release.aab udongkok.aab
@@ -269,7 +270,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           V=$(grep -m1 '^version:' pubspec.yaml | awk '{print $2}')
-          NOTE="플레이 콘솔에 올리는 출시용 파일 · 버전 $V · 만든 시각 $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M')"
+          NOTE="플레이 콘솔에 올리는 출시용 파일 · 버전 ${V%%+*} (코드 ${{ github.run_number }}) · 만든 시각 $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M')"
           if gh release view store >/dev/null 2>&1; then
             gh release upload store udongkok.aab --clobber
             gh release edit store --notes "$NOTE" --title "우동콕 출시용 (AAB)" || true
