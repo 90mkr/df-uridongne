@@ -137,14 +137,15 @@ class _BaseSwitchState extends State<BaseSwitch> {
                       border: on && !cp ? Border.all(color: const Color(0xFFC9D8FB)) : null,
                       boxShadow: on && !cp ? const [BoxShadow(color: Color(0x141C3A6E), blurRadius: 8)] : null,
                     ),
-                    padding: EdgeInsets.symmetric(horizontal: cp ? 4 : 12),
+                    padding: EdgeInsets.symmetric(horizontal: cp ? 3 : 12),
                     child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                      Icon(ic, size: cp ? 11 : 15, color: on ? kBlue : Colors.white),
+                      Icon(ic, size: cp ? 10 : 15, color: on ? kBlue : Colors.white),
                       SizedBox(width: cp ? 2 : 5),
                       Flexible(
                         child: Text(t,
                             maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            softWrap: false,
+                            overflow: cp ? TextOverflow.visible : TextOverflow.ellipsis, // 머리 단추는 「…」 없이 고정 (대표님 11-28)
                             style: TextStyle(fontSize: cp ? 10 : 13, fontWeight: on ? FontWeight.w800 : FontWeight.w600, color: on ? (cp ? kBlue : kInk) : Colors.white, letterSpacing: -0.3)),
                       ),
                     ]),
@@ -153,7 +154,7 @@ class _BaseSwitchState extends State<BaseSwitch> {
               );
           final row = Row(children: [
               seg(!here, Icons.home_rounded, cp ? '집' : '$homeName 기준', () => setHereChoice(false)),
-              seg(here, busy ? Icons.more_horiz_rounded : Icons.my_location_rounded, cp ? '현재 위치' : (here && town.isNotEmpty ? '지금 여기 · $town' : '지금 여기 기준'), () async {
+              seg(here, busy ? Icons.more_horiz_rounded : Icons.my_location_rounded, cp ? '현위치' : (here && town.isNotEmpty ? '지금 여기 · $town' : '지금 여기 기준'), () async {
                 setState(() => busy = true);
                 final ok = await switchToHere();
                 if (!mounted) return;
@@ -162,7 +163,7 @@ class _BaseSwitchState extends State<BaseSwitch> {
               }),
             ]);
           return Container(
-            width: cp ? 104 : null,
+            width: cp ? 112 : null,
             padding: EdgeInsets.all(cp ? 2 : 3),
             decoration: BoxDecoration(color: kBlue, borderRadius: BorderRadius.circular(21)), // 파란 바탕 + 흰 글씨, 머리 단추는 3분의 2 크기 (대표님 11-28)
             child: row,
