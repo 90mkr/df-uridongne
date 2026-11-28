@@ -28,6 +28,7 @@ class Shell extends StatefulWidget {
 
 class _ShellState extends State<Shell> {
   int tab = 0;
+  int _before = 0; // 지도 열기 전 칸 (뒤로 가면 돌아감)
   bool booting = true;
 
   @override
@@ -51,7 +52,10 @@ class _ShellState extends State<Shell> {
 
   // 다른 화면의 「지도로 보기」 → 지도 탭으로
   void _toMap() {
-    if (mapAsk.value != null && mounted) setState(() => tab = 2);
+    if (mapAsk.value != null && mounted) setState(() {
+      if (tab != 5) _before = tab;
+      tab = 5; // 지도는 하단바에서 빠지고 숨은 칸으로 (대표님 11-28)
+    });
   }
 
   Future<void> _boot() async {
@@ -104,12 +108,20 @@ class _ShellState extends State<Shell> {
           c == null
               ? const _NoComplex()
               : (featureById('phonebook') == null ? const SizedBox() : featurePage(context, 'phonebook', c, featureById('phonebook')!.page)),
-          const MapTab(),
+          // 하단바 3번째: 동네 이야기 (대표님 11-28, 지도 자리)
+          c == null || featureById('board') == null ? const _NoComplex() : KeyedSubtree(key: ValueKey('board${c.id}'), child: featureById('board')!.page(context, c)),
           const ToolsTab(),
           const MeTab(),
+          const MapTab(), // 5: 「지도로 보기」로만 여는 지도
         ];
         return Scaffold(
-          body: IndexedStack(index: tab, children: pages),
+          body: PopScope(
+            canPop: tab != 5,
+            onPopInvokedWithResult: (didPop, _) {
+              if (!didPop && tab == 5) setState(() => tab = _before);
+            },
+            child: IndexedStack(index: tab, children: pages),
+          ),
           bottomNavigationBar: _nav(),
         );
       },
@@ -119,7 +131,7 @@ class _ShellState extends State<Shell> {
   // 하단 메뉴: 떠 있는 흰 둥근 띠 + 색 아이콘, 고른 칸은 파란 알약 (시안 11-23)
   // 하단 메뉴 (대표님 11-24): 둥근 띄움 없이 화면 끝까지 평평하게 · 새 아이콘 · 아이콘은 늘 원래 색, 고른 칸은 옅은 파랑 바탕·파랑 글자·위 파랑 줄
   Widget _nav() {
-    const items = [('home', '홈'), ('list', '전화번호부'), ('map', '지도'), ('grid', '생활 도구'), ('me', '내 정보')];
+    const items = [('home', '홈'), ('list', '전화번호부'), ('talk', '동네 이야기'), ('grid', '생활 도구'), ('me', '내 정보')];
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,

@@ -157,7 +157,7 @@ class GuidePage extends StatelessWidget {
 
     final steps = <_Step>[
       _Step('우리 단지 고르기', '처음 한 번만 고르면 버스·날씨·분리수거가 우리 단지 기준으로 맞춰져요.', const _PickMock(), [
-        '단지 홈 맨 위 단지 이름을 누르거나',
+        '홈 맨 위 단지 이름을 누르거나',
         '「내 정보」 → 「우리 단지」에서 바꿀 수 있어요',
       ], '우리 단지 고르기', () => pickComplex(context)),
       _Step('홈 꾸미기', '위에는 오늘 바뀌는 정보가 큰 카드로, 아래에는 바로가기 아이콘이 한 줄로 있어요.', const _PressMock(), [
