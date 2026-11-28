@@ -10,13 +10,16 @@ from playwright.sync_api import sync_playwright
 URL, OUT = sys.argv[1], sys.argv[2]
 os.makedirs(OUT, exist_ok=True)
 log = []
+# 아파트가 아닌 집 (대표님 11-28: 「주택·빌라」 누르면 하얀 화면) — 준비된 동네 안 / 밖
+HOUSE = {"id": "home_1764300000000", "n": "우리 집 (송도)", "a": "", "ar": "songdo", "y": 37.3925, "x": 126.6390}
+HOUSE_FAR = {"id": "home_1764300000001", "n": "우리 집", "a": "", "ar": "", "y": 35.1595, "x": 126.8526}
 CPX = {"id": "403605977", "n": "힐스테이트송도더테라스", "a": "인천 연수구 센트럴로 415", "ar": "songdo", "y": 37.410352, "x": 126.626616}
 
 
 def session(b, tag, W, H, steps):
     ctx = b.new_context(viewport={"width": W, "height": H}, device_scale_factor=2, locale="ko-KR")
     ctx.add_init_script(
-        "localStorage.setItem('flutter.complex', %s);" % json.dumps(json.dumps(json.dumps(CPX, ensure_ascii=False)))
+        "localStorage.setItem('flutter.complex', %s);" % json.dumps(json.dumps(json.dumps(HOUSE_FAR if "주택먼" in tag else HOUSE if "주택" in tag else CPX, ensure_ascii=False)))
         + ("" if "인트로" in tag else "localStorage.setItem('flutter.intro.seen', %s);" % json.dumps(json.dumps("1")))
         + "localStorage.setItem('flutter.school.mine', %s);" % json.dumps(json.dumps(json.dumps(["7341308"])))
         + "localStorage.setItem('flutter.anniv.list', %s);" % json.dumps(json.dumps(json.dumps(ANNIV, ensure_ascii=False)))
@@ -223,6 +226,14 @@ def guide(shot, tap, drag, sem, W, H):
     shot("사용방법4")
 
 
+def house(shot, tap, drag, sem, W, H):
+    shot("홈")
+    tap_has("동네 이야기", wait=5)
+    shot("동네이야기")
+    tap_has("전화번호부", wait=5)
+    shot("전화번호부")
+
+
 def tablet(shot, tap, drag, sem, W, H):
     shot("홈")
     for i in range(4):
@@ -235,7 +246,7 @@ def tablet(shot, tap, drag, sem, W, H):
 
 with sync_playwright() as p:
     b = p.chromium.launch(args=["--use-gl=swiftshader", "--enable-unsafe-swiftshader"])
-    for tag, W, H, f in [("폰인트로", 390, 844, intro), ("폰작은인트로", 360, 740, intro), ("폰안내", 430, 932, guide), ("폰작은안내", 360, 740, guide), ("탭안내", 1180, 820, guide), ("폰반려홈", 430, 932, pethome), ("폰작은반려홈", 360, 740, pethome), ("폰화장실", 430, 932, toilet), ("폰작은화장실", 360, 740, toilet), ("폰작은", 360, 740, phone), ("폰큰", 430, 932, phone), ("폰택배", 430, 932, parcel), ("폰작은택배", 360, 740, parcel), ("폰쓰레기", 430, 932, trash), ("폰작은쓰레기", 360, 740, trash), ("폰주차", 430, 932, parking), ("폰작은주차", 360, 740, parking), ("폰알람", 430, 932, alarm), ("폰작은알람", 360, 740, alarm), ("탭알람", 1180, 820, alarm), ("폰주유소", 430, 932, gas), ("폰작은주유소", 360, 740, gas), ("탭", 1180, 820, tablet), ("탭세로", 820, 1180, tablet)]:
+    for tag, W, H, f in [("폰주택", 390, 844, house), ("폰주택먼", 390, 844, house), ("폰인트로", 390, 844, intro), ("폰작은인트로", 360, 740, intro), ("폰안내", 430, 932, guide), ("폰작은안내", 360, 740, guide), ("탭안내", 1180, 820, guide), ("폰반려홈", 430, 932, pethome), ("폰작은반려홈", 360, 740, pethome), ("폰화장실", 430, 932, toilet), ("폰작은화장실", 360, 740, toilet), ("폰작은", 360, 740, phone), ("폰큰", 430, 932, phone), ("폰택배", 430, 932, parcel), ("폰작은택배", 360, 740, parcel), ("폰쓰레기", 430, 932, trash), ("폰작은쓰레기", 360, 740, trash), ("폰주차", 430, 932, parking), ("폰작은주차", 360, 740, parking), ("폰알람", 430, 932, alarm), ("폰작은알람", 360, 740, alarm), ("탭알람", 1180, 820, alarm), ("폰주유소", 430, 932, gas), ("폰작은주유소", 360, 740, gas), ("탭", 1180, 820, tablet), ("탭세로", 820, 1180, tablet)]:
         try:
             session(b, tag, W, H, f)
         except Exception as e:
