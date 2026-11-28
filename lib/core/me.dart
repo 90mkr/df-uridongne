@@ -66,7 +66,7 @@ class MeTab extends StatelessWidget {
                       if (u != null) _row('회원 탈퇴', '', () => openUrl('${kSiteUrl}policy/delete.html', inApp: true)),
                     ]),
                     const SizedBox(height: 20),
-                    const Text('니즈콕 · 디자인필', style: T.tiny),
+                    const Text('우동콕 · 디자인필', style: T.tiny),
                   ]),
                 ),
               ),
@@ -130,7 +130,7 @@ class _LoginState extends State<_Login> {
   Widget build(BuildContext context) => SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(kPad, 16, kPad, 16 + MediaQuery.of(context).viewInsets.bottom),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          const MixTitle('니즈콕', '로그인', size: 17),
+          const MixTitle('우동콕', '로그인', size: 17),
           const SizedBox(height: 4),
           const Text('콕플 계정이 있으면 그대로 쓸 수 있어요. 로그인하면 우리 단지·홈 배치·내 기록이 저장돼 다시 깔아도 그대로예요', style: T.small),
           const SizedBox(height: 16),

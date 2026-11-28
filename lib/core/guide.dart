@@ -164,7 +164,7 @@ class GuidePage extends StatelessWidget {
         '카드를 꾹 누르면 「아이콘으로 내리기 · 크게 보기로 올리기 · 홈에서 빼기」',
         '「홈 편집」에서는 순서를 바꾸고 칸을 켜고 끌 수 있어요',
       ], '홈 편집 열기', c == null ? null : () => back(() => openHomeEditFor(context, c))),
-      _Step('생활 도구', '니즈콕의 모든 기능이 한곳에 모여 있어요.', const _ToolsMock(), [
+      _Step('생활 도구', '우동콕의 모든 기능이 한곳에 모여 있어요.', const _ToolsMock(), [
         '아래 메뉴 「생활 도구」 또는 홈 아이콘 줄 끝 「전체 보기」',
         '자주 쓰는 건 홈에 꺼내 두면 더 빨라요',
       ], null, null),
@@ -179,7 +179,7 @@ class GuidePage extends StatelessWidget {
       _Step('알림 받기', '게시판 새 글, 내 글에 달린 댓글을 알림으로 받아요.', const _NotiMock(), [
         '「내 정보」 → 「알림 설정」에서 받을 것만 고르세요',
       ], '알림 설정', c == null ? null : () => Navigator.push(context, MaterialPageRoute(builder: (_) => BoardNotiPage(c: c)))),
-      _Step('급할 때 바로가기', '휴대폰 바탕화면의 니즈콕 아이콘을 꾹 누르면 「가까운 화장실」이 바로 떠요.', const _ShortcutMock(), [
+      _Step('급할 때 바로가기', '휴대폰 바탕화면의 우동콕 아이콘을 꾹 누르면 「가까운 화장실」이 바로 떠요.', const _ShortcutMock(), [
         '앱을 열지 않고도 한 번에 찾을 수 있어요',
       ], null, null),
     ];

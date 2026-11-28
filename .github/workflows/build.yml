@@ -128,7 +128,7 @@ jobs:
         run: |
           flutter create --org kr.designfeel --project-name dongne --platforms web .
           python3 tool/brand.py web
-          sed -i 's#<title>.*</title>#<title>우리동네 – 동네 생활정보</title>#' web/index.html
+          sed -i 's#<title>.*</title>#<title>우동콕 – 우리 동네, 필요한 것만 콕</title>#' web/index.html
           flutter pub get
           flutter build web --release --base-href /df-uridongne/ \
             --dart-define=DATA_GO_KR_KEY="$DATA_GO_KR_KEY" --dart-define=OPINET_KEY="$OPINET_KEY" \
@@ -220,7 +220,7 @@ jobs:
       - name: 빠진 기본 파일 채우기
         run: |
           flutter create --org kr.designfeel --project-name dongne --platforms android,ios,web .
-          python3 tool/patch_android.py "니즈콕"
+          python3 tool/patch_android.py "우동콕"
           python3 tool/brand.py android web
 
       - name: 앱 서명 키 넣기
@@ -249,7 +249,7 @@ jobs:
           NOTE="제작 시각: $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M')"
           if gh release view latest >/dev/null 2>&1; then
             gh release upload latest dongne.apk --clobber
-            gh release edit latest --notes "$NOTE" --title "니즈콕 최신 앱" || true
+            gh release edit latest --notes "$NOTE" --title "우동콕 최신 앱" || true
           else
-            gh release create latest dongne.apk --title "니즈콕 최신 앱" --notes "$NOTE" --target main
+            gh release create latest dongne.apk --title "우동콕 최신 앱" --notes "$NOTE" --target main
           fi

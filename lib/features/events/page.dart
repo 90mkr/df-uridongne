@@ -541,7 +541,7 @@ class _EvSheetState extends State<_EvSheet> {
             const SizedBox(width: 8),
             Expanded(
               child: Btn('공유', h: 46, onTap: () {
-                Clipboard.setData(ClipboardData(text: '${e.title}\n${e.period}${e.time.isNotEmpty ? ' ${e.time}' : ''}\n${e.place}\n— 니즈콕 앱'));
+                Clipboard.setData(ClipboardData(text: '${e.title}\n${e.period}${e.time.isNotEmpty ? ' ${e.time}' : ''}\n${e.place}\n— 우동콕 앱'));
                 toast(context, '행사 정보를 복사했어요. 붙여 넣어 보내세요');
               }),
             ),
@@ -553,7 +553,7 @@ class _EvSheetState extends State<_EvSheet> {
                   'text': e.title,
                   'dates': '${_cal(e.start)}/${_cal(e.end.add(const Duration(days: 1)))}',
                   'location': e.place,
-                  'details': '니즈콕 앱 · ${e.src}',
+                  'details': '우동콕 앱 · ${e.src}',
                 }).query;
                 openUrl('https://calendar.google.com/calendar/render?$q');
               }),

@@ -205,7 +205,7 @@ class _BusRoutePageState extends State<BusRoutePage> with SingleTickerProviderSt
       if (i != null && i.start.isNotEmpty) '${i.start} ↔ ${i.end}',
       if (i != null && i.first.isNotEmpty) '첫차 ${i.first} · 막차 ${i.last}${i.gap.isEmpty ? '' : ' · 배차 ${i.gap}'}',
       '${s.name} ${_first.minsText} (${_first.leftText})',
-      '— 니즈콕 앱',
+      '— 우동콕 앱',
     ].join('\n');
     Clipboard.setData(ClipboardData(text: t));
     toast(context, '노선 정보를 복사했어요. 붙여 넣어 보내세요');

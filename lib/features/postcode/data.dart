@@ -18,8 +18,8 @@ String postcodeUrl({String q = '', bool save = false}) {
   return p.isEmpty ? base : '$base?${Uri(queryParameters: p).query}';
 }
 
-// 검색 화면의 「니즈콕에 저장」 단추가 복사해 주는 글 머리
-const kAddrClipHead = '[니즈콕 주소] ';
+// 검색 화면의 「우동콕에 저장」 단추가 복사해 주는 글 머리
+const kAddrClipHead = '[우동콕 주소] ';
 
 // ---------------- 우리 단지 우편번호 ----------------
 final Map<String, Map<String, dynamic>> _zips = {};
