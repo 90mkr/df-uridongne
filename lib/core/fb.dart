@@ -58,14 +58,19 @@ String get myName {
 }
 
 // ---- 로그인 ----
+// 방금 로그인이 「처음 가입」이었는지 (가입 축하 창을 띄울지, 대표님 11-28)
+bool lastLoginNew = false;
+
 Future<String?> signInGoogle() => _run(() async {
       final p = fa.GoogleAuthProvider();
-      kIsWeb ? await fa.FirebaseAuth.instance.signInWithPopup(p) : await fa.FirebaseAuth.instance.signInWithProvider(p);
+      final c = kIsWeb ? await fa.FirebaseAuth.instance.signInWithPopup(p) : await fa.FirebaseAuth.instance.signInWithProvider(p);
+      lastLoginNew = c.additionalUserInfo?.isNewUser ?? false;
     }, '구글 로그인을 마치지 못했어요');
 
 Future<String?> signInKakao() => _run(() async {
       final p = fa.OAuthProvider('oidc.kakao');
       final c = kIsWeb ? await fa.FirebaseAuth.instance.signInWithPopup(p) : await fa.FirebaseAuth.instance.signInWithProvider(p);
+      lastLoginNew = c.additionalUserInfo?.isNewUser ?? false;
       final u = c.user;
       final prof = c.additionalUserInfo?.profile ?? const <String, dynamic>{};
       final nick = (prof['nickname'] ?? prof['name'] ?? '').toString().trim();
@@ -79,8 +84,10 @@ Future<String?> signInEmail(String email, String pass, {bool join = false}) => _
       final a = fa.FirebaseAuth.instance;
       if (join) {
         final c = await a.createUserWithEmailAndPassword(email: email, password: pass);
+        lastLoginNew = true;
         await c.user?.sendEmailVerification();
       } else {
+        lastLoginNew = false;
         await a.signInWithEmailAndPassword(email: email, password: pass);
       }
     }, '로그인을 마치지 못했어요');
@@ -92,6 +99,7 @@ Future<void> signOut() async {
 
 Future<String?> _run(Future<void> Function() f, String fail) async {
   if (!await fbReady()) return '지금은 로그인할 수 없어요';
+  lastLoginNew = false;
   try {
     // 브라우저로 넘어갔다 돌아오지 못하면 단추가 계속 잠기지 않게 (대표님 11-24: 구글 단추가 안 눌림)
     await f().timeout(const Duration(seconds: 90));

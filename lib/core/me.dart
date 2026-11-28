@@ -98,6 +98,43 @@ class MeTab extends StatelessWidget {
       );
 }
 
+// 가입 축하 창
+Future<void> showWelcome(BuildContext context, {bool mail = false}) => showDialog(
+      context: context,
+      barrierColor: const Color(0x55101828),
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 36),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: const BoxDecoration(color: Color(0xFFE8F0FF), shape: BoxShape.circle),
+              child: const Icon(Icons.check_rounded, size: 38, color: kBlue),
+            ),
+            const SizedBox(height: 16),
+            const Text('가입되었습니다', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: -0.6, color: kInk)),
+            const SizedBox(height: 8),
+            Text(
+              '${myName.isNotEmpty ? '$myName님, ' : ''}우동콕 회원이 되신 걸 환영해요.\n자동으로 로그인되었어요.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 14, height: 1.45, color: kSub, letterSpacing: -0.3),
+            ),
+            if (mail) ...[
+              const SizedBox(height: 10),
+              const Text('보내 드린 메일의 인증 링크도 눌러 주세요.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12.5, color: kMute)),
+            ],
+            const SizedBox(height: 22),
+            SizedBox(width: double.infinity, child: Btn('확인', primary: true, onTap: () => Navigator.pop(ctx))),
+          ]),
+        ),
+      ),
+    );
+
 // 로그인 창: 카카오 · 구글 · 이메일 (콕플과 같은 계정)
 Future<void> openLogin(BuildContext context) => showSheet(context, (ctx) => const _Login());
 
@@ -119,8 +156,15 @@ class _LoginState extends State<_Login> {
     if (!mounted) return;
     setState(() => busy = false);
     if (err == null) {
-      Navigator.pop(context);
-      toast(context, join ? '가입했어요. 메일의 인증 링크를 눌러 주세요' : '로그인했어요');
+      final nav = Navigator.of(context);
+      final mail = join;
+      nav.pop();
+      // 처음 가입이면 확인 창 — 「가입되었습니다 + 자동으로 로그인되었어요」 (대표님 11-28: 갑자기 로그인으로 바뀌면 허술해 보임)
+      if (lastLoginNew) {
+        showWelcome(nav.context, mail: mail);
+      } else {
+        toast(nav.context, '로그인했어요');
+      }
     } else {
       toast(context, err);
     }
