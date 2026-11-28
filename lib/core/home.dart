@@ -501,7 +501,7 @@ class _Header extends StatelessWidget {
                           ]),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 16, letterSpacing: -0.5, height: 1.25), // 작게 해서 이름이 더 보이게 (대표님 11-28)
+                          style: const TextStyle(fontSize: 14, letterSpacing: -0.4, height: 1.25), // 작게 해서 이름이 더 보이게 (대표님 11-28: 16 → 14)
                         ),
                 ),
                 const Icon(Icons.chevron_right_rounded, size: 20),
