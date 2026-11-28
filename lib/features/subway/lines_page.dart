@@ -926,9 +926,9 @@ class _Painter extends CustomPainter {
       final inf = info[n];
       final others = (inf == null || px < _midPx) ? const <SubLine>[] : [for (final x in byName[n] ?? const <SubLine>[]) if (x != inf.$1) x];
       final far = inf != null && px >= _farPx;
-      final subT = far ? _subText(n, inf!.$1, others) : '';
+      final subT = far ? _subText(n, inf.$1, others) : '';
       final sub = subT.isEmpty ? null : _text(subT, size: fs(9.5), w: FontWeight.w500, color: sel ? Colors.white : kSub);
-      final dist = far ? _text(_distText(inf!.$2), size: fs(9.5), w: FontWeight.w700, color: sel ? Colors.white : kBlue) : null;
+      final dist = far ? _text(_distText(inf.$2), size: fs(9.5), w: FontWeight.w700, color: sel ? Colors.white : kBlue) : null;
       final dotR = 3.0 * g, dotGap = 2.5 * g, dotLead = 4.0 * g, distLead = 6.0 * g;
       final dotsW = others.isEmpty ? 0.0 : dotLead + others.length * (dotR * 2 + dotGap) - dotGap;
       final line1 = tp.width + dotsW + (dist == null ? 0.0 : distLead + dist.width);
