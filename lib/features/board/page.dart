@@ -73,7 +73,7 @@ class _BoardPageState extends State<BoardPage> {
         backgroundColor: kBg,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        titleSpacing: 0,
+        titleSpacing: Navigator.of(context).canPop() ? 0 : kPad, // 하단바 칸일 때 왼쪽에 붙지 않게 (대표님 11-28)
         actions: [
           IconButton(
             tooltip: '알림 설정',
@@ -84,7 +84,7 @@ class _BoardPageState extends State<BoardPage> {
         title: Text.rich(TextSpan(children: [
           TextSpan(text: '${town ? townName : widget.c.name} ', style: const TextStyle(fontWeight: FontWeight.w800)),
           const TextSpan(text: '이야기', style: TextStyle(fontWeight: FontWeight.w300)),
-        ]), style: const TextStyle(fontSize: 16.5, letterSpacing: -0.4), maxLines: 1, overflow: TextOverflow.ellipsis),
+        ]), style: const TextStyle(fontSize: 14.5, letterSpacing: -0.4), maxLines: 1, overflow: TextOverflow.ellipsis),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _write,
@@ -133,7 +133,7 @@ class _BoardPageState extends State<BoardPage> {
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: kLine)),
             clipBehavior: Clip.antiAlias,
             child: Row(children: [
-              for (final (i, t) in [('', '모아 보기'), ...kBoardCats].indexed) ...[
+              for (final (i, t) in [('', '전체'), ...kBoardCats].indexed) ...[
                 if (i > 0) const VerticalDivider(width: 1, color: kLine),
                 Expanded(
                   child: InkWell(
