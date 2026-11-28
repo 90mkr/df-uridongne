@@ -33,6 +33,7 @@ class _ShopListPageState extends State<ShopListPage> {
   Sort sort = Sort.near;
   bool openOnly = false;
   String sub = '';
+  bool finding = false; // 업종 안에서 이름 찾기 (대표님 11-28: 병원 → 피부과만)
 
   Complex get c => widget.complex;
   LatLng get from => c.pos;
@@ -133,11 +134,11 @@ class _ShopListPageState extends State<ShopListPage> {
       padding: const EdgeInsets.only(left: 4, right: 14),
       child: Row(children: [
         IconButton(onPressed: () => Navigator.of(context).maybePop(), icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: kInk)),
-        if (widget.cat == null)
+        if (widget.cat == null || finding)
           Expanded(
             child: SizedBox(
               height: 40,
-              child: TextField(controller: q, autofocus: true, onChanged: (_) => setState(_changed), style: const TextStyle(fontSize: 14.5), decoration: inputDeco('세탁소, 떡집, 가게 이름')),
+              child: TextField(controller: q, autofocus: true, onChanged: (_) => setState(_changed), style: const TextStyle(fontSize: 14.5), decoration: inputDeco(widget.cat == null ? '세탁소, 떡집, 가게 이름' : '${widget.cat!.name} 안에서 찾기 (예: ${widget.cat!.id == 'hosp' ? '피부과' : '가게 이름'})')),
             ),
           )
         else ...[
@@ -152,8 +153,18 @@ class _ShopListPageState extends State<ShopListPage> {
           ],
           const Spacer(),
         ],
-        const SizedBox(width: 10),
-        if (widget.cat != null) _mapBtn(),
+        const SizedBox(width: 6),
+        if (widget.cat != null)
+          IconButton(
+            tooltip: finding ? '찾기 닫기' : '이름으로 찾기',
+            onPressed: () => setState(() {
+              finding = !finding;
+              if (!finding) q.clear();
+              _changed();
+            }),
+            icon: Icon(finding ? Icons.close_rounded : Icons.search_rounded, size: 23, color: kInk),
+          ),
+        if (widget.cat != null && !finding) _mapBtn(),
       ]),
     );
   }
