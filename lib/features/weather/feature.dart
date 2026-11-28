@@ -27,7 +27,7 @@ class WeatherFeature extends Feature {
   @override
   int get order => 10;
   @override
-  String get version => '0.3.2';
+  String get version => '0.3.3';
   @override
   bool get ready => true;
   @override
@@ -39,28 +39,71 @@ class WeatherFeature extends Feature {
   @override
   Widget page(BuildContext context, Complex c) => _WeatherPage(c: c);
 
-  // 「지금 우리 단지」 카드: 비·눈이 오거나 미세먼지가 나쁘면 높게, 아침엔 기본으로 조금 높게
+  // 「지금 우리 단지」 카드: 그날 날씨를 사람 말 한 줄로 (대표님 11-28)
+  //  특보 > 지금 비·눈 > 곧 비 > 미세먼지 > 강추위·무더위 > 큰 일교차 > 좋은 날 > 기본
   @override
   Future<Brief?> brief(Complex c, DateTime now) async {
     final w = await weatherFor(c);
     if (w == null || w.temp == null) return null;
-    const wet = {Sky.rain, Sky.snow, Sky.sleet, Sky.shower};
-    final soon = w.hours.take(4).where((h) => wet.contains(h.sky) || (h.pop ?? 0) >= 60).firstOrNull;
-    final g = w.dust == null ? 0 : (w.dust!.g10 > w.dust!.g25 ? w.dust!.g10 : w.dust!.g25);
-    const gt = ['', '좋음', '보통', '나쁨', '매우 나쁨'];
-    final t = '${w.temp!.round()}°';
-    if (wet.contains(w.sky)) {
-      return Brief(icon: 'weather', kicker: '지금 날씨', bold: '지금 ', hot: skyText(w.sky), rest: ' · $t', sub: '우산 챙기세요${g > 0 ? ' · 미세먼지 ${gt[g]}' : ''}', score: 92);
-    }
-    if (soon != null) {
-      final hh = soon.t.hour;
-      return Brief(icon: 'weather', kicker: '지금 날씨', bold: '$hh시쯤 ', hot: wet.contains(soon.sky) ? skyText(soon.sky) : '비 소식', rest: '', sub: '나갈 때 우산 챙기세요 · 지금 $t', score: 88);
-    }
-    if (g >= 3) {
-      return Brief(icon: 'weather', kicker: '지금 공기', bold: '미세먼지 ', hot: gt[g], rest: '', sub: '마스크 챙기세요 · 지금 $t ${skyText(w.sky)}', score: 78);
-    }
-    return Brief(icon: 'weather', kicker: '지금 날씨', bold: '$t ', hot: skyText(w.sky), rest: '', sub: g > 0 ? '미세먼지 ${gt[g]}' : '', score: now.hour < 10 ? 60 : 35);
+    return weatherBrief(w, now);
   }
+}
+
+Brief weatherBrief(Weather w, DateTime now) {
+  const k = '오늘의 날씨 한마디';
+  const gt = ['', '좋음', '보통', '나쁨', '매우 나쁨'];
+  final t = '${w.temp!.round()}°';
+  final feels = w.feels ?? w.temp!;
+  final td = w.today;
+  final today = w.dustDays.isEmpty ? null : w.dustDays.first;
+  final g = [w.dust?.worst ?? 0, today?.g10 ?? 0, today?.g25 ?? 0].reduce(math.max);
+  final dustTail = g > 0 ? ' · 미세먼지 ${gt[g]}' : '';
+  final day = w.hours.where((h) => h.t.day == w.at.day && h.t.hour >= w.at.hour && h.t.hour <= 22).toList();
+
+  // 1. 특보
+  final al = w.alert;
+  if (al != null) {
+    return Brief(icon: 'weather', kicker: k, hot: al.name, rest: ' 발효 중', sub: _alertTip(al), score: 95);
+  }
+  // 2. 지금 비·눈
+  if (isWet(w.sky)) {
+    final snow = w.sky == Sky.snow || w.sky == Sky.sleet;
+    return Brief(icon: 'weather', kicker: k, bold: '지금 ', hot: snow ? '눈' : '비', rest: snow ? '이 내려요' : '가 와요', sub: '${snow ? '길이 미끄러워요, 조심하세요' : '우산 꼭 챙기세요'} · $t$dustTail', score: 92);
+  }
+  // 3. 오늘 안에 비·눈 소식
+  final wet = day.where((h) => isWet(h.sky) || (h.pop ?? 0) >= 60).firstOrNull;
+  if (wet != null) {
+    final snow = wet.sky == Sky.snow || wet.sky == Sky.sleet;
+    return Brief(icon: 'weather', kicker: k, bold: '${_when(wet.t)}부터 ', hot: snow ? '눈' : '비', rest: ' 소식', sub: '나갈 때 우산 꼭 챙기세요 · 지금 $t', score: 88);
+  }
+  // 4. 미세먼지
+  if (g >= 3) {
+    return Brief(icon: 'weather', kicker: k, bold: '미세먼지가 ', hot: gt[g] == '나쁨' ? '나빠요' : '매우 나빠요', sub: '마스크 챙기고 창문은 닫아 두세요 · $t', score: 82);
+  }
+  // 5. 강추위·무더위
+  if (feels <= -5 || (td?.min ?? 99) <= -10) {
+    return Brief(icon: 'weather', kicker: k, bold: '오늘은 ', hot: '많이 추워요', rest: ' (체감 ${feels.round()}°)', sub: '두꺼운 패딩·목도리 챙기세요${(td?.min ?? 0) <= -10 ? ' · 수도 동파 조심' : ''}', score: 72);
+  }
+  if ((td?.max ?? 0) >= 33) {
+    return Brief(icon: 'weather', kicker: k, bold: '오늘은 ', hot: '무더워요', rest: ' (최고 ${(td?.max ?? 33).round()}°)', sub: '한낮 바깥 활동은 줄이고 물 자주 드세요', score: 72);
+  }
+  // 6. 큰 일교차
+  final lo = td?.min, hi = td?.max;
+  if (lo != null && hi != null && hi - lo >= 10) {
+    return Brief(icon: 'weather', kicker: k, hot: '일교차가 커요', rest: ' (${lo.round()}°~${hi.round()}°)', sub: '아침저녁엔 겉옷 하나 더 챙기세요$dustTail', score: now.hour < 10 ? 62 : 45);
+  }
+  // 7. 좋은 날 — 계절 기준으로 포근하거나 선선하고 맑음
+  final clear = w.sky == Sky.clear || w.sky == Sky.partly;
+  final m = now.month;
+  final winter = m == 12 || m <= 2 || m == 11;
+  final mild = winter ? (td?.max ?? w.temp!) >= 9 : (feels >= 15 && feels <= 26);
+  if (clear && mild && g <= 2) {
+    final how = winter ? '날이 포근해서' : '맑고 선선해서';
+    return Brief(icon: 'weather', kicker: k, bold: '$how ', hot: '외출하기 좋아요', sub: '$t ${skyText(w.sky)}${g == 1 ? ' · 공기도 깨끗해요' : dustTail}', score: now.hour < 10 ? 60 : 42);
+  }
+  // 8. 기본: 옷차림 한마디
+  final c = _clothes(feels);
+  return Brief(icon: 'weather', kicker: k, bold: '$t ', hot: skyText(w.sky), rest: ' · ${c.$1} 추천', sub: '${c.$2}$dustTail', score: now.hour < 10 ? 58 : 35);
 }
 
 String _deg(double? t) => t == null ? '-' : '${t.round()}°';
