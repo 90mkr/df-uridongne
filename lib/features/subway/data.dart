@@ -63,6 +63,14 @@ class Station {
     return '${top.replaceAll(RegExp(r'역$'), '')} 방면';
   }
 
+  /// 첫차 시각
+  String first(String ud, DateTime now) {
+    final list = tt['${dayCode(now)}$ud'] ?? const [];
+    if (list.isEmpty) return '';
+    final t = list.first.$1;
+    return '${t.substring(0, 2)}:${t.substring(2, 4)}';
+  }
+
   /// 막차 시각
   String last(String ud, DateTime now) {
     final list = tt['${dayCode(now)}$ud'] ?? const [];
