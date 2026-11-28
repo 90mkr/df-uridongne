@@ -230,6 +230,7 @@ jobs:
       - name: 안드로이드 설치 파일 만들기
         env:
           KEY_PASS: ${{ secrets.ANDROID_KEY_PASS }}
+          ONLY_ARM64: '1'
           DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
           OPINET_KEY: ${{ secrets.OPINET_KEY }}
           AIRKOREA_KEY: ${{ secrets.AIRKOREA_KEY }}

@@ -301,3 +301,19 @@ if os.path.exists(gp):
     if "mobile_scanner.useUnbundled" not in t:
         open(gp, "a", encoding="utf-8").write("\ndev.steenbakker.mobile_scanner.useUnbundled=true\n")
 print("QR 부품 가볍게")
+
+
+# 직접 받는 설치 파일(APK)은 64비트 폰용만 — 네이버 지도 부품이 다른 종류까지 따라 들어와 110MB 되던 것 (대표님 11-28)
+#   ONLY_ARM64=1 일 때만 (출시용 AAB 는 구글이 휴대폰마다 골라 주므로 그대로)
+for g in glob.glob("android/app/build.gradle*"):
+    t = open(g, encoding="utf-8").read()
+    if "ONLY_ARM64" in t:
+        continue
+    if g.endswith(".kts"):
+        add = '        if (System.getenv("ONLY_ARM64") == "1") {\n            ndk { abiFilters.clear(); abiFilters.add("arm64-v8a") }\n        }\n'
+    else:
+        add = '        if (System.getenv("ONLY_ARM64") == "1") {\n            ndk { abiFilters "arm64-v8a" }\n        }\n'
+    t2 = t.replace("    defaultConfig {\n", "    defaultConfig {\n" + add, 1)
+    if t2 != t:
+        open(g, "w", encoding="utf-8").write(t2)
+        print("APK 64비트만:", g)
