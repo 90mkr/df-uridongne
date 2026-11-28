@@ -161,11 +161,15 @@ class _BaseSwitchState extends State<BaseSwitch> {
                 if (!ok) toast(context, '위치를 찾지 못했어요. 위치 권한을 켜 주세요');
               }),
             ]);
-          return Container(
+          // 화면 위에 떠 있을 때 글자 밑 노란 두 줄이 생기지 않게 Material 로 감쌈 (대표님 11-28)
+          return Material(
+            type: MaterialType.transparency,
+            child: Container(
             width: cp ? 112 : 260,
             padding: EdgeInsets.all(cp ? 2 : 3),
             decoration: BoxDecoration(color: kBlue, borderRadius: BorderRadius.circular(21), boxShadow: cp ? null : const [BoxShadow(color: Color(0x332563EB), blurRadius: 14)]), // 파란 바탕 + 흰 글씨, 머리 단추는 3분의 2 크기 (대표님 11-28)
             child: row,
+          ),
           );
         },
       );
