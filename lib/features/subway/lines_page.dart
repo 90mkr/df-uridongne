@@ -700,6 +700,8 @@ class _LinesPageState extends State<LinesPage> {
             setState(() => routeMode = false);
           },
         ),
+        // 경로 결과가 떠 있는 동안은 호선 단추 줄을 숨김 (대표님 11-28: 결과와 단추가 다 붙어 정신없음) — ✕ 로 지우면 다시 나옴
+        if (!(routeMode && route != null)) ...[
         const SizedBox(height: 10),
         SizedBox(
           height: 32,
@@ -711,6 +713,7 @@ class _LinesPageState extends State<LinesPage> {
               _Chip(label: l.name, color: l.color, on: pick == l.name, onTap: () => _choose(pick == l.name ? null : l.name)),
           ]),
         ),
+        ],
         if (!routeMode && t != null) ...[
           const SizedBox(height: 8),
           _StationCard(
@@ -1340,42 +1343,68 @@ class _RoutePanel extends StatelessWidget {
         if (from != null && to != null && r == null)
           const Padding(padding: EdgeInsets.only(top: 10), child: Text('두 역을 잇는 길을 찾지 못했어요 (다른 권역이거나 자료가 없어요)', style: T.small)),
         if (r != null) ...[
-          const SizedBox(height: 12),
-          // 어디서 갈아타는지가 먼저 (대표님 11-28: 처음 가는 사람은 몇 번, 어디서 갈아타는지가 제일 궁금함)
-          Text.rich(
-            TextSpan(children: [
-              TextSpan(text: r.transfers == 0 ? '갈아타지 않고 한 번에' : '${r.transfers}번 갈아타요', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: kBlue, letterSpacing: -0.5)),
-              TextSpan(text: '   약 ${r.minutes}분 · ${r.stops}정거장', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: kSub)),
-            ]),
-          ),
-          const SizedBox(height: 8),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 168),
-            child: SingleChildScrollView(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
-                for (var i = 0; i < r.legs.length; i++) ...[
-                  if (i > 0)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(4, 5, 0, 5),
-                      child: Row(children: [
-                        const Icon(Icons.sync_alt_rounded, size: 15, color: kBlue),
-                        const SizedBox(width: 6),
-                        Text('${r.legs[i].from}역에서 갈아타기', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: kBlue, letterSpacing: -0.3)),
-                      ]),
-                    ),
-                  Row(children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                      decoration: BoxDecoration(color: r.legs[i].line.color, borderRadius: BorderRadius.circular(20)),
-                      child: Text(r.legs[i].line.name, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.2)),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(child: Text('${r.legs[i].from} → ${r.legs[i].to}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: kInk, letterSpacing: -0.3))),
-                    Text('${r.legs[i].count}정거장', style: const TextStyle(fontSize: 12, color: kSub, fontWeight: FontWeight.w600)),
-                  ]),
-                ],
-              ]),
+          const SizedBox(height: 14),
+          // 결과는 카드 하나로 떼어 보여 줌 — 위(출발·도착 칸)·아래(단추)와 섞이지 않게 (대표님 11-28)
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFDDE2EA)),
+              boxShadow: const [BoxShadow(color: Color(0x14000000), blurRadius: 12)],
             ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+              // 어디서 갈아타는지가 먼저 (처음 가는 사람은 몇 번, 어디서 갈아타는지가 제일 궁금함)
+              Text.rich(
+                TextSpan(children: [
+                  TextSpan(text: r.transfers == 0 ? '갈아타지 않고 한 번에' : '${r.transfers}번 갈아타요', style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: kInk, letterSpacing: -0.6)),
+                  TextSpan(text: '   약 ${r.minutes}분 · ${r.stops}정거장', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: kSub)),
+                ]),
+              ),
+              const SizedBox(height: 12),
+              Container(height: 1, color: const Color(0xFFEEF1F5)),
+              const SizedBox(height: 12),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 220),
+                child: SingleChildScrollView(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+                    for (var i = 0; i < r.legs.length; i++) ...[
+                      if (i > 0)
+                        // 갈아타는 곳: 옅은 파란 띠 하나 (구간과 구간 사이를 끊어 줌)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 9),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(color: const Color(0xFFEEF3FF), borderRadius: BorderRadius.circular(9)),
+                              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                const Icon(Icons.sync_alt_rounded, size: 14, color: kBlue),
+                                const SizedBox(width: 6),
+                                Text('${r.legs[i].from}역에서 갈아타기', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: kBlue, letterSpacing: -0.3)),
+                              ]),
+                            ),
+                          ),
+                        ),
+                      // 구간: 왼쪽 호선 색 막대 + 작은 호선 이름 + 굵은 「어디 → 어디」
+                      IntrinsicHeight(
+                        child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                          Container(width: 5, decoration: BoxDecoration(color: r.legs[i].line.color, borderRadius: BorderRadius.circular(3))),
+                          const SizedBox(width: 11),
+                          Expanded(
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                              Text('${r.legs[i].line.name} · ${r.legs[i].count}정거장', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: kSub, letterSpacing: -0.2, height: 1.3)),
+                              const SizedBox(height: 2),
+                              Text('${r.legs[i].from} → ${r.legs[i].to}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: kInk, letterSpacing: -0.4, height: 1.3)),
+                            ]),
+                          ),
+                        ]),
+                      ),
+                    ],
+                  ]),
+                ),
+              ),
+            ]),
           ),
           const SizedBox(height: 12),
           Row(children: [
@@ -1383,8 +1412,9 @@ class _RoutePanel extends StatelessWidget {
             const SizedBox(width: 10),
             Expanded(flex: 2, child: _Btn(label: '실시간·자세히 (카카오맵)', strong: true, onTap: () => _openRouteApp('kakao', r))),
           ]),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           const Text('시간은 거리로 어림한 값이에요. 실시간 도착·정확한 시간은 지도 앱에서 확인하세요.', style: T.tiny),
+          const SizedBox(height: 4),
         ],
       ]),
     );
@@ -1475,8 +1505,8 @@ class _Btn extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           onTap: onTap,
           child: SizedBox(
-            height: 38,
-            child: Center(child: Text(label, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: strong ? Colors.white : kInk))),
+            height: 42,
+            child: Center(child: Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: strong ? Colors.white : kInk))),
           ),
         ),
       );
