@@ -201,19 +201,19 @@ class CarCard extends StatelessWidget {
         onTap: () => openCar(context),
         child: Ink(
           decoration: _carBox,
-          padding: EdgeInsets.fromLTRB(16, small ? 12 : 14, 14, small ? 12 : 14),
+          padding: EdgeInsets.fromLTRB(14, small ? 10 : 12, 12, small ? 10 : 12), // 주차 카드 줄임 (대표님 11-28)
           child: Row(children: [
-            Image.asset('assets/icons/car.png', width: small ? 40 : 52, height: small ? 40 : 52),
-            const SizedBox(width: 12),
+            Image.asset('assets/icons/car.png', width: small ? 34 : 40, height: small ? 34 : 40),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
-                  const Text('주차 중', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: kInk)),
+                  const Text('주차 중', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: kInk)),
                   const SizedBox(width: 6),
                   Flexible(child: Text(car.lot?.name ?? car.memo, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.tiny)),
                 ]),
                 const SizedBox(height: 2),
-                Text(carLine(car, now), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: small ? 16 : 19, fontWeight: FontWeight.w800, letterSpacing: -0.6, color: kInk)),
+                Text(carLine(car, now), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: small ? 14 : 15, fontWeight: FontWeight.w800, letterSpacing: -0.4, color: kInk)),
                 if (end != null && end.isAfter(now)) Text('무료 ${_hm(end)}까지', style: T.tiny),
               ]),
             ),
@@ -251,12 +251,12 @@ class _BlueBtn extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              if (iconName != null) LineIcon(iconName!, size: 20, line: Colors.white, fill: Colors.transparent),
-              if (icon != null) Icon(icon, size: 19, color: Colors.white),
-              const SizedBox(width: 6),
-              Text(text, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: -0.3)),
+              if (iconName != null) LineIcon(iconName!, size: 16, line: Colors.white, fill: Colors.transparent),
+              if (icon != null) Icon(icon, size: 16, color: Colors.white),
+              const SizedBox(width: 4),
+              Text(text, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: -0.3)),
             ]),
           ),
         ),
