@@ -2,7 +2,7 @@
 //  · 손가락으로 키우고 밀기, 키울수록 역 이름이 더 보임 (겹치는 이름은 숨김)
 //  · 확대 단계 (대표님 11-28: 키워도 역 사이만 벌어지면 키울 이유가 없음)
 //      보통 → 역 이름 / 조금 키움 → 이름 커짐 + 갈아타는 노선 색 점 + 흐린 노선의 역도 보임
-//      많이 키움 → 이름 아래 「○○선 환승 · 단지에서 1.2km」「○○행 3분」 / 그 이상은 못 키움 (역 몇 개만 남는 빈 화면 막기)
+//      많이 키움 → 이름 아래 「○○선 환승 · 단지에서 1.2km」「○○행 3분」 / 끝까지 키우면 이름 2.7배·역 동그라미 3.5배 (눈 안 좋은 분)
 //  · 환승역은 흰 알약, 우리 단지는 파란 점 + 이름표
 //  · 아래: 호선 고르기 → 그 노선 띠(역 순서·환승·우리 역) → 역을 누르면 다음 열차·환승·지도 앱 실시간·길찾기
 // 자료: web/data/subway/lines_<권역>.json (collector/features/subway_lines.py 가 주 1회 모음)
@@ -33,8 +33,9 @@ class SubLine {
 // 확대 단계: 1km 가 화면 몇 점인가 (보통 12km 보기는 약 34)
 const _midPx = 52.0; // 여기부터 환승 색 점 · 흐린 노선의 역
 const _farPx = 80.0; // 여기부터 이름 아래 작은 정보 줄
-const _maxPx = 110.0; // 더는 못 키움 — 한 화면에 역이 여섯에서 여덟은 남게
+const _maxPx = 330.0; // 대표님 11-28: 3배 더 키울 수 있게 — 대신 키울수록 이름·역 동그라미도 크게 (눈 안 좋은 분)
 const _maxS = _maxPx / _World.perKm;
+const _fitS = 110.0 / _World.perKm; // 저절로 맞출 때(경로 보기)는 여기까지만
 
 const _regions = <String, List<double>>{
   'capital': [126.30, 36.75, 127.75, 38.05],
@@ -156,7 +157,7 @@ class _LinesPageState extends State<LinesPage> {
     final ps = [for (final l in r.legs) for (final st in l.stops) w.px(st.$2)];
     final xs = ps.map((p) => p.dx), ys = ps.map((p) => p.dy);
     final rc = Rect.fromLTRB(xs.reduce(math.min), ys.reduce(math.min), xs.reduce(math.max), ys.reduce(math.max));
-    final sc = math.min((b.width - 80) / math.max(rc.width, 1), (b.height - 80) / math.max(rc.height, 1)).clamp(0.04, _maxS);
+    final sc = math.min((b.width - 80) / math.max(rc.width, 1), (b.height - 80) / math.max(rc.height, 1)).clamp(0.04, _fitS);
     _setView(rc.center, sc, fy: 0.5);
   }
   List<Station> local = const []; // 동네 역 시간표 (다음 열차)
@@ -592,8 +593,9 @@ class _Painter extends CustomPainter {
     final bold = [for (final l in lines) if (_strong(l)) l];
     // 키울수록 글자·점·선도 같이 커짐 (지도 카드처럼) — 1km 가 30점일 때 기준, 최대 2.2배
     final px = s * _World.perKm; // 1km 가 화면 몇 점
-    final g = math.pow(px / 30, 0.4).clamp(1.0, 1.65).toDouble(); // 대표님 11-26: 너무 크지도 작지도 않게 → 11-28: 키우면 이름도 눈에 띄게 커지게 (지도 3배에 글자 1.65배)
-    final lw = (pick != null ? 5.0 : 4.0) * math.min(g, 1.6) / s;
+    final g = math.pow(px / 30, 0.42).clamp(1.0, 2.7).toDouble(); // 대표님 11-26: 너무 크지도 작지도 않게 → 11-28: 키우면 이름도 눈에 띄게 커지게 (끝까지 키우면 글자 2.7배)
+    final d = math.pow(g, 1.25).toDouble(); // 역 동그라미는 글자보다 조금 더 빨리 커짐 (끝까지 키우면 약 3.5배)
+    final lw = (pick != null ? 5.0 : 4.0) * math.min(g, 2.0) / s;
 
     void drawLine(SubLine l, Color col, double w) {
       final p = Paint()
@@ -705,7 +707,7 @@ class _Painter extends CustomPainter {
     final placed = <Rect>[];
     final ring = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.4 / s;
+      ..strokeWidth = 1.4 * math.min(g, 1.8) / s;
     final fill = Paint()..color = Colors.white;
     final labels = <(String, Offset, int)>[]; // 이름, 위치, 우선순위 (0 누른 역 · 1 환승 · 2 보통)
     final drawn = <String>{};
@@ -717,17 +719,17 @@ class _Painter extends CustomPainter {
         final multi = (byName[st.$1] ?? const <SubLine>[]).where(_strong).length > 1;
         if (multi) {
           if (!drawn.add('T|${st.$1}')) continue;
-          final r = RRect.fromRectAndRadius(Rect.fromCenter(center: o, width: 15 * g / s, height: 10 * g / s), Radius.circular(5 * g / s));
+          final r = RRect.fromRectAndRadius(Rect.fromCenter(center: o, width: 15 * d / s, height: 10 * d / s), Radius.circular(5 * d / s));
           canvas.drawRRect(r, fill);
           canvas.drawRRect(r, ring..color = const Color(0xFF3A3F4A));
         } else if (st.$1 == tapped) {
           // 고른 역: 진한 파란 큰 점 + 흰 테 (대표님 11-26)
-          canvas.drawCircle(o, 8 * g / s, Paint()..color = kBlue.withValues(alpha: 0.18));
-          canvas.drawCircle(o, 5.6 * g / s, Paint()..color = kBlue);
-          canvas.drawCircle(o, 5.6 * g / s, ring..color = Colors.white);
+          canvas.drawCircle(o, 8 * d / s, Paint()..color = kBlue.withValues(alpha: 0.18));
+          canvas.drawCircle(o, 5.6 * d / s, Paint()..color = kBlue);
+          canvas.drawCircle(o, 5.6 * d / s, ring..color = Colors.white);
         } else {
-          canvas.drawCircle(o, 4.2 * g / s, fill);
-          canvas.drawCircle(o, 4.2 * g / s, ring..color = l.color);
+          canvas.drawCircle(o, 4.2 * d / s, fill);
+          canvas.drawCircle(o, 4.2 * d / s, ring..color = l.color);
         }
         if (drawn.add('L|${st.$1}')) {
           labels.add((st.$1, o, st.$1 == tapped ? 0 : (multi ? 1 : 2)));
@@ -743,12 +745,12 @@ class _Painter extends CustomPainter {
           if (!vis.contains(o)) continue;
           if (!drawn.add('L|${st.$1}')) continue;
           if (st.$1 == tapped) {
-            canvas.drawCircle(o, 8 * g / s, Paint()..color = kBlue.withValues(alpha: 0.18));
-            canvas.drawCircle(o, 5.6 * g / s, Paint()..color = kBlue);
-            canvas.drawCircle(o, 5.6 * g / s, ring..color = Colors.white);
+            canvas.drawCircle(o, 8 * d / s, Paint()..color = kBlue.withValues(alpha: 0.18));
+            canvas.drawCircle(o, 5.6 * d / s, Paint()..color = kBlue);
+            canvas.drawCircle(o, 5.6 * d / s, ring..color = Colors.white);
           } else {
-            canvas.drawCircle(o, 3.2 * g / s, fill);
-            canvas.drawCircle(o, 3.2 * g / s, ring..color = l.color.withValues(alpha: 0.75));
+            canvas.drawCircle(o, 3.2 * d / s, fill);
+            canvas.drawCircle(o, 3.2 * d / s, ring..color = l.color.withValues(alpha: 0.75));
           }
           labels.add((st.$1, o, st.$1 == tapped ? 0 : 3));
           info[st.$1] = (l, st.$2);
@@ -803,7 +805,7 @@ class _Painter extends CustomPainter {
       final dotsW = others.isEmpty ? 0.0 : dotLead + others.length * (dotR * 2 + dotGap) - dotGap;
       final w = math.max(tp.width + dotsW, sub?.width ?? 0.0) / s, h = (tp.height + (sub == null ? 0 : sub.height + 2)) / s;
       // 오른쪽 → 왼쪽 → 위 → 아래 중 빈 곳
-      final gap = (sel ? 12 + 4 * g : 6 + 4 * g) / s;
+      final gap = (sel ? 8 * d + 5 : (pri == 1 ? 7.5 * d + 4 : (pri == 3 ? 3.2 * d + 4 : 4.2 * d + 5))) / s; // 동그라미가 커진 만큼 이름도 떨어뜨림
       final cands = [
         Rect.fromLTWH(o.dx + gap, o.dy - h / 2, w, h),
         Rect.fromLTWH(o.dx - gap - w, o.dy - h / 2, w, h),
