@@ -50,6 +50,24 @@ const _regions = <String, List<double>>{
   'daejeon': [127.25, 36.25, 127.50, 36.50],
 };
 
+// 권역 이름 (대표님 11-28: 서울 사람이 부산 갈 때도 미리 볼 수 있게 권역을 고름)
+const kRegionNames = <String, String>{'capital': '수도권', 'busan': '부산', 'daegu': '대구', 'gwangju': '광주', 'daejeon': '대전'};
+
+/// 어느 권역에도 안 들면 가장 가까운 권역
+String nearestRegion(LatLng p) {
+  var best = _regions.keys.first;
+  var bd = double.infinity;
+  for (final e in _regions.entries) {
+    final b = e.value;
+    final d = meters(p, LatLng((b[1] + b[3]) / 2, (b[0] + b[2]) / 2));
+    if (d < bd) {
+      bd = d;
+      best = e.key;
+    }
+  }
+  return best;
+}
+
 String? regionOf(LatLng p) {
   for (final e in _regions.entries) {
     final b = e.value;
@@ -215,7 +233,12 @@ class _LinesPageState extends State<LinesPage> {
   }
 
   void _mapFit(List<LatLng> pts) {
-    if (pts.isEmpty) return;
+    final f = _fitOf(pts);
+    if (f != null) _mapGo(f.$1, f.$2);
+  }
+
+  (LatLng, double)? _fitOf(List<LatLng> pts) {
+    if (pts.isEmpty) return null;
     var s = 90.0, n = -90.0, w = 180.0, e = -180.0;
     for (final p in pts) {
       s = math.min(s, p.latitude);
@@ -225,7 +248,7 @@ class _LinesPageState extends State<LinesPage> {
     }
     final zx = math.log((mapBox.width - 80) * 360 / (256 * math.max(e - w, 0.002))) / math.ln2;
     final zy = math.log((mapBox.height - 120) / math.max(_my(s, 0) - _my(n, 0), 0.00001)) / math.ln2;
-    _mapGo(LatLng((s + n) / 2, (w + e) / 2), math.min(zx, zy).clamp(7.0, 15.0));
+    return (LatLng((s + n) / 2, (w + e) / 2), math.min(zx, zy).clamp(7.0, 15.0));
   }
 
   @override
@@ -234,15 +257,33 @@ class _LinesPageState extends State<LinesPage> {
     stationsOf(widget.c.areaId).then((l) {
       if (mounted) setState(() => local = l);
     });
-    final r = regionOf(widget.c.pos);
-    if (r == null) {
-      all = const [];
-      return;
-    }
+    homeRegion = regionOf(widget.c.pos);
+    _loadRegion(homeRegion ?? nearestRegion(widget.c.pos), first: true);
+  }
+
+  // 권역 바꾸기: 우리 권역이면 우리 역 둘레, 다른 권역이면 그 권역 전체가 한 화면에
+  String region = 'capital';
+  String? homeRegion; // 우리 단지(또는 지금 위치)가 든 권역
+  bool get _away => region != homeRegion;
+
+  void _loadRegion(String r, {bool first = false}) {
+    setState(() {
+      region = r;
+      all = null;
+      near = const [];
+      pick = null;
+      showAll = r != homeRegion;
+      tapped = null;
+      rFrom = null;
+      rTo = null;
+      route = null;
+      camC = null;
+      camZ = null;
+    });
     linesOf(r).then((l) {
-      if (!mounted) return;
+      if (!mounted || region != r) return;
       double dist(SubLine x) => x.stations.map((s) => meters(widget.c.pos, s.$2)).fold(double.infinity, (a, b) => a < b ? a : b);
-      final n = l.where((x) => dist(x) <= 5000).toList()..sort((a, b) => dist(a).compareTo(dist(b)));
+      final n = r != homeRegion ? <SubLine>[] : (l.where((x) => dist(x) <= 5000).toList()..sort((a, b) => dist(a).compareTo(dist(b))));
       final bn = <String, List<SubLine>>{};
       for (final x in l) {
         for (final s in x.stations) {
@@ -255,8 +296,66 @@ class _LinesPageState extends State<LinesPage> {
         near = n;
         byName = bn;
         world = _World(_regions[r]!);
+        if (n.isEmpty) showAll = true;
+        if (onMap) {
+          // 지도는 새로 켜지므로 처음 자리를 미리 정해 둠
+          final f = (n.isEmpty ? _fitOf([for (final x in l) for (final s in x.stations) s.$2]) : null) ?? (widget.c.pos, 13.0);
+          startC = f.$1;
+          startZ = f.$2;
+          camC = f.$1;
+          camZ = f.$2;
+        }
+      });
+      if (first || onMap) return; // 처음엔 _plainView 가 자리를 잡음
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !onMap) _initialView();
       });
     });
+  }
+
+  // 노선도 첫 자리: 우리 권역이면 우리 단지 둘레, 다른 권역이면 권역 전체
+  void _initialView() => _away || near.isEmpty ? _fitAll() : _resetView();
+
+  void _fitAll() {
+    final w = world, b = box, a = all;
+    if (w == null || b == null || a == null || a.isEmpty) return;
+    final ps = [for (final l in a) for (final st in l.stations) w.px(st.$2)];
+    if (ps.isEmpty) return;
+    final xs = ps.map((p) => p.dx), ys = ps.map((p) => p.dy);
+    final rc = Rect.fromLTRB(xs.reduce(math.min), ys.reduce(math.min), xs.reduce(math.max), ys.reduce(math.max));
+    final sc = math.min((b.width - 60) / math.max(rc.width, 1), (b.height - 60) / math.max(rc.height, 1)).clamp(0.04, _fitS);
+    _setView(rc.center, sc, fy: 0.5);
+  }
+
+  Future<void> _pickRegion() async {
+    final r = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(kPad, 18, kPad, 12),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            const MixTitle('어느 지역', '노선도', size: 16),
+            const SizedBox(height: 10),
+            for (final e in kRegionNames.entries)
+              InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: () => Navigator.pop(ctx, e.key),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 4),
+                  child: Row(children: [
+                    Expanded(child: Text(e.value, style: TextStyle(fontSize: 15, fontWeight: e.key == region ? FontWeight.w800 : FontWeight.w500, color: e.key == region ? kBlue : kInk, letterSpacing: -0.3))),
+                    if (e.key == homeRegion) Text(widget.c.isHere ? '지금 있는 곳' : '우리 단지', style: T.tiny),
+                    if (e.key == region) const Padding(padding: EdgeInsets.only(left: 8), child: Icon(Icons.check_rounded, size: 18, color: kBlue)),
+                  ]),
+                ),
+              ),
+          ]),
+        ),
+      ),
+    );
+    if (r != null && r != region) _loadRegion(r);
   }
 
   @override
@@ -296,6 +395,8 @@ class _LinesPageState extends State<LinesPage> {
     if (onMap) {
       if (l != null) {
         _mapFit([for (final s in l.stations) s.$2]);
+      } else if (_away || near.isEmpty) {
+        _mapFit([for (final x in this.all ?? const <SubLine>[]) for (final s in x.stations) s.$2]);
       } else {
         _mapGo(widget.c.pos, all ? 11 : 13);
       }
@@ -303,6 +404,8 @@ class _LinesPageState extends State<LinesPage> {
       // 노선 전체를 한 화면에 넣으면 깨알처럼 작아짐 → 우리 역 둘레를 읽을 만한 크기로, 나머지는 손가락으로 (대표님 11-28)
       if (l != null) {
         _resetView(to: l.stations.firstWhere((s) => s.$1 == nearestOn(l)).$2, km: 14);
+      } else if (_away || near.isEmpty) {
+        _fitAll();
       } else {
         _resetView(km: all ? 22 : 12);
       }
@@ -352,12 +455,14 @@ class _LinesPageState extends State<LinesPage> {
       ],
       body: a == null
           ? const Center(child: CircularProgressIndicator(color: kBlue))
-          : a.isEmpty
-              ? const Center(child: Padding(padding: EdgeInsets.all(30), child: Text('이 동네 노선도는 준비하고 있어요', style: T.small)))
-              : Column(children: [
-                  Expanded(child: onMap ? _mapView(a) : _plainView(a)),
-                  _bottom(a),
-                ]),
+          : Column(children: [
+              Expanded(
+                child: a.isEmpty
+                    ? const Center(child: Padding(padding: EdgeInsets.all(30), child: Text('이 지역 노선도를 받지 못했어요. 잠시 뒤 다시 열어 주세요.', style: T.small)))
+                    : (onMap ? _mapView(a) : _plainView(a)),
+              ),
+              _bottom(a),
+            ]),
     );
   }
 
@@ -376,7 +481,7 @@ class _LinesPageState extends State<LinesPage> {
             camC = null;
             camZ = null;
           } else {
-            _resetView();
+            _initialView();
           }
         });
       }
@@ -413,7 +518,7 @@ class _LinesPageState extends State<LinesPage> {
                     home: w.px(widget.c.pos),
                     homeName: widget.c.name,
                     homeLL: widget.c.pos,
-                    homeWord: widget.c.isHere ? '여기서' : '단지에서',
+                    homeWord: _away ? '' : (widget.c.isHere ? '여기서' : '단지에서'), // 다른 권역은 거리 숨김
                     local: local,
                     tapped: tapped?.$1,
                     tc: tc,
@@ -432,7 +537,7 @@ class _LinesPageState extends State<LinesPage> {
               shape: const CircleBorder(side: BorderSide(color: Color(0xFFDDE2EA))),
               child: InkWell(
                 customBorder: const CircleBorder(),
-                onTap: () => _resetView(),
+                onTap: () => _away && homeRegion != null ? _loadRegion(homeRegion!) : _initialView(),
                 child: const Padding(padding: EdgeInsets.all(9), child: Icon(Icons.home_outlined, size: 20, color: kBlue)),
               ),
             ),
@@ -502,7 +607,7 @@ class _LinesPageState extends State<LinesPage> {
         final seen = <String>{};
         for (final l in base) {
           for (final s in l.stations) {
-            if (pick == null && meters(widget.c.pos, s.$2) > 8000) continue;
+            if (!_away && pick == null && meters(widget.c.pos, s.$2) > 8000) continue;
             if (!seen.add(s.$1)) continue;
             sts.add((s.$1, l, s.$2, (byName[s.$1]?.length ?? 0) > 1));
           }
@@ -561,6 +666,7 @@ class _LinesPageState extends State<LinesPage> {
         SizedBox(
           height: 32,
           child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: kPad), children: [
+            _RegionChip(label: kRegionNames[region] ?? region, onTap: _pickRegion),
             _Chip(label: '경로 찾기', color: kBlue, on: routeMode, onTap: () => setState(() {
                   routeMode = !routeMode;
                   tapped = null;
@@ -570,7 +676,7 @@ class _LinesPageState extends State<LinesPage> {
                     route = null;
                   }
                 })),
-            _Chip(label: '우리 동네', color: kInk, on: !routeMode && pick == null && !showAll, onTap: () => _choose(null)),
+            if (near.isNotEmpty) _Chip(label: '우리 동네', color: kInk, on: !routeMode && pick == null && !showAll, onTap: () => _choose(null)),
             _Chip(label: '전체', color: kInk, on: pick == null && showAll, onTap: () => _choose(null, all: true)),
             for (final l in [...near, ...a.where((x) => !near.contains(x))])
               _Chip(label: l.name, color: l.color, on: pick == l.name, onTap: () => _choose(pick == l.name ? null : l.name)),
@@ -596,6 +702,7 @@ class _LinesPageState extends State<LinesPage> {
             transfer: [for (final x in byName[t.$1] ?? const <SubLine>[]) if (x != t.$2) x],
             local: local,
             c: widget.c,
+            away: _away,
             onClose: () => setState(() => tapped = null),
           ),
         ],
@@ -928,7 +1035,7 @@ class _Painter extends CustomPainter {
       final far = inf != null && px >= _farPx;
       final subT = far ? _subText(n, inf.$1, others) : '';
       final sub = subT.isEmpty ? null : _text(subT, size: fs(9.5), w: FontWeight.w500, color: sel ? Colors.white : kSub);
-      final dist = far ? _text(_distText(inf.$2), size: fs(9.5), w: FontWeight.w700, color: sel ? Colors.white : kBlue) : null;
+      final dist = far && homeWord.isNotEmpty ? _text(_distText(inf.$2), size: fs(9.5), w: FontWeight.w700, color: sel ? Colors.white : kBlue) : null;
       final dotR = 3.0 * g, dotGap = 2.5 * g, dotLead = 4.0 * g, distLead = 6.0 * g;
       final dotsW = others.isEmpty ? 0.0 : dotLead + others.length * (dotR * 2 + dotGap) - dotGap;
       final line1 = tp.width + dotsW + (dist == null ? 0.0 : distLead + dist.width);
@@ -998,7 +1105,8 @@ class _StationCard extends StatelessWidget {
   final List<Station> local;
   final Complex c;
   final VoidCallback onClose;
-  const _StationCard({required this.name, required this.line, required this.transfer, required this.local, required this.c, required this.onClose});
+  final bool away; // 다른 권역을 보는 중 (거리 숨김)
+  const _StationCard({required this.name, required this.line, required this.transfer, required this.local, required this.c, required this.onClose, this.away = false});
 
   @override
   Widget build(BuildContext context) {
@@ -1028,7 +1136,7 @@ class _StationCard extends StatelessWidget {
               ]),
             ),
           ),
-          Text(km < 1 ? '${c.isHere ? '여기서' : '단지에서'} ${(km * 1000).round()}m' : '${c.isHere ? '여기서' : '단지에서'} ${km.toStringAsFixed(1)}km', style: T.tiny),
+          if (!away) Text(km < 1 ? '${c.isHere ? '여기서' : '단지에서'} ${(km * 1000).round()}m' : '${c.isHere ? '여기서' : '단지에서'} ${km.toStringAsFixed(1)}km', style: T.tiny),
           IconButton(onPressed: onClose, visualDensity: VisualDensity.compact, icon: const Icon(Icons.close_rounded, size: 18, color: kMute)),
         ]),
         if (st != null) ...[
@@ -1285,6 +1393,32 @@ class _Pill extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
             child: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: kInk)),
+          ),
+        ),
+      );
+}
+
+// 권역 고르기 단추 「수도권 ▾」
+class _RegionChip extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+  const _RegionChip({required this.label, required this.onTap});
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(right: 6),
+        child: Material(
+          color: const Color(0xFFF1F4F9),
+          shape: const StadiumBorder(side: BorderSide(color: Color(0xFFDDE2EA))),
+          child: InkWell(
+            customBorder: const StadiumBorder(),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 14, right: 8),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: kInk)),
+                const Icon(Icons.expand_more_rounded, size: 18, color: kSub),
+              ]),
+            ),
           ),
         ),
       );
