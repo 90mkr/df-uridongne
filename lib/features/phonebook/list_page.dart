@@ -18,6 +18,25 @@ enum Sort { rec, near }
 
 const _gap = 10.0;
 
+// 기준(집·현위치)이 바뀌면 그 동네 가게로 다시 불러 보여 줌
+class ShopListFor extends StatelessWidget {
+  final Complex complex;
+  final Cat? cat;
+  final List<Shop>? preload;
+  const ShopListFor({super.key, required this.complex, this.cat, this.preload});
+  @override
+  Widget build(BuildContext context) {
+    final p = preload;
+    if (p != null) return ShopListPage(complex: complex, all: p, cat: cat);
+    return FutureBuilder<List<Shop>>(
+      future: shopsOf(complex.areaId),
+      builder: (context, s) => s.hasData
+          ? ShopListPage(complex: complex, all: s.data!, cat: cat)
+          : const Scaffold(backgroundColor: kBg, body: Center(child: CircularProgressIndicator(color: kBlue))),
+    );
+  }
+}
+
 class ShopListPage extends StatefulWidget {
   final Complex complex;
   final List<Shop> all;

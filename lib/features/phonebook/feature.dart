@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../core/here.dart';
 import '../../core/data.dart';
 import '../../core/feature.dart';
 import '../../core/icons.dart';
@@ -74,7 +75,7 @@ class _HomeCardState extends State<_HomeCard> {
   void _open(BuildContext context, Cat? cat) async {
     final all = await shopsOf(c.areaId);
     if (!context.mounted) return;
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => ShopListPage(complex: c, all: all, cat: cat)));
+    pushNearby(context, 'phonebook', c, (b) => ShopListFor(complex: b, cat: cat, preload: b.id == c.id ? all : null));
   }
 
   @override
@@ -183,7 +184,7 @@ class _PhonebookPageState extends State<PhonebookPage> {
     final c = widget.complex;
     int count(String id) => all.where((s) => s.cats.contains(id)).length;
     final tops = kokTops(c.areaId);
-    void go(Cat? cat) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ShopListPage(complex: c, all: all, cat: cat)));
+    void go(Cat? cat) => pushNearby(context, 'phonebook', c, (b) => ShopListFor(complex: b, cat: cat, preload: b.id == c.id ? all : null));
     // 대표님 시안(11-24) 참고: 위 하늘색 띠 + 큰 전화번호부 그림, 흰 판이 둥글게 올라옴, 업종은 옅은 칸 4개씩
     return Scaffold(
       backgroundColor: Colors.white,

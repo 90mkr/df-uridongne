@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart' hide Path;
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/here.dart';
 import '../../core/data.dart';
 import '../../core/dnmap.dart';
 import '../../core/icons.dart';
@@ -1186,7 +1187,7 @@ class _LineHomeWidgetState extends State<LineHomeWidget> {
     });
   }
 
-  void _open() => Navigator.of(context).push(MaterialPageRoute(builder: (_) => LinesPage(c: widget.c)));
+  void _open() => pushNearby(context, 'subway', widget.c, (b) => LinesPage(c: b));
 
   @override
   Widget build(BuildContext context) {

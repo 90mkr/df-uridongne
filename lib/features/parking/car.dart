@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../core/here.dart';
 import '../../core/data.dart';
 import '../../core/icons.dart';
 import '../../core/nav.dart';
@@ -372,7 +373,7 @@ class _NearLotsCardState extends State<NearLotsCard> {
     });
   }
 
-  void _open() => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ParkingPage(complex: widget.c)));
+  void _open() => pushNearby(context, 'parking', widget.c, (b) => ParkingPage(complex: b));
 
   @override
   Widget build(BuildContext context) {

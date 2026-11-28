@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../core/here.dart';
 import '../../core/data.dart';
 import '../../core/feature.dart';
 import '../../core/icons.dart';
@@ -403,7 +404,7 @@ class _Page extends StatelessWidget {
                   shadowColor: const Color(0x662A1C7A),
                   child: InkWell(
                     customBorder: const StadiumBorder(),
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => LinesPage(c: c))),
+                    onTap: () => pushNearby(context, 'subway', c, (b) => LinesPage(c: b)),
                     child: const Padding(
                       padding: EdgeInsets.fromLTRB(12, 8, 16, 8),
                       child: Row(mainAxisSize: MainAxisSize.min, children: [

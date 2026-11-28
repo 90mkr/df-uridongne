@@ -3,6 +3,7 @@
 // 화면: 지도 먼저 → 거르기 · 목록 · 바텀시트 / 「행사 알리기」(관리자 승인 뒤 공개)
 import 'package:flutter/material.dart';
 
+import '../../core/here.dart';
 import '../../core/data.dart';
 import '../../core/feature.dart';
 import '../../core/icons.dart';
@@ -102,7 +103,7 @@ class _HomeCardState extends State<_HomeCard> {
   }
 
   void _open([Ev? e]) {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => EventsPage(c: widget.c)));
+    pushNearby(context, 'events', widget.c, (b) => EventsPage(c: b));
     if (e != null) Future.delayed(const Duration(milliseconds: 380), () => mounted ? showEvent(context, e, widget.c) : null);
   }
 

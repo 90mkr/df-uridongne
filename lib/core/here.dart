@@ -211,6 +211,10 @@ class _HereFrameState extends State<HereFrame> {
       );
 }
 
+/// 홈 카드·업종 칸 같은 옆문으로 여는 기능 화면도 아래 「기준 단추」가 붙게 (대표님 11-28)
+Future<T?> pushNearby<T>(BuildContext context, String id, Complex c, Widget Function(Complex b) page) =>
+    Navigator.of(context).push<T>(MaterialPageRoute(builder: (ctx) => featurePage(ctx, id, complex.value ?? c, (_, b) => page(b))));
+
 /// 기능 화면 만들기 — 근처 기능이면 「어디 기준」 틀로 감싼다
 Widget featurePage(BuildContext context, String id, Complex c, Widget Function(BuildContext, Complex) build) =>
     kNearbyFeatures.contains(id) ? HereFrame(featureId: id, home: c, builder: build) : build(context, c);

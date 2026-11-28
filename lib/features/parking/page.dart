@@ -113,7 +113,7 @@ class _ParkingPageState extends State<ParkingPage> {
         body: Stack(children: [
           // 맨 위 파란 물결 (아래 끝은 바탕색으로 녹아 경계선이 없다)
           Positioned(left: 0, right: 0, top: 0, height: top + 190, child: const _WaveHead()),
-          ListView(padding: EdgeInsets.only(top: top, bottom: 30), children: [
+          ListView(padding: EdgeInsets.only(top: top, bottom: 30 + MediaQuery.of(context).padding.bottom), children: [
             inner(_title()),
             inner(Padding(padding: const EdgeInsets.fromLTRB(kPad, 6, kPad, 0), child: CarBar(lots: all ?? const []))),
             inner(SizedBox(
