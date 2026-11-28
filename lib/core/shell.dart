@@ -119,7 +119,7 @@ class _ShellState extends State<Shell> {
   // 하단 메뉴: 떠 있는 흰 둥근 띠 + 색 아이콘, 고른 칸은 파란 알약 (시안 11-23)
   // 하단 메뉴 (대표님 11-24): 둥근 띄움 없이 화면 끝까지 평평하게 · 새 아이콘 · 아이콘은 늘 원래 색, 고른 칸은 옅은 파랑 바탕·파랑 글자·위 파랑 줄
   Widget _nav() {
-    const items = [('home', '단지 홈'), ('list', '전화번호부'), ('map', '지도'), ('grid', '생활 도구'), ('me', '내 정보')];
+    const items = [('home', '홈'), ('list', '전화번호부'), ('map', '지도'), ('grid', '생활 도구'), ('me', '내 정보')];
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
