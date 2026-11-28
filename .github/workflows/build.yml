@@ -128,7 +128,7 @@ jobs:
         run: |
           flutter create --org kr.designfeel --project-name dongne --platforms web .
           python3 tool/brand.py web
-          sed -i 's#<title>.*</title>#<title>우동콕 – 우리 동네, 필요한 것만 콕</title>#' web/index.html
+          sed -i 's#<title>.*</title>#<title>우동콕 – 우리동네 선택형 생활정보</title>#' web/index.html
           flutter pub get
           flutter build web --release --base-href /df-uridongne/ \
             --dart-define=DATA_GO_KR_KEY="$DATA_GO_KR_KEY" --dart-define=OPINET_KEY="$OPINET_KEY" \
