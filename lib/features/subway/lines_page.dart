@@ -192,8 +192,6 @@ class _LinesPageState extends State<LinesPage> {
     super.dispose();
   }
 
-  SubLine? get stripLine => pick != null ? (all ?? const <SubLine>[]).where((x) => x.name == pick).firstOrNull : near.firstOrNull;
-
   String nearestOn(SubLine l) {
     var best = l.stations.first;
     for (final s in l.stations) {
@@ -215,16 +213,6 @@ class _LinesPageState extends State<LinesPage> {
     _setView(w.px(to ?? widget.c.pos), (b.width / (km * _World.perKm)).clamp(0.04, 6.0));
   }
 
-  void _fitLine(SubLine l) {
-    final w = world, b = box;
-    if (w == null || b == null || l.stations.isEmpty) return;
-    final ps = [for (final s in l.stations) w.px(s.$2)];
-    final xs = ps.map((p) => p.dx), ys = ps.map((p) => p.dy);
-    final r = Rect.fromLTRB(xs.reduce(math.min), ys.reduce(math.min), xs.reduce(math.max), ys.reduce(math.max));
-    final s = math.min((b.width - 60) / math.max(r.width, 1), (b.height - 60) / math.max(r.height, 1)).clamp(0.04, 3.0);
-    _setView(r.center, s, fy: 0.5);
-  }
-
   void _choose(String? name, {bool all = false}) {
     setState(() {
       pick = name;
@@ -239,7 +227,12 @@ class _LinesPageState extends State<LinesPage> {
         ctl.move(widget.c.pos, all ? 11 : 13);
       }
     } else {
-      l != null ? _fitLine(l) : _resetView(km: all ? 40 : 12);
+      // 노선 전체를 한 화면에 넣으면 깨알처럼 작아짐 → 우리 역 둘레를 읽을 만한 크기로, 나머지는 손가락으로 (대표님 11-28)
+      if (l != null) {
+        _resetView(to: l.stations.firstWhere((s) => s.$1 == nearestOn(l)).$2, km: 14);
+      } else {
+        _resetView(km: all ? 22 : 12);
+      }
     }
   }
 
@@ -317,7 +310,7 @@ class _LinesPageState extends State<LinesPage> {
               constrained: false,
               minScale: 0.04,
               maxScale: 6,
-              boundaryMargin: const EdgeInsets.all(800),
+              boundaryMargin: const EdgeInsets.all(double.infinity), // 작게 볼 때도 확대·이동이 막히지 않게 (대표님 11-28)
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTapUp: (d) => _hit(d.localPosition, a, w),
@@ -440,9 +433,8 @@ class _LinesPageState extends State<LinesPage> {
     return DnMap(center: widget.c.pos, zoom: 13, lines: lines, marks: marks, ctl: ctl, onMapTap: () => setState(() => tapped = null));
   }
 
-  // ---- 아래: 호선 고르기 · 노선 띠 · 역 정보 ----
+  // ---- 아래: 호선 고르기 · 역 정보 (노선 띠는 뺌, 대표님 11-27·28) ----
   Widget _bottom(List<SubLine> a) {
-    final sl = stripLine;
     final t = tapped;
     return Container(
       padding: EdgeInsets.fromLTRB(0, 10, 0, 10 + MediaQuery.paddingOf(context).bottom),
@@ -476,17 +468,6 @@ class _LinesPageState extends State<LinesPage> {
             onPick: (isFrom, n) => isFrom ? _setRoute(from: n, to: rTo == n ? null : rTo) : _setRoute(from: rFrom, to: n),
             onSwap: () => _setRoute(from: rTo, to: rFrom),
             onClear: () => _setRoute(),
-          ),
-        ] else if (sl != null) ...[
-          const SizedBox(height: 10),
-          _Strip(
-            key: ValueKey('strip_${sl.name}'),
-            line: sl,
-            stations: lineStrip(sl, nearestOn(sl)),
-            mine: nearestOn(sl),
-            tapped: t?.$2 == sl ? t?.$1 : null,
-            byName: byName,
-            onTap: (n) => _tapStation(n, sl, move: true),
           ),
         ],
         if (!routeMode && t != null) ...[
@@ -794,141 +775,6 @@ class _Painter extends CustomPainter {
   bool shouldRepaint(covariant _Painter o) =>
       o.route != route || o.routeEnds.join() != routeEnds.join() || o.pick != pick || o.tapped != tapped || o.lines != lines || !setEquals(o.strongSet, strongSet) || o.homeName != homeName;
 }
-
-// ---------------- 노선 띠 ----------------
-
-class _Strip extends StatefulWidget {
-  final SubLine line;
-  final List<(String, LatLng)> stations;
-  final String mine;
-  final String? tapped;
-  final Map<String, List<SubLine>> byName;
-  final void Function(String) onTap;
-  const _Strip({super.key, required this.line, required this.stations, required this.mine, required this.tapped, required this.byName, required this.onTap});
-  @override
-  State<_Strip> createState() => _StripState();
-}
-
-class _StripState extends State<_Strip> {
-  final sc = ScrollController();
-  // 역마다 이름 길이만큼 칸 너비 (대표님 11-26: 따닥따닥 붙고 두 줄로 갈라짐 → 넓게, 한 줄로)
-  static double wOf(String n) => (n.length * 13.5 + 26).clamp(74, 190).toDouble();
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final i = widget.stations.indexWhere((s) => s.$1 == widget.mine);
-      if (i < 0 || !sc.hasClients) return;
-      var x = kPad;
-      for (final s in widget.stations.take(i)) {
-        x += wOf(s.$1);
-      }
-      final to = (x + wOf(widget.stations[i].$1) / 2 - sc.position.viewportDimension / 2).clamp(0.0, sc.position.maxScrollExtent);
-      sc.jumpTo(to);
-    });
-  }
-
-  @override
-  void dispose() {
-    sc.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final st = widget.stations;
-    final col = widget.line.color;
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: kPad),
-        child: Row(children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-            decoration: BoxDecoration(color: col, borderRadius: BorderRadius.circular(11)),
-            child: Text(widget.line.name, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: Colors.white)),
-          ),
-          const SizedBox(width: 8),
-          if (st.length >= 2) Expanded(child: Text('${st.first.$1} ↔ ${st.last.$1} · 역 ${st.length}개', maxLines: 1, overflow: TextOverflow.ellipsis, style: T.tiny)),
-        ]),
-      ),
-      const SizedBox(height: 6),
-      SizedBox(
-        height: 86,
-        child: ListView.builder(
-          controller: sc,
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: kPad),
-          itemCount: st.length,
-          itemBuilder: (context, i) {
-            final n = st[i].$1;
-            final me = n == widget.mine, sel = n == widget.tapped;
-            final tr = [for (final x in widget.byName[n] ?? const <SubLine>[]) if (x != widget.line) x];
-            final big = me || sel;
-            return InkWell(
-              onTap: () => widget.onTap(n),
-              child: SizedBox(
-                width: wOf(n),
-                child: Column(children: [
-                  SizedBox(
-                    height: 26,
-                    child: Stack(alignment: Alignment.center, children: [
-                      Row(children: [
-                        Expanded(child: Container(height: 4, color: i == 0 ? Colors.transparent : col)),
-                        Expanded(child: Container(height: 4, color: i == st.length - 1 ? Colors.transparent : col)),
-                      ]),
-                      // 고른 역: 진하고 크게 (노선 색으로 꽉 찬 점 + 흰 테 + 둘레 빛)
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 160),
-                        width: sel ? 24 : (me ? 18 : (tr.isNotEmpty ? 16 : 12)),
-                        height: sel ? 24 : (me ? 18 : 12),
-                        decoration: BoxDecoration(
-                          color: (me || sel) ? col : Colors.white,
-                          borderRadius: BorderRadius.circular(tr.isNotEmpty && !sel ? 6 : 12),
-                          border: Border.all(color: (me || sel) ? Colors.white : (tr.isNotEmpty ? const Color(0xFF3A3F4A) : col), width: 1),
-                          boxShadow: sel
-                              ? [BoxShadow(color: col.withValues(alpha: 0.55), blurRadius: 10, spreadRadius: 2)]
-                              : me
-                                  ? [BoxShadow(color: col.withValues(alpha: 0.35), blurRadius: 6)]
-                                  : null,
-                        ),
-                      ),
-                    ]),
-                  ),
-                  const SizedBox(height: 5),
-                  // 이름은 한 줄 — 고른 역은 노선 색 알약에 흰 굵은 글자
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 160),
-                    padding: EdgeInsets.symmetric(horizontal: sel ? 9 : 2, vertical: sel ? 3 : 1),
-                    decoration: BoxDecoration(color: sel ? col : Colors.transparent, borderRadius: BorderRadius.circular(12)),
-                    child: Text(
-                      n,
-                      maxLines: 1,
-                      softWrap: false,
-                      overflow: TextOverflow.visible,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 12.5, height: 1.2, fontWeight: (me || sel) ? FontWeight.w800 : FontWeight.w500, color: sel ? Colors.white : kInk, letterSpacing: -0.4),
-                    ),
-                  ),
-                  if (me) const Padding(padding: EdgeInsets.only(top: 2), child: Text('우리 역', style: TextStyle(fontSize: 10, color: kBlue, fontWeight: FontWeight.w700))),
-                  if (!me && tr.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 3),
-                      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                        for (final x in tr.take(4)) Container(width: 7, height: 7, margin: const EdgeInsets.symmetric(horizontal: 1), decoration: BoxDecoration(color: x.color, shape: BoxShape.circle)),
-                      ]),
-                    ),
-                ]),
-              ),
-            );
-          },
-        ),
-      ),
-    ]);
-  }
-}
-
-// ---------------- 역 정보 ----------------
 
 class _StationCard extends StatelessWidget {
   final String name;
@@ -1346,27 +1192,33 @@ class _LineHomeWidgetState extends State<LineHomeWidget> {
   Widget build(BuildContext context) {
     final l = line;
     if (l == null || strip.length < 2) return const SizedBox.shrink();
-    return Container(
-      decoration: cardBox(r: 20),
-      padding: const EdgeInsets.fromLTRB(0, 14, 0, 10),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        InkWell(
-          onTap: _open,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(kPad, 0, kPad - 4, 8),
-            child: Row(children: [
-              const LineIcon('subway', size: 26),
-              const SizedBox(width: 8),
-              const Text('우리 역 ', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: -0.5, color: kInk)),
-              const Text('노선도', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w400, letterSpacing: -0.5, color: kInk)),
-              const Spacer(),
-              const Text('전체 노선도', style: TextStyle(fontSize: 12.5, color: kSub, fontWeight: FontWeight.w600)),
-              const Icon(Icons.chevron_right_rounded, size: 18, color: kSub),
-            ]),
-          ),
+    final also = [for (final x in byName[mine] ?? const <SubLine>[]) if (x != l) x.name];
+    // 가로 노선 띠는 뺌 — 한 줄 카드로 (대표님 11-27·28)
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: _open,
+        child: Container(
+          decoration: cardBox(r: 20),
+          padding: const EdgeInsets.fromLTRB(kPad, 16, kPad - 4, 16),
+          child: Row(children: [
+            const LineIcon('subway', size: 40),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text.rich(TextSpan(children: [
+                  TextSpan(text: '우리 역 ', style: TextStyle(fontWeight: FontWeight.w800)),
+                  TextSpan(text: '노선도', style: TextStyle(fontWeight: FontWeight.w400)),
+                ]), style: TextStyle(fontSize: 16, letterSpacing: -0.5, color: kInk)),
+                const SizedBox(height: 3),
+                Text('$mine역 · ${[l.name, ...also].join(' · ')}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, color: kSub, letterSpacing: -0.3)),
+              ]),
+            ),
+            const Icon(Icons.chevron_right_rounded, size: 22, color: kSub),
+          ]),
         ),
-        _Strip(key: ValueKey('${l.name}|$mine'), line: l, stations: strip, mine: mine, tapped: null, byName: byName, onTap: (_) => _open()),
-      ]),
+      ),
     );
   }
 }
