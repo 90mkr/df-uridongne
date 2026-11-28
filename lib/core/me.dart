@@ -149,9 +149,13 @@ class _LoginState extends State<_Login> {
   final pass = TextEditingController();
   bool busy = false;
   bool join = false;
+  String? error;
 
   Future<void> run(Future<String?> Function() f) async {
-    setState(() => busy = true);
+    setState(() {
+      busy = true;
+      error = null;
+    });
     final err = await f();
     if (!mounted) return;
     setState(() => busy = false);
@@ -166,7 +170,8 @@ class _LoginState extends State<_Login> {
         toast(nav.context, '로그인했어요');
       }
     } else {
-      toast(context, err);
+      // 아래 창 뒤로 알림이 가려져 「반응 없음」처럼 보이던 것 → 창 안에 빨간 글로 (대표님 11-28)
+      setState(() => error = err);
     }
   }
 
@@ -192,9 +197,30 @@ class _LoginState extends State<_Login> {
           const Padding(padding: EdgeInsets.symmetric(vertical: 14), child: Row(children: [Expanded(child: Divider(color: kLine)), Padding(padding: EdgeInsets.symmetric(horizontal: 10), child: Text('또는 이메일', style: T.tiny)), Expanded(child: Divider(color: kLine))])),
           Field('', email, hint: '이메일', type: TextInputType.emailAddress, max: 80),
           Field('', pass, hint: '비밀번호 (6자 넘게)', secret: true, max: 40),
-          Btn(join ? '이메일로 가입하기' : '이메일로 로그인', primary: true, onTap: busy ? null : () => run(() => signInEmail(email.text.trim(), pass.text, join: join))),
+          if (error != null)
+            Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+              decoration: BoxDecoration(color: const Color(0xFFFFF1F1), borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFF5C2C2))),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Icon(Icons.error_outline_rounded, size: 18, color: Color(0xFFE5484D)),
+                const SizedBox(width: 7),
+                Expanded(child: Text(error!, style: const TextStyle(fontSize: 13, height: 1.4, color: Color(0xFFC62F33), fontWeight: FontWeight.w600))),
+              ]),
+            ),
+          Btn(busy ? '잠시만요…' : (join ? '이메일로 가입하기' : '이메일로 로그인'), primary: true, onTap: busy
+              ? null
+              : () {
+                  final e = email.text.trim(), p = pass.text;
+                  if (e.isEmpty || p.isEmpty) return setState(() => error = '이메일과 비밀번호를 넣어 주세요');
+                  if (join && p.length < 6) return setState(() => error = '비밀번호는 6자 넘게 넣어 주세요');
+                  run(() => signInEmail(e, p, join: join));
+                }),
           TextButton(
-            onPressed: () => setState(() => join = !join),
+            onPressed: () => setState(() {
+              join = !join;
+              error = null;
+            }),
             child: Text(join ? '이미 가입했어요 · 로그인' : '처음이에요 · 이메일로 가입', style: const TextStyle(fontSize: 13, color: kSub)),
           ),
         ]),
