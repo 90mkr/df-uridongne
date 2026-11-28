@@ -139,13 +139,13 @@ class _BaseSwitchState extends State<BaseSwitch> {
                     ),
                     padding: EdgeInsets.symmetric(horizontal: cp ? 6 : 12),
                     child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                      Icon(ic, size: cp ? 14 : 15, color: on ? kBlue : kMute),
+                      Icon(ic, size: cp ? 14 : 15, color: on ? kBlue : Colors.white),
                       SizedBox(width: cp ? 3 : 5),
                       Flexible(
                         child: Text(t,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: cp ? 12.5 : 13, fontWeight: on ? FontWeight.w800 : FontWeight.w600, color: on ? kInk : kSub, letterSpacing: -0.3)),
+                            style: TextStyle(fontSize: cp ? 12.5 : 13, fontWeight: on ? FontWeight.w800 : FontWeight.w600, color: on ? kInk : Colors.white, letterSpacing: -0.3)),
                       ),
                     ]),
                   ),
@@ -164,7 +164,7 @@ class _BaseSwitchState extends State<BaseSwitch> {
           return Container(
             width: cp ? 158 : null,
             padding: const EdgeInsets.all(3),
-            decoration: BoxDecoration(color: const Color(0xFFE9EEF6), borderRadius: BorderRadius.circular(21)),
+            decoration: BoxDecoration(color: const Color(0xFF8F99A8), borderRadius: BorderRadius.circular(21)), // 진한 회색 바탕 + 흰 글씨 (대표님 11-28: 단추처럼 보이게)
             child: row,
           );
         },

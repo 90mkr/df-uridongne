@@ -5,6 +5,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../features/registry.dart';
+import '../features/board/noti.dart';
 import 'complex_info.dart';
 import 'home_layout.dart';
 import 'complex_pick.dart';
@@ -510,7 +511,8 @@ class _Header extends StatelessWidget {
         if (c != null) Padding(padding: const EdgeInsets.only(left: 8), child: BaseSwitch(home: c!, compact: true)),
         IconButton(
           tooltip: '알림',
-          onPressed: () => toast(context, '알림은 준비하고 있어요'),
+          // 「준비하고 있어요」 대신 알림 설정으로 바로 (대표님 11-28)
+          onPressed: c == null ? null : () => Navigator.push(context, MaterialPageRoute(builder: (_) => BoardNotiPage(c: c!))),
           icon: const LineIcon('bell', size: 23, fill: Colors.transparent),
         ),
       ]),
