@@ -9,9 +9,9 @@ import 'package:image_picker/image_picker.dart';
 import '../../core/data.dart';
 import '../../core/fb.dart';
 import '../../core/feature.dart';
+import '../../core/feedback.dart';
 import '../../core/icons.dart';
 import '../../features/registry.dart' show featureById;
-import '../../core/me.dart' show openLogin;
 import '../../core/theme.dart';
 import '../../core/ui.dart';
 import 'data.dart';
@@ -37,6 +37,7 @@ class _BoardPageState extends State<BoardPage> {
     super.initState();
     boardTick.addListener(_load);
     authTick.addListener(_load);
+    blockTick.addListener(_load);
     _load();
   }
 
@@ -44,6 +45,7 @@ class _BoardPageState extends State<BoardPage> {
   void dispose() {
     boardTick.removeListener(_load);
     authTick.removeListener(_load);
+    blockTick.removeListener(_load);
     super.dispose();
   }
 
@@ -52,15 +54,13 @@ class _BoardPageState extends State<BoardPage> {
   Future<void> _load() async {
     final t = town;
     final l = await postsOf(widget.c, town: t);
-    if (mounted && t == town) setState(() => all = l);
+    final b = await blockedUids(); // 차단한 이웃 글은 안 보임 (대표님 11-28)
+    if (mounted && t == town) setState(() => all = l.where((p) => !b.contains(p.uid)).toList());
   }
 
   Future<void> _write() async {
-    if (me == null) {
-      toast(context, '로그인하면 글을 쓸 수 있어요');
-      await openLogin(context);
-      if (me == null || !mounted) return;
-    }
+    // 로그인 + 이메일 가입이면 메일 인증 확인 (대표님 11-28)
+    if (!await canWrite(context) || !mounted) return;
     await Navigator.push(context, MaterialPageRoute(builder: (_) => _WritePage(c: widget.c, town: town, cat: cat.isEmpty ? 'free' : cat)));
   }
 
@@ -177,6 +177,7 @@ class _BoardPageState extends State<BoardPage> {
                             ]),
                           ),
                           const Padding(padding: EdgeInsets.only(top: 12), child: Text('우리 단지 주민끼리 보는 게시판이에요. 광고·비방 글은 신고해 주세요.', style: T.tiny, textAlign: TextAlign.center)),
+                          FeedbackBanner(area: widget.c.areaId),
                         ],
                       ),
                     ),
@@ -242,6 +243,22 @@ extension on _BoardPageState {
           if (benefits != null) _BenefitCard(f: benefits, c: widget.c),
           for (final b in kBoards) section(b.$1),
           const Padding(padding: EdgeInsets.only(top: 4), child: Text('광고·비방 글은 신고해 주세요. 여러 번 신고된 글은 가려져요.', style: T.tiny, textAlign: TextAlign.center)),
+          // 맨 아래 강조: 오류·개선 의견 (대표님 11-28 「적극 반영해 드리겠습니다」)
+          FeedbackBanner(area: widget.c.areaId),
+          FutureBuilder<Set<String>>(
+            future: blockedUids(),
+            builder: (_, b) => (b.data?.isEmpty ?? true)
+                ? const SizedBox()
+                : Center(
+                    child: TextButton(
+                      onPressed: () async {
+                        await unblockAll();
+                        if (mounted) toast(context, '차단을 모두 풀었어요');
+                      },
+                      child: Text('차단한 이웃 ${b.data!.length}명 · 모두 풀기', style: const TextStyle(fontSize: 12, color: kSub)),
+                    ),
+                  ),
+          ),
         ],
       ),
     );
@@ -341,16 +358,14 @@ class _ReadPageState extends State<_ReadPage> {
 
   Future<void> _load() async {
     final l = await commentsOf(p);
-    if (mounted) setState(() => cms = l);
+    final b = await blockedUids();
+    if (mounted) setState(() => cms = l.where((c) => !b.contains(c.uid)).toList());
   }
 
   Future<void> _send() async {
     final t = ctl.text.trim();
     if (t.isEmpty) return;
-    if (me == null) {
-      await openLogin(context);
-      if (me == null || !mounted) return;
-    }
+    if (!await canWrite(context) || !mounted) return;
     setState(() => busy = true);
     final e = await addComment(p, t);
     if (!mounted) return;
@@ -371,6 +386,7 @@ class _ReadPageState extends State<_ReadPage> {
           if (p.mine && p.cat == 'share') ListTile(title: Text(p.done ? '나눔 다시 열기' : '나눔 완료로 표시'), onTap: () => Navigator.pop(ctx, 'done')),
           if (p.mine || isAdmin) ListTile(title: const Text('글 지우기', style: TextStyle(color: Color(0xFFE5484D))), onTap: () => Navigator.pop(ctx, 'del')),
           if (!p.mine) ListTile(title: const Text('신고하기'), onTap: () => Navigator.pop(ctx, 'report')),
+          if (!p.mine) ListTile(title: const Text('이 이웃 차단하기'), subtitle: const Text('이 사람의 글과 댓글이 더는 보이지 않아요', style: TextStyle(fontSize: 12)), onTap: () => Navigator.pop(ctx, 'block')),
         ]),
       ),
     );
@@ -381,6 +397,11 @@ class _ReadPageState extends State<_ReadPage> {
       }
     } else if (r == 'del') {
       if (await deletePost(p) && mounted) Navigator.pop(context);
+    } else if (r == 'block') {
+      await blockUser(p.uid);
+      if (!mounted) return;
+      toast(context, '차단했어요. 동네 이야기 맨 아래에서 풀 수 있어요');
+      Navigator.pop(context);
     } else if (r == 'report') {
       final ok = await reportPost(p, '이용자 신고');
       if (mounted) toast(context, ok ? '신고했어요. 확인할게요' : (me == null ? '로그인하면 신고할 수 있어요' : '신고하지 못했어요'));
@@ -431,6 +452,15 @@ class _ReadPageState extends State<_ReadPage> {
                         Text(c.body, style: const TextStyle(fontSize: 14, height: 1.45)),
                       ]),
                     ),
+                    if (c.uid != me?.uid && me != null)
+                      InkWell(
+                        onTap: () async {
+                          await blockUser(c.uid);
+                          if (mounted) toast(context, '차단했어요. 이 사람 댓글은 더 보이지 않아요');
+                          _load();
+                        },
+                        child: const Padding(padding: EdgeInsets.all(4), child: Text('차단', style: TextStyle(fontSize: 11, color: kMute))),
+                      ),
                     if (c.uid == me?.uid || isAdmin)
                       InkWell(
                         onTap: () async {

@@ -126,3 +126,17 @@
       allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
       allow read, delete: if isAdmin();
     }
+
+    // 오류 신고·개선 제안 (11-28): 누구나(로그인 없이도) 보내기만 · 보기·지우기는 관리자
+    match /dn_feedback/{id} {
+      allow create: if request.resource.data.keys().hasOnly(['kind', 'text', 'contact', 'uid', 'name', 'area', 'ver', 'os', 'st', 'at'])
+        && request.resource.data.kind in ['bug', 'idea']
+        && request.resource.data.st == 'new'
+        && request.resource.data.at == request.time
+        && request.resource.data.text is string && request.resource.data.text.size() >= 5 && request.resource.data.text.size() <= 1000
+        && request.resource.data.contact is string && request.resource.data.contact.size() <= 80
+        && request.resource.data.name is string && request.resource.data.name.size() <= 40
+        && request.resource.data.area is string && request.resource.data.area.size() <= 40
+        && (request.resource.data.uid == '' || (request.auth != null && request.resource.data.uid == request.auth.uid));
+      allow read, delete: if isAdmin();
+    }

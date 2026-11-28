@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'account.dart';
 import 'complex_pick.dart';
+import 'feedback.dart';
 import 'data.dart';
 import 'fb.dart';
 import 'guide.dart';
@@ -70,6 +71,8 @@ class MeTab extends StatelessWidget {
                       if (c != null) _row('홈 편집', '순서 · 보일 카드', () => openHomeEditFor(context, c)),
                       if (c != null) _row('알림 설정', '게시판 · 댓글', () => Navigator.push(context, MaterialPageRoute(builder: (_) => BoardNotiPage(c: c)))),
                       _row('사용 방법', '처음 안내 · 기능 설명', () => openGuide(context)),
+                      _row('오류 신고 · 개선 제안', '적극 반영해 드려요', () => openFeedback(context, area: c?.areaId ?? '')),
+                      if (isAdmin) _row('받은 의견 (관리자)', '', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FeedbackAdminPage()))),
                       _row('개인정보처리방침', '', () => openUrl('${kSiteUrl}policy/privacy.html', inApp: true)),
                       _row('이용약관', '', () => openUrl('${kSiteUrl}policy/terms.html', inApp: true)),
                       if (u != null) _row('회원 탈퇴', '', () => _leave(context)), // 앱 안에서 바로 (대표님 11-28 플레이 출시)
@@ -304,6 +307,16 @@ class _LoginState extends State<_Login> {
             }),
             child: Text(join ? '이미 가입했어요 · 로그인' : '처음이에요 · 이메일로 가입', style: const TextStyle(fontSize: 13, color: kSub)),
           ),
+          // 약관 동의 (플레이 정책: 글을 올리기 전 약관 동의, 대표님 11-28)
+          Wrap(alignment: WrapAlignment.center, children: [
+            const Text('로그인·가입하면 ', style: T.tiny),
+            InkWell(onTap: () => openUrl('${kSiteUrl}policy/terms.html', inApp: true), child: const Text('이용약관', style: TextStyle(fontSize: 11.5, color: kSub, decoration: TextDecoration.underline))),
+            const Text('과 ', style: T.tiny),
+            InkWell(onTap: () => openUrl('${kSiteUrl}policy/privacy.html', inApp: true), child: const Text('개인정보처리방침', style: TextStyle(fontSize: 11.5, color: kSub, decoration: TextDecoration.underline))),
+            const Text('에 동의하는 것으로 봐요.', style: T.tiny),
+          ]),
+          const SizedBox(height: 4),
+          const Text('만 14세 미만은 가입할 수 없어요. 욕설·비방·광고 글은 지워지고 이용이 제한될 수 있어요.', textAlign: TextAlign.center, style: T.tiny),
         ]),
       );
 }
